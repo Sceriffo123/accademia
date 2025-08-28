@@ -79,20 +79,17 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 
 export async function getUserById(id: string): Promise<User | null> {
   try {
-    console.log('Fetching user by ID:', id);
-    const result = await sql`
-      SELECT * FROM users WHERE id = ${id}
-    `;
-    
-    if (result.length > 0) {
-      console.log('User found by ID:', result[0]);
-      return result[0] as User;
+    // Verifica formato UUID v4
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+      throw new Error('ID utente non valido');
     }
     
-    console.log('User not found for ID:', id);
-    return null;
+    const result = await sql`
+      SELECT * FROM users WHERE id = ${id}::uuid
+    `;
+    return result[0] as User || null;
   } catch (error) {
-    console.error('Error fetching user by ID:', error);
+    console.error('Errore recupero utente per ID:', error);
     return null;
   }
 }
@@ -130,11 +127,15 @@ export async function getUsersCount(): Promise<number> {
 
 export async function updateUser(id: string, updates: Partial<User>): Promise<User | null> {
   try {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+      throw new Error('ID utente non valido');
+    }
+    
     const result = await sql`
       UPDATE users
       SET full_name = ${updates.full_name}, 
           role = ${updates.role}
-      WHERE id = ${id}
+      WHERE id = ${id}::uuid
       RETURNING *
     `;
     return result[0] || null;
@@ -146,7 +147,11 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
 
 export async function deleteUser(id: string): Promise<boolean> {
   try {
-    await sql`DELETE FROM users WHERE id = ${id}`;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+      throw new Error('ID utente non valido');
+    }
+    
+    await sql`DELETE FROM users WHERE id = ${id}::uuid`;
     return true;
   } catch (error) {
     console.error('Error deleting user:', error);
