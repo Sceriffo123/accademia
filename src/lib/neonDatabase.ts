@@ -31,10 +31,19 @@ export async function initializeTables() {
     console.log('🏗️ INIT DEBUG: Inizializzazione tabelle...');
     console.log('🏗️ INIT DEBUG: Database URL presente:', !!import.meta.env.VITE_DATABASE_URL);
     
+    // Drop tables in reverse order to handle dependencies
+    console.log('🏗️ INIT DEBUG: Rimozione tabelle esistenti...');
+    await sql`DROP TABLE IF EXISTS activity_logs CASCADE`;
+    await sql`DROP TABLE IF EXISTS role_permissions CASCADE`;
+    await sql`DROP TABLE IF EXISTS role_sections CASCADE`;
+    await sql`DROP TABLE IF EXISTS permissions CASCADE`;
+    await sql`DROP TABLE IF EXISTS normatives CASCADE`;
+    await sql`DROP TABLE IF EXISTS users CASCADE`;
+    
     // Crea tabella users
     console.log('🏗️ INIT DEBUG: Creazione tabella users...');
     await sql`
-      CREATE TABLE IF NOT EXISTS users (
+      CREATE TABLE users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         email VARCHAR(255) UNIQUE NOT NULL,
         full_name VARCHAR(255) NOT NULL,
@@ -47,7 +56,7 @@ export async function initializeTables() {
     // Crea tabella normatives
     console.log('🏗️ INIT DEBUG: Creazione tabella normatives...');
     await sql`
-      CREATE TABLE IF NOT EXISTS normatives (
+      CREATE TABLE normatives (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         title TEXT NOT NULL,
         content TEXT NOT NULL,
@@ -65,7 +74,7 @@ export async function initializeTables() {
     // Crea tabella activity_logs
     console.log('🏗️ INIT DEBUG: Creazione tabella activity_logs...');
     await sql`
-      CREATE TABLE IF NOT EXISTS activity_logs (
+      CREATE TABLE activity_logs (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
         action VARCHAR(100) NOT NULL,
@@ -79,7 +88,7 @@ export async function initializeTables() {
     // Crea tabella permissions
     console.log('🏗️ INIT DEBUG: Creazione tabella permissions...');
     await sql`
-      CREATE TABLE IF NOT EXISTS permissions (
+      CREATE TABLE permissions (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         permission_id VARCHAR(100) UNIQUE NOT NULL,
         name VARCHAR(255) NOT NULL,
@@ -93,7 +102,7 @@ export async function initializeTables() {
     // Crea tabella role_permissions
     console.log('🏗️ INIT DEBUG: Creazione tabella role_permissions...');
     await sql`
-      CREATE TABLE IF NOT EXISTS role_permissions (
+      CREATE TABLE role_permissions (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         role VARCHAR(20) NOT NULL,
         permission_id VARCHAR(100) NOT NULL,
@@ -108,7 +117,7 @@ export async function initializeTables() {
     // Crea tabella role_sections
     console.log('🏗️ INIT DEBUG: Creazione tabella role_sections...');
     await sql`
-      CREATE TABLE IF NOT EXISTS role_sections (
+      CREATE TABLE role_sections (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         role VARCHAR(20) NOT NULL,
         section VARCHAR(50) NOT NULL,
@@ -120,7 +129,11 @@ export async function initializeTables() {
 
     // Inserisci dati di esempio
     console.log('🏗️ INIT DEBUG: Inserimento dati di esempio...');
-    await insertSampleData(true); // Forza inserimento
+    await insertSampleData(); // Non serve più forzare
+    
+    // Inserisci permessi e configurazioni di default
+    await insertDefaultPermissions();
+    await insertDefaultRoleConfiguration();
 
     console.log('Database Neon inizializzato con successo!');
     return true;
@@ -132,19 +145,9 @@ export async function initializeTables() {
 }
 
 // Inserisci dati di esempio
-async function insertSampleData(forceInsert = false) {
+async function insertSampleData() {
   try {
     console.log('📝 SAMPLE DEBUG: Inserimento dati di esempio...');
-    
-    // Verifica se ci sono già utenti
-    if (!forceInsert) {
-      const existingUsers = await sql`SELECT COUNT(*) as count FROM users`;
-      if (parseInt(existingUsers[0].count) > 0) {
-        console.log('📝 SAMPLE DEBUG: Database già popolato, skip inserimento');
-        return;
-      }
-    }
-    
     
     // Hash password semplificato per demo
     console.log('📝 SAMPLE DEBUG: Hash password admin...');
@@ -172,7 +175,6 @@ async function insertSampleData(forceInsert = false) {
         ('superadmin@accademiatpl.org', 'Super Amministratore', ${superAdminHash}, 'superadmin'),
         ('admin@accademia.it', 'Amministratore', ${adminHash}, 'admin'),
         ('user@accademia.it', 'Utente Demo', ${userHash}, 'user')
-      ON CONFLICT (email) DO NOTHING
     `;
     console.log('📝 SAMPLE DEBUG: Utenti inseriti con successo');
     
@@ -216,7 +218,6 @@ async function insertSampleData(forceInsert = false) {
           '2023-05-20',
           ARRAY['tar', 'autorizzazioni', 'giurisprudenza']
         )
-      ON CONFLICT (reference_number) DO NOTHING
     `;
     console.log('📝 SAMPLE DEBUG: Normative inserite con successo');
 
