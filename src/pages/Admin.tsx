@@ -79,6 +79,8 @@ export default function Admin() {
         setNormatives(prev => prev.map(n => n.id === id ? updated : n));
         setShowEditor(false);
         setEditingNormative(null);
+        // Ricarica i dati per essere sicuri
+        await fetchAdminData();
       } else {
         console.error('Failed to update normative');
         alert('Errore durante il salvataggio della normativa');
@@ -98,6 +100,8 @@ export default function Admin() {
       if (success) {
         console.log('Normative deleted successfully');
         setNormatives(prev => prev.filter(n => n.id !== id));
+        // Ricarica i dati per essere sicuri
+        await fetchAdminData();
       } else {
         console.error('Failed to delete normative');
         alert('Errore durante l\'eliminazione della normativa');
@@ -330,21 +334,33 @@ export default function Admin() {
                       
                       <div className="flex items-center space-x-2 ml-4 flex-shrink-0">
                         <button 
-                          onClick={() => window.open(`/normative/${normative.id}`, '_blank')}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            console.log('View button clicked for:', normative.id);
+                            window.open(`/normative/${normative.id}`, '_blank');
+                          }}
                           className="p-2 text-gray-400 hover:text-blue-600 transition-colors bg-white rounded-lg border border-gray-200 hover:border-blue-300"
                           title="Visualizza"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button 
-                          onClick={() => handleEditNormative(normative)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            console.log('Edit button clicked for:', normative.title);
+                            handleEditNormative(normative);
+                          }}
                           className="p-2 text-gray-400 hover:text-green-600 transition-colors bg-white rounded-lg border border-gray-200 hover:border-green-300"
                           title="Modifica"
                         >
                           <Edit3 className="h-4 w-4" />
                         </button>
                         <button 
-                          onClick={() => handleDeleteNormative(normative.id)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            console.log('Delete button clicked for:', normative.id);
+                            handleDeleteNormative(normative.id);
+                          }}
                           className="p-2 text-gray-400 hover:text-red-600 transition-colors bg-white rounded-lg border border-gray-200 hover:border-red-300"
                           title="Elimina"
                         >

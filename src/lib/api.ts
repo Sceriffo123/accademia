@@ -44,7 +44,8 @@ export async function getNormatives(filters?: {
 
 export async function getNormativeById(id: string): Promise<Normative | null> {
   try {
-    return await getNormativeById(id);
+    const { getNormativeById: getNormativeByIdDB } = await import('./neonDatabase');
+    return await getNormativeByIdDB(id);
   } catch (error) {
     console.error('Error fetching normative:', error);
     return null;
