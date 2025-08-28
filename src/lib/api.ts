@@ -4,7 +4,7 @@ import {
   getNormativesCount as getNormativesCountFromDB, 
   getRecentNormativesCount,
   getAllUsers,
-  getUsersCount,
+  getUsersCount as getUsersCountFromDB,
   type Normative 
 } from './neonDatabase';
 
