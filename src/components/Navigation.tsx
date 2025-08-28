@@ -9,7 +9,8 @@ import {
   LogOut, 
   Menu, 
   X,
-  User
+  User,
+  Crown
 } from 'lucide-react';
 
 export default function Navigation() {

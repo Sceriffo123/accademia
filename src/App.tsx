@@ -12,6 +12,7 @@ import Normatives from './pages/Normatives';
 import NormativeDetail from './pages/NormativeDetail';
 import Education from './pages/Education';
 import Admin from './pages/Admin';
+import SuperAdmin from './pages/SuperAdmin';
 
 function App() {
   return (
@@ -46,6 +47,11 @@ function App() {
             <Route path="/admin" element={
               <ProtectedRoute adminOnly>
                 <Admin />
+              </ProtectedRoute>
+            } />
+            <Route path="/superadmin" element={
+              <ProtectedRoute superAdminOnly>
+                <SuperAdmin />
               </ProtectedRoute>
             } />
           </Route>

@@ -40,7 +40,7 @@ export default function ProtectedRoute({
     return <Navigate to="/dashboard" replace />;
   }
 
-  if (adminOnly && !['admin', 'superadmin'].includes(profile?.role || '')) {
+  if (adminOnly && profile?.role !== 'admin') {
     return <Navigate to="/dashboard" replace />;
   }
 
