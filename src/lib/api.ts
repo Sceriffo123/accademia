@@ -86,3 +86,23 @@ export async function getUsersCount(): Promise<number> {
     return 0;
   }
 }
+
+export async function updateNormative(id: string, data: Partial<Omit<Normative, 'id' | 'created_at' | 'updated_at'>>): Promise<Normative | null> {
+  try {
+    const { updateNormative: updateNormativeDB } = await import('./neonDatabase');
+    return await updateNormativeDB(id, data);
+  } catch (error) {
+    console.error('Error updating normative:', error);
+    return null;
+  }
+}
+
+export async function deleteNormative(id: string): Promise<boolean> {
+  try {
+    const { deleteNormative: deleteNormativeDB } = await import('./neonDatabase');
+    return await deleteNormativeDB(id);
+  } catch (error) {
+    console.error('Error deleting normative:', error);
+    return false;
+  }
+}

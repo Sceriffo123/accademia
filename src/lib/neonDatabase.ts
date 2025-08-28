@@ -259,3 +259,40 @@ export async function getRecentNormativesCount(days: number = 30): Promise<numbe
     return 0;
   }
 }
+
+export async function updateNormative(id: string, data: Partial<Omit<Normative, 'id' | 'created_at' | 'updated_at'>>): Promise<Normative | null> {
+  try {
+    const result = await sql`
+      UPDATE normatives 
+      SET 
+        title = COALESCE(${data.title}, title),
+        content = COALESCE(${data.content}, content),
+        category = COALESCE(${data.category}, category),
+        type = COALESCE(${data.type}, type),
+        reference_number = COALESCE(${data.reference_number}, reference_number),
+        publication_date = COALESCE(${data.publication_date}, publication_date),
+        effective_date = COALESCE(${data.effective_date}, effective_date),
+        tags = COALESCE(${data.tags}, tags),
+        updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    return result[0] || null;
+  } catch (error) {
+    console.error('Errore aggiornamento normativa:', error);
+    return null;
+  }
+}
+
+export async function deleteNormative(id: string): Promise<boolean> {
+  try {
+    const result = await sql`
+      DELETE FROM normatives 
+      WHERE id = ${id}
+    `;
+    return true;
+  } catch (error) {
+    console.error('Errore eliminazione normativa:', error);
+    return false;
+  }
+}

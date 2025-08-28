@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getNormativesCount, getUsersCount, getUsers, getNormatives } from '../lib/api';
+import { getNormativesCount, getUsersCount, getUsers, getNormatives, updateNormative, deleteNormative, type Normative } from '../lib/api';
+import NormativeEditor from '../components/NormativeEditor';
 import { 
   Users, 
   FileText, 
@@ -29,7 +30,8 @@ export default function Admin() {
   const [users, setUsers] = useState<any[]>([]);
   const [normatives, setNormatives] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddNormative, setShowAddNormative] = useState(false);
+  const [editingNormative, setEditingNormative] = useState<Normative | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
 
   useEffect(() => {
     fetchAdminData();
@@ -58,6 +60,38 @@ export default function Admin() {
       console.error('Error fetching admin data:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleEditNormative(normative: Normative) {
+    setEditingNormative(normative);
+    setShowEditor(true);
+  }
+
+  async function handleSaveNormative(id: string, data: Partial<Normative>) {
+    try {
+      const updated = await updateNormative(id, data);
+      if (updated) {
+        // Aggiorna la lista locale
+        setNormatives(prev => prev.map(n => n.id === id ? updated : n));
+        setShowEditor(false);
+        setEditingNormative(null);
+      }
+    } catch (error) {
+      console.error('Error updating normative:', error);
+    }
+  }
+
+  async function handleDeleteNormative(id: string) {
+    if (!confirm('Sei sicuro di voler eliminare questa normativa?')) return;
+    
+    try {
+      const success = await deleteNormative(id);
+      if (success) {
+        setNormatives(prev => prev.filter(n => n.id !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting normative:', error);
     }
   }
 
@@ -252,13 +286,6 @@ export default function Admin() {
                   <h3 className="text-lg font-semibold text-gray-900">
                     Gestione Normative ({normatives.length})
                   </h3>
-                  <button
-                    onClick={() => setShowAddNormative(true)}
-                    className="flex items-center space-x-2 bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors"
-                  >
-                    <Plus className="h-5 w-5" />
-                    <span>Aggiungi Normativa</span>
-                  </button>
                 </div>
 
                 <div className="space-y-4">
@@ -286,13 +313,25 @@ export default function Admin() {
                       </div>
                       
                       <div className="flex items-center space-x-2">
-                        <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
+                        <button 
+                          onClick={() => window.open(`/normative/${normative.id}`, '_blank')}
+                          className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Visualizza"
+                        >
                           <Eye className="h-4 w-4" />
                         </button>
-                        <button className="p-2 text-gray-400 hover:text-green-600 transition-colors">
+                        <button 
+                          onClick={() => handleEditNormative(normative)}
+                          className="p-2 text-gray-400 hover:text-green-600 transition-colors"
+                          title="Modifica"
+                        >
                           <Edit3 className="h-4 w-4" />
                         </button>
-                        <button className="p-2 text-gray-400 hover:text-red-600 transition-colors">
+                        <button 
+                          onClick={() => handleDeleteNormative(normative.id)}
+                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                          title="Elimina"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
@@ -304,6 +343,18 @@ export default function Admin() {
           </div>
         </div>
       </div>
+
+      {/* Editor Modal */}
+      {showEditor && (
+        <NormativeEditor
+          normative={editingNormative}
+          onSave={handleSaveNormative}
+          onClose={() => {
+            setShowEditor(false);
+            setEditingNormative(null);
+          }}
+        />
+      )}
     </div>
   );
 }
