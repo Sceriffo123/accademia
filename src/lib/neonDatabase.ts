@@ -1,488 +1,358 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { getNormativesCount, getUsersCount, getUsers, getNormatives, updateNormative, deleteNormative, type Normative } from '../lib/api';
-import NormativeEditor from '../components/NormativeEditor';
-import { 
-  Users, 
-  FileText, 
-  Plus, 
-  Edit3, 
-  Trash2, 
-  Eye,
-  Settings,
-  BarChart3,
-  Shield,
-  UserX
-} from 'lucide-react';
+import { neon } from '@neondatabase/serverless';
 
-interface AdminStats {
-  totalUsers: number;
-  totalNormatives: number;
-  totalViews: number;
-  newUsersThisMonth: number;
+const sql = neon(import.meta.env.VITE_DATABASE_URL!);
+
+export interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  role: 'user' | 'admin';
+  created_at: string;
+  updated_at: string;
 }
 
-export default function Admin() {
-  const { user, profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'normatives'>('overview');
-  const [stats, setStats] = useState<AdminStats>({
-    totalUsers: 0,
-    totalNormatives: 0,
-    totalViews: 0,
-    newUsersThisMonth: 0
-  });
-  const [users, setUsers] = useState<any[]>([]);
-  const [normatives, setNormatives] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [editingNormative, setEditingNormative] = useState<Normative | null>(null);
-  const [showEditor, setShowEditor] = useState(false);
+export interface Normative {
+  id: string;
+  title: string;
+  type: 'law' | 'regulation' | 'ruling';
+  reference_number: string;
+  publication_date: string;
+  content: string;
+  summary?: string;
+  tags?: string[];
+  created_at: string;
+  updated_at: string;
+}
 
-  // Verifica autorizzazione admin
-  if (!user || profile?.role !== 'admin') {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <Shield className="h-12 w-12 text-red-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Accesso Negato
-          </h1>
-          <p className="text-gray-600 mb-6">
-            Solo gli amministratori possono accedere a questa sezione.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  useEffect(() => {
-    fetchAdminData();
-  }, []);
-
-  async function fetchAdminData() {
-    try {
-      // Fetch admin data
-      const [totalUsers, totalNormatives, usersData, normativesData] = await Promise.all([
-        getUsersCount(),
-        getNormativesCount(),
-        getUsers(),
-        getNormatives()
-      ]);
-
-      setStats({
-        totalUsers,
-        totalNormatives,
-        totalViews: 1247, // Mock data
-        newUsersThisMonth: 23 // Mock data
-      });
-
-      setUsers(usersData);
-      setNormatives(normativesData);
-    } catch (error) {
-      console.error('Error fetching admin data:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleEditNormative(normative: Normative) {
-    console.log('Editing normative:', normative.title);
-    setEditingNormative(normative);
-    setShowEditor(true);
-  }
-
-  async function handleSaveNormative(id: string, data: Partial<Normative>) {
-    console.log('Saving normative:', id, data);
-    try {
-      const updated = await updateNormative(id, data);
-      if (updated) {
-        console.log('Normative updated successfully:', updated);
-        // Aggiorna la lista locale
-        setNormatives(prev => prev.map(n => n.id === id ? updated : n));
-        setShowEditor(false);
-        setEditingNormative(null);
-        // Mostra messaggio di successo
-        alert('Normativa aggiornata con successo!');
-      } else {
-        console.error('Failed to update normative');
-        alert('Errore durante il salvataggio della normativa');
-      }
-    } catch (error) {
-      console.error('Error updating normative:', error);
-      alert('Errore durante il salvataggio: ' + (error as Error).message);
-    }
-  }
-
-  async function handleDeleteNormative(id: string) {
-    if (!confirm('Sei sicuro di voler eliminare questa normativa?')) return;
+// User functions
+export async function createUser(userData: Omit<User, 'id' | 'created_at' | 'updated_at'>): Promise<User | null> {
+  try {
+    console.log('Creating user:', userData.email);
+    const result = await sql`
+      INSERT INTO users (email, full_name, role)
+      VALUES (${userData.email}, ${userData.full_name}, ${userData.role})
+      ON CONFLICT (email) DO NOTHING
+      RETURNING *
+    `;
     
+    if (result.length > 0) {
+      console.log('User created successfully:', result[0]);
+      return result[0] as User;
+    }
+    
+    // If no rows returned due to conflict, fetch existing user
+    const existing = await sql`
+      SELECT * FROM users WHERE email = ${userData.email}
+    `;
+    
+    if (existing.length > 0) {
+      console.log('User already exists:', existing[0]);
+      return existing[0] as User;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error creating user:', error);
+    return null;
+  }
+}
+
+export async function getUserByEmail(email: string): Promise<User | null> {
+  try {
+    console.log('Fetching user by email:', email);
+    const result = await sql`
+      SELECT * FROM users WHERE email = ${email}
+    `;
+    
+    if (result.length > 0) {
+      console.log('User found:', result[0]);
+      return result[0] as User;
+    }
+    
+    console.log('User not found for email:', email);
+    return null;
+  } catch (error) {
+    console.error('Error fetching user by email:', error);
+    return null;
+  }
+}
+
+export async function getUserById(id: string): Promise<User | null> {
+  try {
+    console.log('Fetching user by ID:', id);
+    const result = await sql`
+      SELECT * FROM users WHERE id = ${id}
+    `;
+    
+    if (result.length > 0) {
+      console.log('User found by ID:', result[0]);
+      return result[0] as User;
+    }
+    
+    console.log('User not found for ID:', id);
+    return null;
+  } catch (error) {
+    console.error('Error fetching user by ID:', error);
+    return null;
+  }
+}
+
+export async function getUsers(): Promise<User[]> {
+  try {
+    console.log('Fetching all users');
+    const result = await sql`
+      SELECT * FROM users ORDER BY created_at DESC
+    `;
+    
+    console.log('Users fetched:', result.length);
+    return result as User[];
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    return [];
+  }
+}
+
+export async function getUsersCount(): Promise<number> {
+  try {
+    console.log('Fetching users count');
+    const result = await sql`
+      SELECT COUNT(*) as count FROM users
+    `;
+    
+    const count = parseInt(result[0].count as string);
+    console.log('Users count:', count);
+    return count;
+  } catch (error) {
+    console.error('Error fetching users count:', error);
+    return 0;
+  }
+}
+
+// Normative functions
+export async function createNormative(normativeData: Omit<Normative, 'id' | 'created_at' | 'updated_at'>): Promise<Normative | null> {
+  try {
+    console.log('Creating normative:', normativeData.title);
+    const result = await sql`
+      INSERT INTO normatives (title, type, reference_number, publication_date, content, summary, tags)
+      VALUES (${normativeData.title}, ${normativeData.type}, ${normativeData.reference_number}, 
+              ${normativeData.publication_date}, ${normativeData.content}, 
+              ${normativeData.summary || null}, ${JSON.stringify(normativeData.tags || [])})
+      ON CONFLICT (reference_number) DO NOTHING
+      RETURNING *
+    `;
+    
+    if (result.length > 0) {
+      console.log('Normative created successfully:', result[0]);
+      return result[0] as Normative;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error creating normative:', error);
+    return null;
+  }
+}
+
+export async function getNormatives(): Promise<Normative[]> {
+  try {
+    console.log('Fetching all normatives');
+    const result = await sql`
+      SELECT * FROM normatives ORDER BY publication_date DESC
+    `;
+    
+    console.log('Normatives fetched:', result.length);
+    return result as Normative[];
+  } catch (error) {
+    console.error('Error fetching normatives:', error);
+    return [];
+  }
+}
+
+export async function getNormativeById(id: string): Promise<Normative | null> {
+  try {
+    console.log('Fetching normative by ID:', id);
+    const result = await sql`
+      SELECT * FROM normatives WHERE id = ${id}
+    `;
+    
+    if (result.length > 0) {
+      console.log('Normative found:', result[0]);
+      return result[0] as Normative;
+    }
+    
+    console.log('Normative not found for ID:', id);
+    return null;
+  } catch (error) {
+    console.error('Error fetching normative by ID:', error);
+    return null;
+  }
+}
+
+export async function getNormativesCount(): Promise<number> {
+  try {
+    console.log('Fetching normatives count');
+    const result = await sql`
+      SELECT COUNT(*) as count FROM normatives
+    `;
+    
+    const count = parseInt(result[0].count as string);
+    console.log('Normatives count:', count);
+    return count;
+  } catch (error) {
+    console.error('Error fetching normatives count:', error);
+    return 0;
+  }
+}
+
+export async function updateNormative(id: string, updates: Partial<Normative>): Promise<Normative | null> {
+  try {
+    console.log('Updating normative:', id, updates);
+    
+    // Build dynamic update query
+    const updateFields = [];
+    const values = [];
+    
+    if (updates.title !== undefined) {
+      updateFields.push('title = $' + (values.length + 1));
+      values.push(updates.title);
+    }
+    if (updates.type !== undefined) {
+      updateFields.push('type = $' + (values.length + 1));
+      values.push(updates.type);
+    }
+    if (updates.reference_number !== undefined) {
+      updateFields.push('reference_number = $' + (values.length + 1));
+      values.push(updates.reference_number);
+    }
+    if (updates.publication_date !== undefined) {
+      updateFields.push('publication_date = $' + (values.length + 1));
+      values.push(updates.publication_date);
+    }
+    if (updates.content !== undefined) {
+      updateFields.push('content = $' + (values.length + 1));
+      values.push(updates.content);
+    }
+    if (updates.summary !== undefined) {
+      updateFields.push('summary = $' + (values.length + 1));
+      values.push(updates.summary);
+    }
+    if (updates.tags !== undefined) {
+      updateFields.push('tags = $' + (values.length + 1));
+      values.push(JSON.stringify(updates.tags));
+    }
+    
+    updateFields.push('updated_at = NOW()');
+    values.push(id); // ID is always the last parameter
+    
+    const query = `
+      UPDATE normatives 
+      SET ${updateFields.join(', ')}
+      WHERE id = $${values.length}
+      RETURNING *
+    `;
+    
+    console.log('Update query:', query);
+    console.log('Update values:', values);
+    
+    const result = await sql(query, values);
+    
+    if (result.length > 0) {
+      console.log('Normative updated successfully:', result[0]);
+      return result[0] as Normative;
+    }
+    
+    console.log('No normative updated for ID:', id);
+    return null;
+  } catch (error) {
+    console.error('Error updating normative:', error);
+    return null;
+  }
+}
+
+export async function deleteNormative(id: string): Promise<boolean> {
+  try {
     console.log('Deleting normative:', id);
-    try {
-      const success = await deleteNormative(id);
-      if (success) {
-        console.log('Normative deleted successfully');
-        setNormatives(prev => prev.filter(n => n.id !== id));
-        alert('Normativa eliminata con successo!');
-      } else {
-        console.error('Failed to delete normative');
-        alert('Errore durante l\'eliminazione della normativa');
+    const result = await sql`
+      DELETE FROM normatives WHERE id = ${id}
+      RETURNING id
+    `;
+    
+    const success = result.length > 0;
+    console.log('Normative deletion result:', success);
+    return success;
+  } catch (error) {
+    console.error('Error deleting normative:', error);
+    return false;
+  }
+}
+
+// Initialize database with sample data
+export async function initializeDatabase(): Promise<void> {
+  try {
+    console.log('Initializing Neon database...');
+    
+    // Create tables if they don't exist
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        email TEXT UNIQUE NOT NULL,
+        full_name TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+    
+    await sql`
+      CREATE TABLE IF NOT EXISTS normatives (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title TEXT NOT NULL,
+        type TEXT NOT NULL,
+        reference_number TEXT UNIQUE NOT NULL,
+        publication_date DATE NOT NULL,
+        content TEXT NOT NULL,
+        summary TEXT,
+        tags JSONB DEFAULT '[]',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+    
+    // Insert sample admin user
+    await createUser({
+      email: 'admin@accademiatpl.org',
+      full_name: 'Amministratore Sistema',
+      role: 'admin'
+    });
+    
+    // Insert sample normatives
+    const sampleNormatives = [
+      {
+        title: 'Decreto Legislativo 285/1992',
+        type: 'law' as const,
+        reference_number: 'D.Lgs. 285/1992',
+        publication_date: '1992-04-30',
+        content: 'Nuovo codice della strada. Disciplina la circolazione stradale e stabilisce le norme di comportamento degli utenti della strada.',
+        summary: 'Codice della Strada italiano',
+        tags: ['trasporti', 'sicurezza', 'circolazione']
+      },
+      {
+        title: 'Regolamento CE 561/2006',
+        type: 'regulation' as const,
+        reference_number: 'Reg. CE 561/2006',
+        publication_date: '2006-03-15',
+        content: 'Regolamento relativo all\'armonizzazione di alcune disposizioni in materia sociale nel settore dei trasporti su strada.',
+        summary: 'Tempi di guida e riposo',
+        tags: ['europa', 'tempi di guida', 'riposo']
       }
-    } catch (error) {
-      console.error('Error deleting normative:', error);
-      alert('Errore durante l\'eliminazione: ' + (error as Error).message);
+    ];
+    
+    for (const normative of sampleNormatives) {
+      await createNormative(normative);
     }
-  }
-
-  async function handleEditUser(userId: string) {
-    console.log('Editing user:', userId);
-    const user = users.find(u => u.id === userId);
-    if (user) {
-      const newName = prompt('Nuovo nome completo:', user.full_name);
-      if (newName && newName.trim() !== '') {
-        console.log('Updating user name:', userId, 'to:', newName);
-        alert(`Nome utente aggiornato a: ${newName}\n(Funzionalità completa in sviluppo)`);
-      }
-    }
-  }
-
-  async function handleDeleteUser(userId: string) {
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
     
-    if (!confirm(`Sei sicuro di voler eliminare l'utente "${user.full_name}"?`)) return;
-    
-    console.log('Deleting user:', userId);
-    alert(`Utente "${user.full_name}" eliminato\n(Funzionalità completa in sviluppo)`);
+    console.log('Database Neon inizializzato con successo!');
+  } catch (error) {
+    console.error('Errore inizializzazione database Neon:', error);
   }
-
-  async function handleToggleUserRole(userId: string, currentRole: string) {
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
-    
-    const newRole = currentRole === 'admin' ? 'user' : 'admin';
-    if (!confirm(`Cambiare il ruolo di "${user.full_name}" da ${currentRole} a ${newRole}?`)) return;
-    
-    console.log('Toggling user role:', userId, 'from', currentRole, 'to', newRole);
-    alert(`Ruolo di "${user.full_name}" cambiato da ${currentRole} a ${newRole}\n(Funzionalità completa in sviluppo)`);
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-800"></div>
-      </div>
-    );
-  }
-
-  const statCards = [
-    {
-      title: 'Utenti Totali',
-      value: stats.totalUsers,
-      icon: Users,
-      color: 'bg-blue-500',
-      change: `+${stats.newUsersThisMonth} questo mese`
-    },
-    {
-      title: 'Normative Pubblicate',
-      value: stats.totalNormatives,
-      icon: FileText,
-      color: 'bg-green-500',
-      change: '+5 questa settimana'
-    },
-    {
-      title: 'Visualizzazioni Totali',
-      value: stats.totalViews,
-      icon: Eye,
-      color: 'bg-purple-500',
-      change: '+156 oggi'
-    },
-    {
-      title: 'Tasso di Completamento',
-      value: '73%',
-      icon: BarChart3,
-      color: 'bg-orange-500',
-      change: '+5% vs scorso mese'
-    }
-  ];
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-            Pannello Amministrativo
-          </h1>
-          <p className="text-gray-600">
-            Gestione utenti, contenuti e monitoraggio piattaforma
-          </p>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {statCards.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <div
-                key={index}
-                className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`p-3 rounded-lg ${stat.color}`}>
-                    <Icon className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <h3 className="text-sm font-medium text-gray-600 mb-1">
-                  {stat.title}
-                </h3>
-                <p className="text-2xl font-bold text-gray-900 mb-1">
-                  {stat.value}
-                </p>
-                <span className="text-sm text-green-600 font-medium">
-                  {stat.change}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
-          <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6">
-              {[
-                { id: 'overview', label: 'Panoramica', icon: Settings },
-                { id: 'users', label: 'Utenti', icon: Users },
-                { id: 'normatives', label: 'Normative', icon: FileText }
-              ].map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                      activeTab === tab.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-
-          <div className="p-6">
-            {activeTab === 'overview' && (
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Attività Recenti
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">Nuova normativa pubblicata</p>
-                      <p className="text-sm text-gray-600">Regolamento Trasporti 2024</p>
-                    </div>
-                    <span className="text-sm text-gray-500">2 ore fa</span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">Nuovo utente registrato</p>
-                      <p className="text-sm text-gray-600">Marco Rossi</p>
-                    </div>
-                    <span className="text-sm text-gray-500">5 ore fa</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'users' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Gestione Utenti ({users.length})
-                  </h3>
-                </div>
-                
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">Nome</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">Email</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">Ruolo</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">Registrato</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">Azioni</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users.map((user) => (
-                        <tr key={user.id} className="border-b border-gray-100">
-                          <td className="py-3 px-4">{user.full_name}</td>
-                          <td className="py-3 px-4 text-sm text-gray-600">{user.email}</td>
-                          <td className="py-3 px-4">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {user.role === 'admin' ? 'Admin' : 'Utente'}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">
-                            {new Date(user.created_at).toLocaleDateString('it-IT')}
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center space-x-2">
-                              <button 
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  console.log('Toggle role clicked for user:', user.id, user.role);
-                                  handleToggleUserRole(user.id, user.role);
-                                }}
-                                className="p-1 text-gray-400 hover:text-purple-600 transition-colors"
-                                title={`Cambia ruolo (attuale: ${user.role})`}
-                              >
-                                <Shield className="h-4 w-4" />
-                              </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  console.log('Edit user clicked for:', user.id);
-                                  handleEditUser(user.id);
-                                }}
-                                className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                                title="Modifica utente"
-                              >
-                                <Edit3 className="h-4 w-4" />
-                              </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  console.log('Delete user clicked for:', user.id);
-                                  handleDeleteUser(user.id);
-                                }}
-                                className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                                title="Elimina utente"
-                                disabled={user.role === 'admin'}
-                              >
-                                {user.role === 'admin' ? (
-                                  <UserX className="h-4 w-4 opacity-50" />
-                                ) : (
-                                  <Trash2 className="h-4 w-4" />
-                                )}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'normatives' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Gestione Normative ({normatives.length})
-                  </h3>
-                </div>
-
-                <div className="space-y-4">
-                  {normatives.map((normative) => (
-                    <div
-                      key={normative.id}
-                      className="flex items-start justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 mb-1">
-                          {normative.title}
-                        </h4>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            normative.type === 'law' ? 'bg-blue-100 text-blue-800' :
-                            normative.type === 'regulation' ? 'bg-green-100 text-green-800' :
-                            'bg-orange-100 text-orange-800'
-                          }`}>
-                            {normative.type === 'law' ? 'Legge' :
-                             normative.type === 'regulation' ? 'Regolamento' : 'Sentenza'}
-                          </span>
-                          <span>{normative.reference_number}</span>
-                          <span>{new Date(normative.publication_date).toLocaleDateString('it-IT')}</span>
-                        </div>
-                        <p className="text-sm text-gray-500 mt-2 line-clamp-2">
-                          {normative.content.substring(0, 150)}...
-                        </p>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2 ml-4 flex-shrink-0">
-                        <button 
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('View button clicked for:', normative.id);
-                            window.open(`/normative/${normative.id}`, '_blank');
-                          }}
-                          className="p-2 text-gray-600 hover:text-blue-600 transition-colors bg-white rounded-lg border border-gray-300 hover:border-blue-300 hover:bg-blue-50"
-                          title="Visualizza"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('Edit button clicked for:', normative.title);
-                            handleEditNormative(normative);
-                          }}
-                          className="p-2 text-gray-600 hover:text-green-600 transition-colors bg-white rounded-lg border border-gray-300 hover:border-green-300 hover:bg-green-50"
-                          title="Modifica"
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('Delete button clicked for:', normative.id);
-                            handleDeleteNormative(normative.id);
-                          }}
-                          className="p-2 text-gray-600 hover:text-red-600 transition-colors bg-white rounded-lg border border-gray-300 hover:border-red-300 hover:bg-red-50"
-                          title="Elimina"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {normatives.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p className="text-lg">Nessuna normativa trovata</p>
-                      <p className="text-sm">Le normative appariranno qui una volta caricate dal database</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Editor Modal */}
-      {showEditor && (
-        <NormativeEditor
-          normative={editingNormative}
-          onSave={handleSaveNormative}
-          onClose={() => {
-            setShowEditor(false);
-            setEditingNormative(null);
-          }}
-        />
-      )}
-    </div>
-  );
 }
