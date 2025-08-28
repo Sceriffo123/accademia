@@ -28,11 +28,11 @@ export interface Normative {
 // Inizializza le tabelle se non esistono
 export async function initializeTables() {
   try {
-    console.log('🏗️ INIT DEBUG: Inizializzazione tabelle...');
-    console.log('🏗️ INIT DEBUG: Database URL presente:', !!import.meta.env.VITE_DATABASE_URL);
+    console.log('🎓 ACCADEMIA: Configurazione archivio normativo...');
+    console.log('🎓 ACCADEMIA: Connessione database verificata:', !!import.meta.env.VITE_DATABASE_URL);
     
     // Crea tabella users
-    console.log('🏗️ INIT DEBUG: Creazione tabella users...');
+    console.log('🎓 ACCADEMIA: Configurazione sistema utenti...');
     await sql`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -45,7 +45,7 @@ export async function initializeTables() {
     `;
 
     // Crea tabella normatives
-    console.log('🏗️ INIT DEBUG: Creazione tabella normatives...');
+    console.log('🎓 ACCADEMIA: Configurazione archivio normative...');
     await sql`
       CREATE TABLE IF NOT EXISTS normatives (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -63,7 +63,7 @@ export async function initializeTables() {
     `;
 
     // Crea tabella activity_logs
-    console.log('🏗️ INIT DEBUG: Creazione tabella activity_logs...');
+    console.log('🎓 ACCADEMIA: Configurazione sistema di audit...');
     await sql`
       CREATE TABLE IF NOT EXISTS activity_logs (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -77,7 +77,7 @@ export async function initializeTables() {
     `;
 
     // Crea tabella permissions
-    console.log('🏗️ INIT DEBUG: Creazione tabella permissions...');
+    console.log('🎓 ACCADEMIA: Configurazione sistema permessi...');
     await sql`
       CREATE TABLE IF NOT EXISTS permissions (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -91,7 +91,7 @@ export async function initializeTables() {
     `;
 
     // Crea tabella role_permissions
-    console.log('🏗️ INIT DEBUG: Creazione tabella role_permissions...');
+    console.log('🎓 ACCADEMIA: Configurazione matrice autorizzazioni...');
     await sql`
       CREATE TABLE IF NOT EXISTS role_permissions (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -106,7 +106,7 @@ export async function initializeTables() {
     `;
 
     // Crea tabella role_sections
-    console.log('🏗️ INIT DEBUG: Creazione tabella role_sections...');
+    console.log('🎓 ACCADEMIA: Configurazione visibilità sezioni...');
     await sql`
       CREATE TABLE IF NOT EXISTS role_sections (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -119,18 +119,18 @@ export async function initializeTables() {
     `;
 
     // Inserisci dati di esempio
-    console.log('🏗️ INIT DEBUG: Inserimento dati di esempio...');
+    console.log('🎓 ACCADEMIA: Popolamento archivio con dati iniziali...');
     await insertSampleData();
     
     // Inserisci permessi e configurazioni di default
     await insertDefaultPermissions();
     await insertDefaultRoleConfiguration();
 
-    console.log('Database Neon inizializzato con successo!');
+    console.log('🎓 ACCADEMIA: Sistema inizializzato con successo!');
     return true;
   } catch (error) {
-    console.error('Errore inizializzazione Neon:', error);
-    console.error('🏗️ INIT DEBUG: Dettagli errore:', error?.message);
+    console.error('🚨 ACCADEMIA: Errore critico durante l\'inizializzazione:', error);
+    console.error('🚨 ACCADEMIA: Dettagli tecnici:', error?.message);
     return false;
   }
 }
@@ -138,28 +138,16 @@ export async function initializeTables() {
 // Inserisci dati di esempio
 async function insertSampleData() {
   try {
-    console.log('📝 SAMPLE DEBUG: Inserimento dati di esempio...');
+    console.log('🎓 ACCADEMIA: Configurazione utenti amministrativi...');
     
     // Hash password semplificato per demo
-    console.log('📝 SAMPLE DEBUG: Hash password admin...');
+    console.log('🎓 ACCADEMIA: Generazione credenziali sicure...');
     const adminHash = await hashPassword('admin123');
-    console.log('📝 SAMPLE DEBUG: Hash password user...');
     const userHash = await hashPassword('user123');
-    
-    // Hash password per SuperAdmin
-    console.log('📝 SAMPLE DEBUG: Hash password superadmin...');
     const superAdminHash = await hashPassword('superadmin2024!');
-    
-    console.log('📝 SAMPLE DEBUG: Admin hash (primi 10):', adminHash.substring(0, 10));
-    console.log('📝 SAMPLE DEBUG: User hash (primi 10):', userHash.substring(0, 10));
-    console.log('📝 SAMPLE DEBUG: SuperAdmin hash (primi 10):', superAdminHash.substring(0, 10));
-
-    // Verifica che gli hash siano stati generati correttamente
-    console.log('📝 SAMPLE DEBUG: Admin hash completo length:', adminHash.length);
-    console.log('📝 SAMPLE DEBUG: User hash completo length:', userHash.length);
 
     // Inserisci utenti
-    console.log('📝 SAMPLE DEBUG: Inserimento utenti...');
+    console.log('🎓 ACCADEMIA: Creazione profili utente...');
     await sql`
       INSERT INTO users (email, full_name, password_hash, role)
       VALUES 
@@ -168,14 +156,9 @@ async function insertSampleData() {
         ('user@accademia.it', 'Utente Demo', ${userHash}, 'user')
       ON CONFLICT (email) DO NOTHING
     `;
-    console.log('📝 SAMPLE DEBUG: Utenti inseriti con successo');
-    
-    // Verifica immediata che gli utenti siano stati inseriti
-    const verifyUsers = await sql`SELECT id, email, full_name, role FROM users`;
-    console.log('📝 SAMPLE DEBUG: Verifica utenti inseriti:', verifyUsers);
 
     // Inserisci normative
-    console.log('📝 SAMPLE DEBUG: Inserimento normative...');
+    console.log('🎓 ACCADEMIA: Popolamento archivio normativo...');
     
     await sql`
       INSERT INTO normatives (title, content, category, type, reference_number, publication_date, effective_date, tags)
@@ -212,10 +195,9 @@ async function insertSampleData() {
         )
       ON CONFLICT (reference_number) DO NOTHING
     `;
-    console.log('📝 SAMPLE DEBUG: Normative inserite con successo');
 
     // Inserisci alcuni log di attività di esempio
-    console.log('📝 SAMPLE DEBUG: Inserimento activity logs...');
+    console.log('🎓 ACCADEMIA: Inizializzazione registro attività...');
     const adminUser = await sql`SELECT id FROM users WHERE email = 'admin@accademia.it'`;
     if (adminUser.length > 0) {
       await sql`
@@ -225,13 +207,12 @@ async function insertSampleData() {
           (${adminUser[0].id}, 'LOGIN', 'user', ${adminUser[0].id}, '{"ip": "127.0.0.1"}'),
           (${adminUser[0].id}, 'VIEW', 'normative', gen_random_uuid(), '{"title": "Legge Regionale 15/2018"}')
       `;
-      console.log('📝 SAMPLE DEBUG: Activity logs inseriti con successo');
     }
 
-    console.log('Dati di esempio inseriti con successo!');
+    console.log('🎓 ACCADEMIA: Archivio popolato con successo!');
   } catch (error) {
-    console.error('Errore inserimento dati:', error);
-    console.error('📝 SAMPLE DEBUG: Dettagli errore inserimento:', error?.message);
+    console.error('🚨 ACCADEMIA: Errore durante il popolamento archivio:', error);
+    console.error('🚨 ACCADEMIA: Dettagli tecnici:', error?.message);
   }
 }
 
@@ -246,70 +227,35 @@ async function hashPassword(password: string): Promise<string> {
 
 // Verifica password
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  console.log('🔒 PASSWORD DEBUG: Verifica password in corso...');
-  console.log('🔒 PASSWORD DEBUG: Password length:', password.length);
-  console.log('🔒 PASSWORD DEBUG: Hash length:', hash.length);
+  console.log('🎓 ACCADEMIA: Verifica credenziali di accesso...');
   
   const passwordHash = await hashPassword(password);
-  console.log('🔒 PASSWORD DEBUG: Hash calcolato:', passwordHash.substring(0, 10) + '...');
-  console.log('🔒 PASSWORD DEBUG: Hash database:', hash.substring(0, 10) + '...');
+  const isValid = passwordHash === hash;
   
-  return passwordHash === hash;
+  console.log('🎓 ACCADEMIA: Credenziali', isValid ? 'valide' : 'non valide');
+  return isValid;
 }
 
 // === METODI PER UTENTI ===
 export async function getUserByEmail(email: string): Promise<User | null> {
   try {
-    console.log('🗄️ DB DEBUG: getUserByEmail chiamato per:', email);
-    console.log('🗄️ DB DEBUG: Email type:', typeof email);
-    console.log('🗄️ DB DEBUG: Email length:', email.length);
-    console.log('🗄️ DB DEBUG: Email trimmed:', email.trim());
+    console.log('🎓 ACCADEMIA: Ricerca profilo utente:', email);
     
-    console.log('🗄️ DB DEBUG: Esecuzione query SQL...');
-    console.log('🗄️ DB DEBUG: Query: SELECT * FROM users WHERE email = ', email);
-    
-    // Prima proviamo a vedere tutti gli utenti
-    console.log('🗄️ DB DEBUG: Controllo tutti gli utenti...');
-    const allUsers = await sql`SELECT email, full_name FROM users`;
-    console.log('🗄️ DB DEBUG: Tutti gli utenti nel DB:', allUsers);
-    
-    // Poi la query specifica
     const result = await sql`
       SELECT id, email, full_name, password_hash, role, created_at
       FROM users
       WHERE email = ${email}
     `;
     
-    console.log('🗄️ DB DEBUG: Query risultato:', result.length > 0 ? 'TROVATO' : 'NON TROVATO');
-    console.log('🗄️ DB DEBUG: Numero righe:', result.length);
-    
-    // Proviamo anche una query case-insensitive
-    console.log('🗄️ DB DEBUG: Provo query case-insensitive...');
-    const resultCaseInsensitive = await sql`
-      SELECT id, email, full_name, password_hash, role, created_at
-      FROM users
-      WHERE LOWER(email) = LOWER(${email})
-    `;
-    console.log('🗄️ DB DEBUG: Risultato case-insensitive:', resultCaseInsensitive.length);
-    
     if (result.length > 0) {
-      console.log('🗄️ DB DEBUG: Utente:', { 
-        id: result[0].id, 
-        email: result[0].email, 
-        full_name: result[0].full_name,
-        role: result[0].role 
-      });
+      console.log('🎓 ACCADEMIA: Profilo trovato:', result[0].full_name, `(${result[0].role})`);
       return result[0];
-    } else if (resultCaseInsensitive.length > 0) {
-      console.log('🗄️ DB DEBUG: Trovato con case-insensitive:', resultCaseInsensitive[0]);
-      return resultCaseInsensitive[0];
     }
     
+    console.log('🎓 ACCADEMIA: Profilo non trovato per:', email);
     return null;
   } catch (error) {
-    console.error('🗄️ DB DEBUG: Errore recupero utente per email:', error);
-    console.error('🗄️ DB DEBUG: Tipo errore:', typeof error);
-    console.error('🗄️ DB DEBUG: Messaggio errore:', error?.message);
+    console.error('🚨 ACCADEMIA: Errore ricerca profilo utente:', error?.message);
     return null;
   }
 }
@@ -361,13 +307,14 @@ export async function getUsersCount(): Promise<number> {
     const result = await sql`SELECT COUNT(*) as count FROM users`;
     return parseInt(result[0].count);
   } catch (error) {
-    console.error('Errore conteggio utenti:', error);
+    console.error('🚨 ACCADEMIA: Errore conteggio profili utente:', error?.message);
     return 0;
   }
 }
 
 export async function updateUser(id: string, data: { email?: string; full_name?: string; role?: 'user' | 'admin' | 'superadmin' | 'operator' }): Promise<User | null> {
   try {
+    console.log('🎓 ACCADEMIA: Aggiornamento profilo utente...');
     const updates = [];
     const values = [];
     let paramIndex = 1;
@@ -398,13 +345,14 @@ export async function updateUser(id: string, data: { email?: string; full_name?:
     const result = await sql.unsafe(query, values);
     return result[0] || null;
   } catch (error) {
-    console.error('Errore aggiornamento utente:', error);
+    console.error('🚨 ACCADEMIA: Errore aggiornamento profilo:', error?.message);
     throw error;
   }
 }
 
 export async function deleteUser(id: string): Promise<boolean> {
   try {
+    console.log('🎓 ACCADEMIA: Rimozione profilo utente...');
     const result = await sql`
       DELETE FROM users 
       WHERE id = ${id}
@@ -412,7 +360,7 @@ export async function deleteUser(id: string): Promise<boolean> {
     `;
     return result.length > 0;
   } catch (error) {
-    console.error('Errore cancellazione utente:', error);
+    console.error('🚨 ACCADEMIA: Errore rimozione profilo:', error?.message);
     throw error;
   }
 }
@@ -519,9 +467,9 @@ async function insertDefaultPermissions() {
       `;
     }
     
-    console.log('📝 PERMISSIONS DEBUG: Permessi di default inseriti');
+    console.log('🎓 ACCADEMIA: Sistema permessi configurato');
   } catch (error) {
-    console.error('Errore inserimento permessi:', error);
+    console.error('🚨 ACCADEMIA: Errore configurazione permessi:', error);
   }
 }
 
@@ -578,9 +526,9 @@ async function insertDefaultRoleConfiguration() {
       }
     }
     
-    console.log('📝 ROLES DEBUG: Configurazione ruoli inserita');
+    console.log('🎓 ACCADEMIA: Matrice ruoli configurata');
   } catch (error) {
-    console.error('Errore inserimento configurazione ruoli:', error);
+    console.error('🚨 ACCADEMIA: Errore configurazione ruoli:', error);
   }
 }
 
@@ -605,7 +553,7 @@ export async function getUserSections(role: string): Promise<string[]> {
     `;
     return result.map(r => r.section);
   } catch (error) {
-    console.error('Errore recupero sezioni utente:', error);
+    console.error('🚨 ACCADEMIA: Errore recupero sezioni autorizzate:', error?.message);
     return [];
   }
 }

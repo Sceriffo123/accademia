@@ -92,34 +92,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signIn(email: string, password: string) {
-    console.log('🔐 AUTH DEBUG: signIn chiamato', { email, passwordLength: password.length });
+    console.log('🎓 ACCADEMIA: Tentativo di accesso per:', email);
     
     try {
-      console.log('🔐 AUTH DEBUG: Ricerca utente nel database...');
       // Trova utente nel database Neon
       const user = await getUserByEmail(email);
-      console.log('🔐 AUTH DEBUG: Utente trovato:', user ? 'SI' : 'NO');
       
       if (!user) {
-        console.log('🔐 AUTH DEBUG: Utente non trovato');
+        console.log('🎓 ACCADEMIA: Credenziali non riconosciute');
         return { error: 'Email o password non validi' };
       }
 
-      console.log('🔐 AUTH DEBUG: Verifica password...');
       // Verifica password
       const isValidPassword = await verifyPassword(password, user.password_hash);
-      console.log('🔐 AUTH DEBUG: Password valida:', isValidPassword);
       
       if (!isValidPassword) {
-        console.log('🔐 AUTH DEBUG: Password non valida');
+        console.log('🎓 ACCADEMIA: Credenziali non valide');
         return { error: 'Email o password non validi' };
       }
 
-      console.log('🔐 AUTH DEBUG: Generazione token...');
       // Genera token
       const token = generateToken(user.email);
 
-      console.log('🔐 AUTH DEBUG: Impostazione utente...');
       // Imposta utente
       setUser({
         id: user.id,
@@ -130,10 +124,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       localStorage.setItem('auth_token', token);
-      console.log('🔐 AUTH DEBUG: Login completato con successo');
+      console.log('🎓 ACCADEMIA: Accesso autorizzato per:', user.full_name, `(${user.role})`);
       return { error: null };
     } catch (error) {
-      console.error('🔐 AUTH DEBUG: Errore login:', error);
+      console.error('🚨 ACCADEMIA: Errore durante l\'autenticazione:', error?.message);
       return { error: 'Errore durante il login' };
     }
   }
