@@ -15,6 +15,10 @@ import {
   UserX
 } from 'lucide-react';
 
+function generateToken(userEmail: string): string {
+  return userEmail;
+}
+
 interface AdminStats {
   totalUsers: number;
   totalNormatives: number;
@@ -485,4 +489,9 @@ export default function Admin() {
       )}
     </div>
   );
+}
+
+export function verifyToken(token: string): { userEmail: string } | null {
+  const payload = { userEmail: token };
+  return { userEmail: payload.userEmail };
 }
