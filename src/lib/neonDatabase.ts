@@ -232,14 +232,6 @@ async function insertSampleData(forceInsert = false) {
       console.log('📝 SAMPLE DEBUG: Activity logs inseriti con successo');
     }
 
-    // Inserisci permessi di default
-    console.log('📝 SAMPLE DEBUG: Inserimento permessi di default...');
-    await insertDefaultPermissions();
-
-    // Inserisci configurazione ruoli di default
-    console.log('📝 SAMPLE DEBUG: Inserimento configurazione ruoli...');
-    await insertDefaultRoleConfiguration();
-
     console.log('Dati di esempio inseriti con successo!');
   } catch (error) {
     console.error('Errore inserimento dati:', error);
@@ -492,5 +484,192 @@ export async function getRecentNormativesCount(days: number = 30): Promise<numbe
   } catch (error) {
     console.error('Errore conteggio normative recenti:', error);
     return 0;
+  }
+}
+
+// === METODI PER PERMESSI ===
+async function insertDefaultPermissions() {
+  try {
+    const permissions = [
+      // Gestione Utenti
+      { id: 'users.view', name: 'Visualizza Utenti', description: 'Può vedere la lista utenti', category: 'users', level: 2 },
+      { id: 'users.create', name: 'Crea Utenti', description: 'Può creare nuovi utenti', category: 'users', level: 2 },
+      { id: 'users.edit', name: 'Modifica Utenti', description: 'Può modificare utenti esistenti', category: 'users', level: 2 },
+      { id: 'users.delete', name: 'Elimina Utenti', description: 'Può eliminare utenti', category: 'users', level: 1 },
+      { id: 'users.manage_roles', name: 'Gestisce Ruoli', description: 'Può modificare i ruoli utente', category: 'users', level: 1 },
+      
+      // Gestione Normative
+      { id: 'normatives.view', name: 'Visualizza Normative', description: 'Può vedere le normative', category: 'normatives', level: 4 },
+      { id: 'normatives.create', name: 'Crea Normative', description: 'Può creare nuove normative', category: 'normatives', level: 3 },
+      { id: 'normatives.edit', name: 'Modifica Normative', description: 'Può modificare normative', category: 'normatives', level: 2 },
+      { id: 'normatives.delete', name: 'Elimina Normative', description: 'Può eliminare normative', category: 'normatives', level: 2 },
+      { id: 'normatives.publish', name: 'Pubblica Normative', description: 'Può pubblicare normative', category: 'normatives', level: 2 },
+      
+      // Sistema
+      { id: 'system.settings', name: 'Impostazioni Sistema', description: 'Accesso alle impostazioni', category: 'system', level: 1 },
+      { id: 'system.permissions', name: 'Gestione Permessi', description: 'Può modificare i permessi', category: 'system', level: 1 },
+      { id: 'system.logs', name: 'Log Sistema', description: 'Può vedere i log di sistema', category: 'system', level: 2 },
+      
+      // Report
+      { id: 'reports.view', name: 'Visualizza Report', description: 'Può vedere i report', category: 'reports', level: 3 },
+      { id: 'reports.export', name: 'Esporta Report', description: 'Può esportare i report', category: 'reports', level: 2 }
+    ];
+
+    for (const perm of permissions) {
+      await sql`
+        INSERT INTO permissions (permission_id, name, description, category, level)
+        VALUES (${perm.id}, ${perm.name}, ${perm.description}, ${perm.category}, ${perm.level})
+        ON CONFLICT (permission_id) DO NOTHING
+      `;
+    }
+    
+    console.log('📝 PERMISSIONS DEBUG: Permessi di default inseriti');
+  } catch (error) {
+    console.error('Errore inserimento permessi:', error);
+  }
+}
+
+async function insertDefaultRoleConfiguration() {
+  try {
+    const roleConfigs = [
+      {
+        role: 'superadmin',
+        permissions: ['users.view', 'users.create', 'users.edit', 'users.delete', 'users.manage_roles', 
+                     'normatives.view', 'normatives.create', 'normatives.edit', 'normatives.delete', 'normatives.publish',
+                     'system.settings', 'system.permissions', 'system.logs', 'reports.view', 'reports.export'],
+        sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'superadmin', 'reports', 'settings']
+      },
+      {
+        role: 'admin',
+        permissions: ['users.view', 'users.create', 'users.edit', 'normatives.view', 'normatives.create', 
+                     'normatives.edit', 'normatives.delete', 'normatives.publish', 'system.logs', 'reports.view', 'reports.export'],
+        sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'reports']
+      },
+      {
+        role: 'operator',
+        permissions: ['normatives.view', 'normatives.create', 'reports.view'],
+        sections: ['dashboard', 'normatives', 'education', 'reports']
+      },
+      {
+        role: 'user',
+        permissions: ['normatives.view'],
+        sections: ['dashboard', 'normatives', 'education']
+      },
+      {
+        role: 'guest',
+        permissions: [],
+        sections: ['dashboard']
+      }
+    ];
+
+    // Inserisci permessi per ruoli
+    for (const config of roleConfigs) {
+      for (const permissionId of config.permissions) {
+        await sql`
+          INSERT INTO role_permissions (role, permission_id, granted)
+          VALUES (${config.role}, ${permissionId}, true)
+          ON CONFLICT (role, permission_id) DO NOTHING
+        `;
+      }
+      
+      // Inserisci sezioni visibili per ruoli
+      for (const section of config.sections) {
+        await sql`
+          INSERT INTO role_sections (role, section, visible)
+          VALUES (${config.role}, ${section}, true)
+          ON CONFLICT (role, section) DO NOTHING
+        `;
+      }
+    }
+    
+    console.log('📝 ROLES DEBUG: Configurazione ruoli inserita');
+  } catch (error) {
+    console.error('Errore inserimento configurazione ruoli:', error);
+  }
+}
+
+export async function getUserPermissions(role: string): Promise<string[]> {
+  try {
+    const result = await sql`
+      SELECT permission_id FROM role_permissions 
+      WHERE role = ${role} AND granted = true
+    `;
+    return result.map(r => r.permission_id);
+  } catch (error) {
+    console.error('Errore recupero permessi utente:', error);
+    return [];
+  }
+}
+
+export async function getUserSections(role: string): Promise<string[]> {
+  try {
+    const result = await sql`
+      SELECT section FROM role_sections 
+      WHERE role = ${role} AND visible = true
+    `;
+    return result.map(r => r.section);
+  } catch (error) {
+    console.error('Errore recupero sezioni utente:', error);
+    return [];
+  }
+}
+
+export async function updateRolePermission(role: string, permissionId: string, granted: boolean, grantedBy: string): Promise<boolean> {
+  try {
+    await sql`
+      INSERT INTO role_permissions (role, permission_id, granted, granted_by, updated_at)
+      VALUES (${role}, ${permissionId}, ${granted}, ${grantedBy}, NOW())
+      ON CONFLICT (role, permission_id) 
+      DO UPDATE SET granted = ${granted}, granted_by = ${grantedBy}, updated_at = NOW()
+    `;
+    return true;
+  } catch (error) {
+    console.error('Errore aggiornamento permesso ruolo:', error);
+    return false;
+  }
+}
+
+export async function updateRoleSection(role: string, section: string, visible: boolean): Promise<boolean> {
+  try {
+    await sql`
+      INSERT INTO role_sections (role, section, visible)
+      VALUES (${role}, ${section}, ${visible})
+      ON CONFLICT (role, section) 
+      DO UPDATE SET visible = ${visible}
+    `;
+    return true;
+  } catch (error) {
+    console.error('Errore aggiornamento sezione ruolo:', error);
+    return false;
+  }
+}
+
+export async function getAllPermissions(): Promise<any[]> {
+  try {
+    const result = await sql`
+      SELECT * FROM permissions ORDER BY category, level, name
+    `;
+    return result;
+  } catch (error) {
+    console.error('Errore recupero tutti i permessi:', error);
+    return [];
+  }
+}
+
+export async function getRolePermissionsMatrix(): Promise<Map<string, any>> {
+  try {
+    const roles = ['superadmin', 'admin', 'operator', 'user', 'guest'];
+    const matrix = new Map();
+    
+    for (const role of roles) {
+      const permissions = await getUserPermissions(role);
+      const sections = await getUserSections(role);
+      matrix.set(role, { permissions, sections });
+    }
+    
+    return matrix;
+  } catch (error) {
+    console.error('Errore recupero matrice permessi:', error);
+    return new Map();
   }
 }

@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { 
+  getAllPermissions, 
+  getRolePermissionsMatrix, 
+  updateRolePermission, 
+  updateRoleSection 
+} from '../lib/neonDatabase';
+import { 
   Shield, 
   Users, 
   Settings, 
@@ -15,20 +21,15 @@ import {
   ChevronDown,
   ChevronRight
 } from 'lucide-react';
-import { 
-  permissionManager, 
-  PERMISSIONS, 
-  DEFAULT_ROLE_PERMISSIONS,
-  type RolePermissions,
-  type Permission 
-} from '../lib/permissions';
 
 export default function SuperAdmin() {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<'permissions' | 'roles' | 'system'>('permissions');
-  const [rolePermissions, setRolePermissions] = useState<Map<string, RolePermissions>>(new Map());
+  const [permissions, setPermissions] = useState<any[]>([]);
+  const [roleMatrix, setRoleMatrix] = useState<Map<string, any>>(new Map());
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['users']));
   const [hasChanges, setHasChanges] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Solo SuperAdmin può accedere
   if (profile?.role !== 'superadmin') {
@@ -36,13 +37,25 @@ export default function SuperAdmin() {
   }
 
   useEffect(() => {
-    // Carica i permessi attuali
-    const currentPermissions = new Map();
-    DEFAULT_ROLE_PERMISSIONS.forEach(rp => {
-      currentPermissions.set(rp.role, { ...rp });
-    });
-    setRolePermissions(currentPermissions);
+    loadPermissionsData();
   }, []);
+
+  async function loadPermissionsData() {
+    try {
+      setLoading(true);
+      const [allPermissions, matrix] = await Promise.all([
+        getAllPermissions(),
+        getRolePermissionsMatrix()
+      ]);
+      
+      setPermissions(allPermissions);
+      setRoleMatrix(matrix);
+    } catch (error) {
+      console.error('Errore caricamento permessi:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const toggleCategory = (category: string) => {
     const newExpanded = new Set(expandedCategories);
@@ -54,63 +67,47 @@ export default function SuperAdmin() {
     setExpandedCategories(newExpanded);
   };
 
-  const togglePermission = (role: string, permissionId: string) => {
-    const newPermissions = new Map(rolePermissions);
-    const rolePerms = newPermissions.get(role);
+  const togglePermission = async (role: string, permissionId: string) => {
+    const roleData = roleMatrix.get(role);
+    const hasPermission = roleData?.permissions.includes(permissionId);
     
-    if (rolePerms) {
-      const permissions = [...rolePerms.permissions];
-      const index = permissions.indexOf(permissionId);
-      
-      if (index > -1) {
-        permissions.splice(index, 1);
-      } else {
-        permissions.push(permissionId);
+    try {
+      const success = await updateRolePermission(role, permissionId, !hasPermission, profile?.id || '');
+      if (success) {
+        await loadPermissionsData(); // Ricarica i dati
+        setHasChanges(true);
       }
-      
-      newPermissions.set(role, { ...rolePerms, permissions });
-      setRolePermissions(newPermissions);
-      setHasChanges(true);
+    } catch (error) {
+      console.error('Errore aggiornamento permesso:', error);
     }
   };
 
-  const toggleSectionVisibility = (role: string, section: string) => {
-    const newPermissions = new Map(rolePermissions);
-    const rolePerms = newPermissions.get(role);
+  const toggleSectionVisibility = async (role: string, section: string) => {
+    const roleData = roleMatrix.get(role);
+    const isVisible = roleData?.sections.includes(section);
     
-    if (rolePerms) {
-      const visibleSections = [...rolePerms.visibleSections];
-      const index = visibleSections.indexOf(section);
-      
-      if (index > -1) {
-        visibleSections.splice(index, 1);
-      } else {
-        visibleSections.push(section);
+    try {
+      const success = await updateRoleSection(role, section, !isVisible);
+      if (success) {
+        await loadPermissionsData(); // Ricarica i dati
+        setHasChanges(true);
       }
-      
-      newPermissions.set(role, { ...rolePerms, visibleSections });
-      setRolePermissions(newPermissions);
-      setHasChanges(true);
+    } catch (error) {
+      console.error('Errore aggiornamento sezione:', error);
     }
   };
 
   const saveChanges = () => {
-    // Qui salveresti nel database
-    rolePermissions.forEach((perms, role) => {
-      permissionManager.updateRolePermissions(role, perms);
-    });
+    // Le modifiche sono già salvate nel database in tempo reale
     setHasChanges(false);
     alert('Modifiche salvate con successo!');
   };
 
   const resetToDefaults = () => {
     if (confirm('Sei sicuro di voler ripristinare i permessi di default? Tutte le modifiche andranno perse.')) {
-      const defaultPermissions = new Map();
-      DEFAULT_ROLE_PERMISSIONS.forEach(rp => {
-        defaultPermissions.set(rp.role, { ...rp });
-      });
-      setRolePermissions(defaultPermissions);
-      setHasChanges(true);
+      // Implementare reset ai default del database
+      loadPermissionsData();
+      setHasChanges(false);
     }
   };
 
@@ -136,8 +133,16 @@ export default function SuperAdmin() {
     }
   };
 
-  const categories = [...new Set(PERMISSIONS.map(p => p.category))];
+  const categories = [...new Set(permissions.map(p => p.category))];
   const sections = ['dashboard', 'users', 'normatives', 'education', 'admin', 'superadmin', 'reports', 'settings'];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-800"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -248,7 +253,7 @@ export default function SuperAdmin() {
                                 <th className="text-left py-2 px-3 font-medium text-gray-700 min-w-[200px]">
                                   Permesso
                                 </th>
-                                {Array.from(rolePermissions.keys()).map(role => (
+                                {Array.from(roleMatrix.keys()).map(role => (
                                   <th key={role} className="text-center py-2 px-3 min-w-[120px]">
                                     <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getRoleColor(role)}`}>
                                       {getRoleDisplayName(role)}
@@ -258,23 +263,23 @@ export default function SuperAdmin() {
                               </tr>
                             </thead>
                             <tbody>
-                              {PERMISSIONS.filter(p => p.category === category).map(permission => (
-                                <tr key={permission.id} className="border-t border-gray-100">
+                              {permissions.filter(p => p.category === category).map(permission => (
+                                <tr key={permission.permission_id} className="border-t border-gray-100">
                                   <td className="py-3 px-3">
                                     <div>
                                       <div className="font-medium text-gray-900">{permission.name}</div>
                                       <div className="text-sm text-gray-500">{permission.description}</div>
                                     </div>
                                   </td>
-                                  {Array.from(rolePermissions.keys()).map(role => {
-                                    const rolePerms = rolePermissions.get(role);
-                                    const hasPermission = rolePerms?.permissions.includes(permission.id);
+                                  {Array.from(roleMatrix.keys()).map(role => {
+                                    const roleData = roleMatrix.get(role);
+                                    const hasPermission = roleData?.permissions.includes(permission.permission_id);
                                     const isDisabled = role === 'superadmin'; // SuperAdmin ha sempre tutti i permessi
                                     
                                     return (
                                       <td key={role} className="py-3 px-3 text-center">
                                         <button
-                                          onClick={() => !isDisabled && togglePermission(role, permission.id)}
+                                          onClick={() => !isDisabled && togglePermission(role, permission.permission_id)}
                                           disabled={isDisabled}
                                           className={`p-2 rounded-lg transition-colors ${
                                             hasPermission 
@@ -312,7 +317,7 @@ export default function SuperAdmin() {
                         <th className="text-left py-3 px-4 font-medium text-gray-700">
                           Sezione
                         </th>
-                        {Array.from(rolePermissions.keys()).map(role => (
+                        {Array.from(roleMatrix.keys()).map(role => (
                           <th key={role} className="text-center py-3 px-4">
                             <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getRoleColor(role)}`}>
                               {getRoleDisplayName(role)}
@@ -334,9 +339,9 @@ export default function SuperAdmin() {
                              section === 'reports' ? 'Report' :
                              section === 'settings' ? 'Impostazioni' : section}
                           </td>
-                          {Array.from(rolePermissions.keys()).map(role => {
-                            const rolePerms = rolePermissions.get(role);
-                            const isVisible = rolePerms?.visibleSections.includes(section);
+                          {Array.from(roleMatrix.keys()).map(role => {
+                            const roleData = roleMatrix.get(role);
+                            const isVisible = roleData?.sections.includes(section);
                             const isDisabled = role === 'superadmin'; // SuperAdmin vede sempre tutto
                             
                             return (

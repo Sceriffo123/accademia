@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { getUserSections } from '../lib/neonDatabase';
 import { 
   Home, 
   FileText, 
@@ -18,6 +19,24 @@ export default function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [visibleSections, setVisibleSections] = useState<string[]>([]);
+
+  React.useEffect(() => {
+    if (profile?.role) {
+      loadVisibleSections();
+    }
+  }, [profile?.role]);
+
+  async function loadVisibleSections() {
+    try {
+      const sections = await getUserSections(profile?.role || '');
+      setVisibleSections(sections);
+    } catch (error) {
+      console.error('Errore caricamento sezioni visibili:', error);
+      // Fallback ai default se il database non è disponibile
+      setVisibleSections(['dashboard', 'normatives', 'education']);
+    }
+  }
 
   const handleSignOut = async () => {
     await signOut();
@@ -26,14 +45,18 @@ export default function Navigation() {
   };
 
   const navItems = [
-    { to: '/dashboard', icon: Home, label: 'Dashboard' },
-    { to: '/normative', icon: FileText, label: 'Normative' },
-    { to: '/education', icon: GraduationCap, label: 'Formazione' },
-  ];
+    { to: '/dashboard', icon: Home, label: 'Dashboard', section: 'dashboard' },
+    { to: '/normative', icon: FileText, label: 'Normative', section: 'normatives' },
+    { to: '/education', icon: GraduationCap, label: 'Formazione', section: 'education' },
+  ].filter(item => visibleSections.includes(item.section));
 
-  // Admin e SuperAdmin possono accedere al pannello amministrativo
-  if (profile?.role === 'admin' || profile?.role === 'superadmin') {
-    navItems.push({ to: '/admin', icon: Settings, label: 'Admin' });
+  // Aggiungi sezioni amministrative se visibili
+  if (visibleSections.includes('admin') && (profile?.role === 'admin' || profile?.role === 'superadmin')) {
+    navItems.push({ to: '/admin', icon: Settings, label: 'Admin', section: 'admin' });
+  }
+  
+  if (visibleSections.includes('superadmin') && profile?.role === 'superadmin') {
+    navItems.push({ to: '/superadmin', icon: Crown, label: 'SuperAdmin', section: 'superadmin' });
   }
 
   if (!user) {
