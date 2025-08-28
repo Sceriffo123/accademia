@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { getNormativesCount, getUsersCount, getUsers, getNormatives, updateNormative, deleteNormative, type Normative } from '../lib/api';
-import NormativeEditor from '../components/NormativeEditor';
+import { getNormativesCount, getUsersCount, getUsers, getNormatives } from '../lib/api';
 import { 
   Users, 
   FileText, 
@@ -10,9 +8,7 @@ import {
   Trash2, 
   Eye,
   Settings,
-  BarChart3,
-  Shield,
-  UserX
+  BarChart3
 } from 'lucide-react';
 
 interface AdminStats {
@@ -23,7 +19,6 @@ interface AdminStats {
 }
 
 export default function Admin() {
-  const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'normatives'>('overview');
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
@@ -34,25 +29,7 @@ export default function Admin() {
   const [users, setUsers] = useState<any[]>([]);
   const [normatives, setNormatives] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingNormative, setEditingNormative] = useState<Normative | null>(null);
-  const [showEditor, setShowEditor] = useState(false);
-
-  // Verifica autorizzazione admin
-  if (!user || profile?.role !== 'admin') {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <Shield className="h-12 w-12 text-red-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Accesso Negato
-          </h1>
-          <p className="text-gray-600 mb-6">
-            Solo gli amministratori possono accedere a questa sezione.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const [showAddNormative, setShowAddNormative] = useState(false);
 
   useEffect(() => {
     fetchAdminData();
@@ -82,87 +59,6 @@ export default function Admin() {
     } finally {
       setLoading(false);
     }
-  }
-
-  async function handleEditNormative(normative: Normative) {
-    console.log('Editing normative:', normative.title);
-    setEditingNormative(normative);
-    setShowEditor(true);
-  }
-
-  async function handleSaveNormative(id: string, data: Partial<Normative>) {
-    console.log('Saving normative:', id, data);
-    try {
-      const updated = await updateNormative(id, data);
-      if (updated) {
-        console.log('Normative updated successfully:', updated);
-        // Aggiorna la lista locale
-        setNormatives(prev => prev.map(n => n.id === id ? updated : n));
-        setShowEditor(false);
-        setEditingNormative(null);
-        // Mostra messaggio di successo
-        alert('Normativa aggiornata con successo!');
-      } else {
-        console.error('Failed to update normative');
-        alert('Errore durante il salvataggio della normativa');
-      }
-    } catch (error) {
-      console.error('Error updating normative:', error);
-      alert('Errore durante il salvataggio: ' + (error as Error).message);
-    }
-  }
-
-  async function handleDeleteNormative(id: string) {
-    if (!confirm('Sei sicuro di voler eliminare questa normativa?')) return;
-    
-    console.log('Deleting normative:', id);
-    try {
-      const success = await deleteNormative(id);
-      if (success) {
-        console.log('Normative deleted successfully');
-        setNormatives(prev => prev.filter(n => n.id !== id));
-        alert('Normativa eliminata con successo!');
-      } else {
-        console.error('Failed to delete normative');
-        alert('Errore durante l\'eliminazione della normativa');
-      }
-    } catch (error) {
-      console.error('Error deleting normative:', error);
-      alert('Errore durante l\'eliminazione: ' + (error as Error).message);
-    }
-  }
-
-  async function handleEditUser(userId: string) {
-    console.log('Editing user:', userId);
-    const user = users.find(u => u.id === userId);
-    if (user) {
-      const newName = prompt('Nuovo nome completo:', user.full_name);
-      if (newName && newName.trim() !== '') {
-        console.log('Updating user name:', userId, 'to:', newName);
-        alert(`Nome utente aggiornato a: ${newName}\n(Funzionalità completa in sviluppo)`);
-      }
-    }
-  }
-
-  async function handleDeleteUser(userId: string) {
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
-    
-    if (!confirm(`Sei sicuro di voler eliminare l'utente "${user.full_name}"?`)) return;
-    
-    console.log('Deleting user:', userId);
-    alert(`Utente "${user.full_name}" eliminato\n(Funzionalità completa in sviluppo)`);
-  }
-
-  async function handleToggleUserRole(userId: string, currentRole: string) {
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
-    
-    const newRole = currentRole === 'admin' ? 'user' : 'admin';
-    if (!confirm(`Cambiare il ruolo di "${user.full_name}" da ${currentRole} a ${newRole}?`)) return;
-    
-    console.log('Toggling user role:', userId, 'from', currentRole, 'to', newRole);
-    alert(`Ruolo di "${user.full_name}" cambiato da ${currentRole} a ${newRole}\n(Funzionalità completa in sviluppo)`);
   }
 
   if (loading) {
@@ -334,43 +230,11 @@ export default function Admin() {
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex items-center space-x-2">
-                              <button 
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  console.log('Toggle role clicked for user:', user.id, user.role);
-                                  handleToggleUserRole(user.id, user.role);
-                                }}
-                                className="p-1 text-gray-400 hover:text-purple-600 transition-colors"
-                                title={`Cambia ruolo (attuale: ${user.role})`}
-                              >
-                                <Shield className="h-4 w-4" />
-                              </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  console.log('Edit user clicked for:', user.id);
-                                  handleEditUser(user.id);
-                                }}
-                                className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                                title="Modifica utente"
-                              >
+                              <button className="p-1 text-gray-400 hover:text-blue-600 transition-colors">
                                 <Edit3 className="h-4 w-4" />
                               </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  console.log('Delete user clicked for:', user.id);
-                                  handleDeleteUser(user.id);
-                                }}
-                                className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                                title="Elimina utente"
-                                disabled={user.role === 'admin'}
-                              >
-                                {user.role === 'admin' ? (
-                                  <UserX className="h-4 w-4 opacity-50" />
-                                ) : (
-                                  <Trash2 className="h-4 w-4" />
-                                )}
+                              <button className="p-1 text-gray-400 hover:text-red-600 transition-colors">
+                                <Trash2 className="h-4 w-4" />
                               </button>
                             </div>
                           </td>
@@ -388,13 +252,20 @@ export default function Admin() {
                   <h3 className="text-lg font-semibold text-gray-900">
                     Gestione Normative ({normatives.length})
                   </h3>
+                  <button
+                    onClick={() => setShowAddNormative(true)}
+                    className="flex items-center space-x-2 bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors"
+                  >
+                    <Plus className="h-5 w-5" />
+                    <span>Aggiungi Normativa</span>
+                  </button>
                 </div>
 
                 <div className="space-y-4">
                   {normatives.map((normative) => (
                     <div
                       key={normative.id}
-                      className="flex items-start justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                     >
                       <div className="flex-1">
                         <h4 className="font-medium text-gray-900 mb-1">
@@ -412,77 +283,27 @@ export default function Admin() {
                           <span>{normative.reference_number}</span>
                           <span>{new Date(normative.publication_date).toLocaleDateString('it-IT')}</span>
                         </div>
-                        <p className="text-sm text-gray-500 mt-2 line-clamp-2">
-                          {normative.content.substring(0, 150)}...
-                        </p>
                       </div>
                       
-                      <div className="flex items-center space-x-2 ml-4 flex-shrink-0">
-                        <button 
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('View button clicked for:', normative.id);
-                            window.open(`/normative/${normative.id}`, '_blank');
-                          }}
-                          className="p-2 text-gray-600 hover:text-blue-600 transition-colors bg-white rounded-lg border border-gray-300 hover:border-blue-300 hover:bg-blue-50"
-                          title="Visualizza"
-                        >
+                      <div className="flex items-center space-x-2">
+                        <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
                           <Eye className="h-4 w-4" />
                         </button>
-                        <button 
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('Edit button clicked for:', normative.title);
-                            handleEditNormative(normative);
-                          }}
-                          className="p-2 text-gray-600 hover:text-green-600 transition-colors bg-white rounded-lg border border-gray-300 hover:border-green-300 hover:bg-green-50"
-                          title="Modifica"
-                        >
+                        <button className="p-2 text-gray-400 hover:text-green-600 transition-colors">
                           <Edit3 className="h-4 w-4" />
                         </button>
-                        <button 
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('Delete button clicked for:', normative.id);
-                            handleDeleteNormative(normative.id);
-                          }}
-                          className="p-2 text-gray-600 hover:text-red-600 transition-colors bg-white rounded-lg border border-gray-300 hover:border-red-300 hover:bg-red-50"
-                          title="Elimina"
-                        >
+                        <button className="p-2 text-gray-400 hover:text-red-600 transition-colors">
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
                   ))}
-                  
-                  {normatives.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p className="text-lg">Nessuna normativa trovata</p>
-                      <p className="text-sm">Le normative appariranno qui una volta caricate dal database</p>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
           </div>
         </div>
       </div>
-
-      {/* Editor Modal */}
-      {showEditor && (
-        <NormativeEditor
-          normative={editingNormative}
-          onSave={handleSaveNormative}
-          onClose={() => {
-            setShowEditor(false);
-            setEditingNormative(null);
-          }}
-        />
-      )}
     </div>
   );
 }

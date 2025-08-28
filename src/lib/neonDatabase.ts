@@ -6,390 +6,256 @@ export interface User {
   id: string;
   email: string;
   full_name: string;
+  password_hash: string;
   role: 'user' | 'admin';
   created_at: string;
-  updated_at: string;
 }
 
 export interface Normative {
   id: string;
   title: string;
+  content: string;
+  category: string;
   type: 'law' | 'regulation' | 'ruling';
   reference_number: string;
   publication_date: string;
-  content: string;
-  summary?: string;
-  tags?: string[];
+  effective_date: string;
+  tags: string[];
   created_at: string;
   updated_at: string;
 }
 
-// User functions
-export async function createUser(userData: Omit<User, 'id' | 'created_at' | 'updated_at'>): Promise<User | null> {
+// Inizializza le tabelle se non esistono
+export async function initializeTables() {
   try {
-    console.log('Creating user:', userData.email);
-    const result = await sql`
-      INSERT INTO users (email, full_name, role)
-      VALUES (${userData.email}, ${userData.full_name}, ${userData.role})
-      ON CONFLICT (email) DO NOTHING
-      RETURNING *
+    // Crea tabella users
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        email VARCHAR(255) UNIQUE NOT NULL,
+        full_name VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
     `;
-    
-    if (result.length > 0) {
-      console.log('User created successfully:', result[0]);
-      return result[0] as User;
-    }
-    
-    // If no rows returned due to conflict, fetch existing user
-    const existing = await sql`
-      SELECT * FROM users WHERE email = ${userData.email}
+
+    // Crea tabella normatives
+    await sql`
+      CREATE TABLE IF NOT EXISTS normatives (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        type VARCHAR(20) NOT NULL CHECK (type IN ('law', 'regulation', 'ruling')),
+        reference_number VARCHAR(100) NOT NULL,
+        publication_date DATE NOT NULL,
+        effective_date DATE NOT NULL,
+        tags TEXT[] DEFAULT '{}',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
     `;
-    
-    if (existing.length > 0) {
-      console.log('User already exists:', existing[0]);
-      return existing[0] as User;
+
+    // Inserisci dati di esempio se le tabelle sono vuote
+    const userCount = await sql`SELECT COUNT(*) as count FROM users`;
+    if (userCount[0].count === '0') {
+      await insertSampleData();
     }
-    
-    return null;
+
+    console.log('Database Neon inizializzato con successo!');
+    return true;
   } catch (error) {
-    console.error('Error creating user:', error);
-    return null;
+    console.error('Errore inizializzazione Neon:', error);
+    return false;
   }
 }
 
+// Inserisci dati di esempio
+async function insertSampleData() {
+  try {
+    // Hash password semplificato per demo
+    const adminHash = await hashPassword('admin123');
+    const userHash = await hashPassword('user123');
+
+    // Inserisci utenti
+    await sql`
+      INSERT INTO users (email, full_name, password_hash, role)
+      VALUES 
+        ('admin@accademia.it', 'Amministratore', ${adminHash}, 'admin'),
+        ('user@accademia.it', 'Utente Demo', ${userHash}, 'user')
+    `;
+
+    // Inserisci normative
+    await sql`
+      INSERT INTO normatives (title, content, category, type, reference_number, publication_date, effective_date, tags)
+      VALUES 
+        (
+          'Decreto Legislativo 285/1992 - Codice della Strada',
+          'Il presente decreto disciplina la circolazione stradale e stabilisce le norme per il trasporto pubblico locale non di linea. Articolo 1: Definizioni e campo di applicazione. Il trasporto pubblico locale non di linea comprende tutti i servizi di trasporto di persone effettuati con veicoli adibiti al trasporto di persone aventi più di nove posti compreso quello del conducente.',
+          'Trasporto Pubblico',
+          'law',
+          'D.Lgs. 285/1992',
+          '1992-04-30',
+          '1993-01-01',
+          ARRAY['trasporto', 'codice strada', 'pubblico locale']
+        ),
+        (
+          'Legge Regionale 15/2018 - Disciplina TPL non di linea',
+          'La presente legge disciplina il trasporto pubblico locale non di linea nella regione, stabilendo requisiti, procedure e controlli. Articolo 1: Oggetto e finalità. La presente legge disciplina il trasporto pubblico locale non di linea al fine di garantire la sicurezza degli utenti e la qualità del servizio.',
+          'Normativa Regionale',
+          'regulation',
+          'L.R. 15/2018',
+          '2018-03-15',
+          '2018-06-01',
+          ARRAY['trasporto locale', 'regionale', 'licenze']
+        ),
+        (
+          'Sentenza TAR Lazio n. 1234/2023',
+          'Il Tribunale Amministrativo Regionale del Lazio si è pronunciato sulla questione relativa ai requisiti per il rilascio delle autorizzazioni per il trasporto pubblico locale non di linea. La sentenza chiarisce i criteri di valutazione delle domande di autorizzazione.',
+          'Giurisprudenza',
+          'ruling',
+          'TAR Lazio 1234/2023',
+          '2023-05-20',
+          '2023-05-20',
+          ARRAY['tar', 'autorizzazioni', 'giurisprudenza']
+        )
+    `;
+
+    console.log('Dati di esempio inseriti con successo!');
+  } catch (error) {
+    console.error('Errore inserimento dati:', error);
+  }
+}
+
+// Hash password usando Web Crypto API
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password + 'accademia_salt_2024');
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Verifica password
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  const passwordHash = await hashPassword(password);
+  return passwordHash === hash;
+}
+
+// === METODI PER UTENTI ===
 export async function getUserByEmail(email: string): Promise<User | null> {
   try {
-    console.log('Fetching user by email:', email);
     const result = await sql`
-      SELECT * FROM users WHERE email = ${email}
+      SELECT id, email, full_name, password_hash, role, created_at
+      FROM users
+      WHERE email = ${email}
     `;
-    
-    if (result.length > 0) {
-      console.log('User found:', result[0]);
-      return result[0] as User;
-    }
-    
-    console.log('User not found for email:', email);
-    return null;
+    return result[0] || null;
   } catch (error) {
-    console.error('Error fetching user by email:', error);
+    console.error('Errore recupero utente per email:', error);
     return null;
   }
 }
 
 export async function getUserById(id: string): Promise<User | null> {
-  console.log('[DEBUG] getUserById called with ID:', id);
-  
-  if (!isValidUUID(id)) {
-    console.error('[ERROR] Invalid UUID format:', id);
-    return null;
-  }
-
   try {
-    const result = await sql`SELECT * FROM users WHERE id = ${id}::uuid`;
-    console.log('[DEBUG] Query result:', result.length > 0 ? 'User found' : 'User not found');
-    return result[0] as User || null;
-  } catch (error) {
-    console.error('[ERROR] Database error:', error);
-    return null;
-  }
-}
-
-function isValidUUID(id: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(id);
-}
-
-export async function getUsers(): Promise<User[]> {
-  try {
-    console.log('Fetching all users');
     const result = await sql`
-      SELECT * FROM users ORDER BY created_at DESC
+      SELECT id, email, full_name, role, created_at
+      FROM users
+      WHERE id = ${id}
     `;
-    
-    console.log('Users fetched:', result.length);
-    return result as User[];
+    return result[0] || null;
   } catch (error) {
-    console.error('Error fetching users:', error);
+    console.error('Errore recupero utente per ID:', error);
+    return null;
+  }
+}
+
+export async function createUser(email: string, fullName: string, passwordHash: string, role: 'user' | 'admin' = 'user'): Promise<User | null> {
+  try {
+    const result = await sql`
+      INSERT INTO users (email, full_name, password_hash, role)
+      VALUES (${email}, ${fullName}, ${passwordHash}, ${role})
+      RETURNING id, email, full_name, role, created_at
+    `;
+    return result[0] || null;
+  } catch (error) {
+    console.error('Errore creazione utente:', error);
+    return null;
+  }
+}
+
+export async function getAllUsers(): Promise<User[]> {
+  try {
+    const result = await sql`
+      SELECT id, email, full_name, role, created_at
+      FROM users
+      ORDER BY created_at DESC
+    `;
+    return result;
+  } catch (error) {
+    console.error('Errore recupero tutti gli utenti:', error);
     return [];
   }
 }
 
 export async function getUsersCount(): Promise<number> {
   try {
-    console.log('Fetching users count');
-    const result = await sql`
-      SELECT COUNT(*) as count FROM users
-    `;
-    
-    const count = parseInt(result[0].count as string);
-    console.log('Users count:', count);
-    return count;
+    const result = await sql`SELECT COUNT(*) as count FROM users`;
+    return parseInt(result[0].count);
   } catch (error) {
-    console.error('Error fetching users count:', error);
+    console.error('Errore conteggio utenti:', error);
     return 0;
   }
 }
 
-export async function updateUser(id: string, updates: Partial<User>): Promise<User | null> {
+// === METODI PER NORMATIVE ===
+export async function getAllNormatives(): Promise<Normative[]> {
   try {
-    if (!isValidUUID(id)) {
-      throw new Error('ID utente non valido');
-    }
-    
     const result = await sql`
-      UPDATE users
-      SET full_name = ${updates.full_name}, 
-          role = ${updates.role}
-      WHERE id = ${id}::uuid
-      RETURNING *
+      SELECT * FROM normatives
+      ORDER BY publication_date DESC
     `;
-    return result[0] || null;
+    return result;
   } catch (error) {
-    console.error('Error updating user:', error);
-    return null;
-  }
-}
-
-export async function deleteUser(id: string): Promise<boolean> {
-  try {
-    if (!isValidUUID(id)) {
-      throw new Error('ID utente non valido');
-    }
-    
-    await sql`DELETE FROM users WHERE id = ${id}::uuid`;
-    return true;
-  } catch (error) {
-    console.error('Error deleting user:', error);
-    return false;
-  }
-}
-
-// Normative functions
-export async function createNormative(normativeData: Omit<Normative, 'id' | 'created_at' | 'updated_at'>): Promise<Normative | null> {
-  try {
-    console.log('Creating normative:', normativeData.title);
-    const result = await sql`
-      INSERT INTO normatives (title, type, reference_number, publication_date, content, summary, tags)
-      VALUES (${normativeData.title}, ${normativeData.type}, ${normativeData.reference_number}, 
-              ${normativeData.publication_date}, ${normativeData.content}, 
-              ${normativeData.summary || null}, ${JSON.stringify(normativeData.tags || [])})
-      ON CONFLICT (reference_number) DO NOTHING
-      RETURNING *
-    `;
-    
-    if (result.length > 0) {
-      console.log('Normative created successfully:', result[0]);
-      return result[0] as Normative;
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Error creating normative:', error);
-    return null;
-  }
-}
-
-export async function getNormatives(): Promise<Normative[]> {
-  try {
-    console.log('Fetching all normatives');
-    const result = await sql`
-      SELECT * FROM normatives ORDER BY publication_date DESC
-    `;
-    
-    console.log('Normatives fetched:', result.length);
-    return result as Normative[];
-  } catch (error) {
-    console.error('Error fetching normatives:', error);
+    console.error('Errore recupero normative:', error);
     return [];
   }
 }
 
 export async function getNormativeById(id: string): Promise<Normative | null> {
   try {
-    console.log('Fetching normative by ID:', id);
     const result = await sql`
-      SELECT * FROM normatives WHERE id = ${id}
+      SELECT * FROM normatives
+      WHERE id = ${id}
     `;
-    
-    if (result.length > 0) {
-      console.log('Normative found:', result[0]);
-      return result[0] as Normative;
-    }
-    
-    console.log('Normative not found for ID:', id);
-    return null;
+    return result[0] || null;
   } catch (error) {
-    console.error('Error fetching normative by ID:', error);
+    console.error('Errore recupero normativa per ID:', error);
     return null;
   }
 }
 
 export async function getNormativesCount(): Promise<number> {
   try {
-    console.log('Fetching normatives count');
-    const result = await sql`
-      SELECT COUNT(*) as count FROM normatives
-    `;
-    
-    const count = parseInt(result[0].count as string);
-    console.log('Normatives count:', count);
-    return count;
+    const result = await sql`SELECT COUNT(*) as count FROM normatives`;
+    return parseInt(result[0].count);
   } catch (error) {
-    console.error('Error fetching normatives count:', error);
+    console.error('Errore conteggio normative:', error);
     return 0;
   }
 }
 
-export async function updateNormative(id: string, updates: Partial<Normative>): Promise<Normative | null> {
+export async function getRecentNormativesCount(days: number = 30): Promise<number> {
   try {
-    console.log('Updating normative:', id, updates);
-    
-    // Build dynamic update query
-    const updateFields = [];
-    const values = [];
-    
-    if (updates.title !== undefined) {
-      updateFields.push('title = $' + (values.length + 1));
-      values.push(updates.title);
-    }
-    if (updates.type !== undefined) {
-      updateFields.push('type = $' + (values.length + 1));
-      values.push(updates.type);
-    }
-    if (updates.reference_number !== undefined) {
-      updateFields.push('reference_number = $' + (values.length + 1));
-      values.push(updates.reference_number);
-    }
-    if (updates.publication_date !== undefined) {
-      updateFields.push('publication_date = $' + (values.length + 1));
-      values.push(updates.publication_date);
-    }
-    if (updates.content !== undefined) {
-      updateFields.push('content = $' + (values.length + 1));
-      values.push(updates.content);
-    }
-    if (updates.summary !== undefined) {
-      updateFields.push('summary = $' + (values.length + 1));
-      values.push(updates.summary);
-    }
-    if (updates.tags !== undefined) {
-      updateFields.push('tags = $' + (values.length + 1));
-      values.push(JSON.stringify(updates.tags));
-    }
-    
-    updateFields.push('updated_at = NOW()');
-    values.push(id); // ID is always the last parameter
-    
-    const query = `
-      UPDATE normatives 
-      SET ${updateFields.join(', ')}
-      WHERE id = $${values.length}
-      RETURNING *
-    `;
-    
-    console.log('Update query:', query);
-    console.log('Update values:', values);
-    
-    const result = await sql(query, values);
-    
-    if (result.length > 0) {
-      console.log('Normative updated successfully:', result[0]);
-      return result[0] as Normative;
-    }
-    
-    console.log('No normative updated for ID:', id);
-    return null;
-  } catch (error) {
-    console.error('Error updating normative:', error);
-    return null;
-  }
-}
-
-export async function deleteNormative(id: string): Promise<boolean> {
-  try {
-    console.log('Deleting normative:', id);
     const result = await sql`
-      DELETE FROM normatives WHERE id = ${id}
-      RETURNING id
+      SELECT COUNT(*) as count FROM normatives 
+      WHERE created_at >= NOW() - INTERVAL '${days} days'
     `;
-    
-    const success = result.length > 0;
-    console.log('Normative deletion result:', success);
-    return success;
+    return parseInt(result[0].count);
   } catch (error) {
-    console.error('Error deleting normative:', error);
-    return false;
-  }
-}
-
-// Initialize database with sample data
-export async function initializeDatabase(): Promise<void> {
-  try {
-    console.log('Initializing Neon database...');
-    
-    // Create tables if they don't exist
-    await sql`
-      CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        email TEXT UNIQUE NOT NULL,
-        full_name TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'user',
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `;
-    
-    await sql`
-      CREATE TABLE IF NOT EXISTS normatives (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        title TEXT NOT NULL,
-        type TEXT NOT NULL,
-        reference_number TEXT UNIQUE NOT NULL,
-        publication_date DATE NOT NULL,
-        content TEXT NOT NULL,
-        summary TEXT,
-        tags JSONB DEFAULT '[]',
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `;
-    
-    // Insert sample admin user
-    await createUser({
-      email: 'admin@accademiatpl.org',
-      full_name: 'Amministratore Sistema',
-      role: 'admin'
-    });
-    
-    // Insert sample normatives
-    const sampleNormatives = [
-      {
-        title: 'Decreto Legislativo 285/1992',
-        type: 'law' as const,
-        reference_number: 'D.Lgs. 285/1992',
-        publication_date: '1992-04-30',
-        content: 'Nuovo codice della strada. Disciplina la circolazione stradale e stabilisce le norme di comportamento degli utenti della strada.',
-        summary: 'Codice della Strada italiano',
-        tags: ['trasporti', 'sicurezza', 'circolazione']
-      },
-      {
-        title: 'Regolamento CE 561/2006',
-        type: 'regulation' as const,
-        reference_number: 'Reg. CE 561/2006',
-        publication_date: '2006-03-15',
-        content: 'Regolamento relativo all\'armonizzazione di alcune disposizioni in materia sociale nel settore dei trasporti su strada.',
-        summary: 'Tempi di guida e riposo',
-        tags: ['europa', 'tempi di guida', 'riposo']
-      }
-    ];
-    
-    for (const normative of sampleNormatives) {
-      await createNormative(normative);
-    }
-    
-    console.log('Database Neon inizializzato con successo!');
-  } catch (error) {
-    console.error('Errore inizializzazione database Neon:', error);
+    console.error('Errore conteggio normative recenti:', error);
+    return 0;
   }
 }
