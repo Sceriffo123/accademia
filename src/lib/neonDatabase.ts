@@ -31,12 +31,6 @@ export async function initializeTables() {
     console.log('🏗️ INIT DEBUG: Inizializzazione tabelle...');
     console.log('🏗️ INIT DEBUG: Database URL presente:', !!import.meta.env.VITE_DATABASE_URL);
     
-    // Drop existing tables to ensure schema compatibility
-    console.log('🏗️ INIT DEBUG: Rimozione tabelle esistenti per aggiornamento schema...');
-    await sql`DROP TABLE IF EXISTS activity_logs CASCADE`;
-    await sql`DROP TABLE IF EXISTS normatives CASCADE`;
-    await sql`DROP TABLE IF EXISTS users CASCADE`;
-    
     // Crea tabella users
     console.log('🏗️ INIT DEBUG: Creazione tabella users...');
     await sql`
@@ -59,7 +53,7 @@ export async function initializeTables() {
         content TEXT NOT NULL,
         category VARCHAR(100) NOT NULL,
         type VARCHAR(20) NOT NULL CHECK (type IN ('law', 'regulation', 'ruling')),
-        reference_number VARCHAR(100) NOT NULL,
+        reference_number VARCHAR(100) UNIQUE NOT NULL,
         publication_date DATE NOT NULL,
         effective_date DATE NOT NULL,
         tags TEXT[] DEFAULT '{}',
@@ -68,7 +62,7 @@ export async function initializeTables() {
       )
     `;
 
-    // Forza inserimento dati
+    // Inserisci dati di esempio
     console.log('🏗️ INIT DEBUG: Inserimento dati di esempio...');
     await insertSampleData();
 
@@ -104,10 +98,6 @@ async function insertSampleData() {
     console.log('📝 SAMPLE DEBUG: Admin hash completo length:', adminHash.length);
     console.log('📝 SAMPLE DEBUG: User hash completo length:', userHash.length);
 
-    // Prima elimina tutti gli utenti esistenti per evitare conflitti
-    console.log('📝 SAMPLE DEBUG: Pulizia utenti esistenti...');
-    await sql`DELETE FROM users WHERE email IN ('superadmin@accademiatpl.org', 'admin@accademia.it', 'user@accademia.it')`;
-
     // Inserisci utenti
     console.log('📝 SAMPLE DEBUG: Inserimento utenti...');
     const insertResult = await sql`
@@ -116,6 +106,7 @@ async function insertSampleData() {
         ('superadmin@accademiatpl.org', 'Super Amministratore', ${superAdminHash}, 'superadmin'),
         ('admin@accademia.it', 'Amministratore', ${adminHash}, 'admin'),
         ('user@accademia.it', 'Utente Demo', ${userHash}, 'user')
+      ON CONFLICT (email) DO NOTHING
       RETURNING id, email, full_name, role
     `;
     console.log('📝 SAMPLE DEBUG: Utenti inseriti:', insertResult);
