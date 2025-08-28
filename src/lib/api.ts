@@ -86,3 +86,32 @@ export async function getUsersCount(): Promise<number> {
     return 0;
   }
 }
+
+export async function updateUser(id: string, data: { email?: string; full_name?: string; role?: 'user' | 'admin' }): Promise<any> {
+  const { updateUser } = await import('./neonDatabase');
+  return await updateUser(id, data);
+}
+
+export async function deleteUser(id: string): Promise<boolean> {
+  const { deleteUser } = await import('./neonDatabase');
+  return await deleteUser(id);
+}
+
+export async function createNewUser(email: string, fullName: string, password: string, role: 'user' | 'admin' = 'user'): Promise<any> {
+  const { createUser } = await import('./neonDatabase');
+  const { hashPassword } = await import('./neonDatabase');
+  
+  // Hash password usando la stessa funzione del database
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password + 'accademia_salt_2024');
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  return await createUser(email, fullName, passwordHash, role);
+}
+
+export async function updateUserPassword(id: string, newPassword: string): Promise<boolean> {
+  const { updateUserPassword } = await import('./neonDatabase');
+  return await updateUserPassword(id, newPassword);
+}

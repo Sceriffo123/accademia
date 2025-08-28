@@ -297,6 +297,73 @@ export async function getUsersCount(): Promise<number> {
   }
 }
 
+export async function updateUser(id: string, data: { email?: string; full_name?: string; role?: 'user' | 'admin' }): Promise<User | null> {
+  try {
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (data.email) {
+      updates.push(`email = $${paramIndex++}`);
+      values.push(data.email);
+    }
+    if (data.full_name) {
+      updates.push(`full_name = $${paramIndex++}`);
+      values.push(data.full_name);
+    }
+    if (data.role) {
+      updates.push(`role = $${paramIndex++}`);
+      values.push(data.role);
+    }
+
+    if (updates.length === 0) return null;
+
+    const query = `
+      UPDATE users 
+      SET ${updates.join(', ')} 
+      WHERE id = $${paramIndex}
+      RETURNING id, email, full_name, role, created_at
+    `;
+    values.push(id);
+
+    const result = await sql.unsafe(query, values);
+    return result[0] || null;
+  } catch (error) {
+    console.error('Errore aggiornamento utente:', error);
+    throw error;
+  }
+}
+
+export async function deleteUser(id: string): Promise<boolean> {
+  try {
+    const result = await sql`
+      DELETE FROM users 
+      WHERE id = ${id}
+      RETURNING id
+    `;
+    return result.length > 0;
+  } catch (error) {
+    console.error('Errore cancellazione utente:', error);
+    throw error;
+  }
+}
+
+export async function updateUserPassword(id: string, newPassword: string): Promise<boolean> {
+  try {
+    const passwordHash = await hashPassword(newPassword);
+    const result = await sql`
+      UPDATE users 
+      SET password_hash = ${passwordHash}
+      WHERE id = ${id}
+      RETURNING id
+    `;
+    return result.length > 0;
+  } catch (error) {
+    console.error('Errore aggiornamento password:', error);
+    throw error;
+  }
+}
+
 // === METODI PER NORMATIVE ===
 export async function getAllNormatives(): Promise<Normative[]> {
   try {

@@ -216,27 +216,94 @@ export default function Admin() {
                     <tbody>
                       {users.map((user) => (
                         <tr key={user.id} className="border-b border-gray-100">
-                          <td className="py-3 px-4">{user.full_name}</td>
-                          <td className="py-3 px-4 text-sm text-gray-600">{user.email}</td>
                           <td className="py-3 px-4">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {user.role === 'admin' ? 'Admin' : 'Utente'}
-                            </span>
+                            {editingUser?.id === user.id ? (
+                              <input
+                                type="text"
+                                value={editingUser.full_name}
+                                onChange={(e) => setEditingUser({...editingUser, full_name: e.target.value})}
+                                className="w-full px-2 py-1 border border-gray-300 rounded"
+                              />
+                            ) : (
+                              user.full_name
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600">
+                            {editingUser?.id === user.id ? (
+                              <input
+                                type="email"
+                                value={editingUser.email}
+                                onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                            ) : (
+                              user.email
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            {editingUser?.id === user.id ? (
+                              <select
+                                value={editingUser.role}
+                                onChange={(e) => setEditingUser({...editingUser, role: e.target.value as 'user' | 'admin'})}
+                                className="px-2 py-1 border border-gray-300 rounded text-xs"
+                              >
+                                <option value="user">Utente</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                            ) : (
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                              }`}>
+                                {user.role === 'admin' ? 'Admin' : 'Utente'}
+                              </span>
+                            )}
                           </td>
                           <td className="py-3 px-4 text-sm text-gray-600">
                             {new Date(user.created_at).toLocaleDateString('it-IT')}
                           </td>
                           <td className="py-3 px-4">
-                            <div className="flex items-center space-x-2">
-                              <button className="p-1 text-gray-400 hover:text-blue-600 transition-colors">
-                                <Edit3 className="h-4 w-4" />
-                              </button>
-                              <button className="p-1 text-gray-400 hover:text-red-600 transition-colors">
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
+                            {editingUser?.id === user.id ? (
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={handleUpdateUser}
+                                  className="p-1 text-gray-400 hover:text-green-600 transition-colors"
+                                  title="Salva"
+                                >
+                                  <Save className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => setEditingUser(null)}
+                                  className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                                  title="Annulla"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={() => setEditingUser({...user})}
+                                  className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                                  title="Modifica"
+                                >
+                                  <Edit3 className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => setShowPasswordModal(user)}
+                                  className="p-1 text-gray-400 hover:text-yellow-600 transition-colors"
+                                  title="Cambia Password"
+                                >
+                                  <Key className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteUser(user.id, user.email)}
+                                  className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                                  title="Elimina"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -303,6 +370,132 @@ export default function Admin() {
             )}
           </div>
         </div>
+
+        {/* Modal Aggiungi Utente */}
+        {showAddUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Aggiungi Nuovo Utente</h3>
+                <button
+                  onClick={() => setShowAddUser(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={userForm.email}
+                    onChange={(e) => setUserForm({...userForm, email: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="email@esempio.com"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                  <input
+                    type="text"
+                    value={userForm.full_name}
+                    onChange={(e) => setUserForm({...userForm, full_name: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nome e Cognome"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  <input
+                    type="password"
+                    value={userForm.password}
+                    onChange={(e) => setUserForm({...userForm, password: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Minimo 6 caratteri"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo</label>
+                  <select
+                    value={userForm.role}
+                    onChange={(e) => setUserForm({...userForm, role: e.target.value as 'user' | 'admin'})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="user">Utente</option>
+                    <option value="admin">Amministratore</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowAddUser(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleCreateUser}
+                  className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                >
+                  Crea Utente
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Cambia Password */}
+        {showPasswordModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Cambia Password - {showPasswordModal.full_name}
+                </h3>
+                <button
+                  onClick={() => setShowPasswordModal(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nuova Password</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Minimo 6 caratteri"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowPasswordModal(null)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleUpdatePassword}
+                  className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                >
+                  Aggiorna Password
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
