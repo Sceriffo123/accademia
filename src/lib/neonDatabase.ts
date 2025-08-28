@@ -107,6 +107,7 @@ async function insertSampleData() {
       VALUES 
         ('admin@accademia.it', 'Amministratore', ${adminHash}, 'admin'),
         ('user@accademia.it', 'Utente Demo', ${userHash}, 'user')
+     ON CONFLICT (email) DO NOTHING
       RETURNING id, email, full_name, role
     `;
     console.log('📝 SAMPLE DEBUG: Utenti inseriti:', insertResult);
