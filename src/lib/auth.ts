@@ -14,9 +14,9 @@ import {
   Shield,
   UserX
 } from 'lucide-react';
-function generateToken(userEmail: string): string {
+
 interface AdminStats {
-    userEmail,
+  totalUsers: number;
   totalNormatives: number;
   totalViews: number;
   newUsersThisMonth: number;
@@ -475,13 +475,13 @@ export default function Admin() {
       {/* Editor Modal */}
       {showEditor && (
         <NormativeEditor
-export function verifyToken(token: string): { userEmail: string } | null {
+          normative={editingNormative}
           onSave={handleSaveNormative}
           onClose={() => {
             setShowEditor(false);
             setEditingNormative(null);
           }}
-    return { userEmail: payload.userEmail };
+        />
       )}
     </div>
   );
