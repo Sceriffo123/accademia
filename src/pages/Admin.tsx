@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getNormativesCount, getUsersCount, getUsers, getNormatives } from '../lib/api';
+import { getNormativesCount, getUsersCount, getUsers, getNormatives, updateUser, deleteUser, createNewUser, updateUserPassword } from '../lib/api';
 import { 
   Users, 
   FileText, 
