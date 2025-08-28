@@ -8,7 +8,10 @@ import {
   Trash2, 
   Eye,
   Settings,
-  BarChart3
+  BarChart3,
+  X,
+  Save,
+  Key
 } from 'lucide-react';
 
 interface AdminStats {
@@ -30,6 +33,16 @@ export default function Admin() {
   const [normatives, setNormatives] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddNormative, setShowAddNormative] = useState(false);
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState<any>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [userForm, setUserForm] = useState({
+    email: '',
+    full_name: '',
+    password: '',
+    role: 'user' as 'user' | 'admin'
+  });
 
   useEffect(() => {
     fetchAdminData();
@@ -58,6 +71,80 @@ export default function Admin() {
       console.error('Error fetching admin data:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleCreateUser() {
+    try {
+      if (!userForm.email || !userForm.full_name || !userForm.password) {
+        alert('Tutti i campi sono obbligatori');
+        return;
+      }
+      
+      await createNewUser(userForm.email, userForm.full_name, userForm.password, userForm.role);
+      setShowAddUser(false);
+      setUserForm({ email: '', full_name: '', password: '', role: 'user' });
+      await fetchAdminData(); // Refresh data
+      alert('Utente creato con successo!');
+    } catch (error) {
+      console.error('Error creating user:', error);
+      alert('Errore nella creazione dell\'utente');
+    }
+  }
+
+  async function handleUpdateUser() {
+    try {
+      if (!editingUser) return;
+      
+      await updateUser(editingUser.id, {
+        email: editingUser.email,
+        full_name: editingUser.full_name,
+        role: editingUser.role
+      });
+      
+      setEditingUser(null);
+      await fetchAdminData(); // Refresh data
+      alert('Utente aggiornato con successo!');
+    } catch (error) {
+      console.error('Error updating user:', error);
+      alert('Errore nell\'aggiornamento dell\'utente');
+    }
+  }
+
+  async function handleDeleteUser(userId: string, userEmail: string) {
+    if (!confirm(`Sei sicuro di voler eliminare l'utente ${userEmail}?`)) {
+      return;
+    }
+    
+    try {
+      await deleteUser(userId);
+      await fetchAdminData(); // Refresh data
+      alert('Utente eliminato con successo!');
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      alert('Errore nell\'eliminazione dell\'utente');
+    }
+  }
+
+  async function handleUpdatePassword() {
+    try {
+      if (!showPasswordModal || !newPassword) {
+        alert('Inserisci una nuova password');
+        return;
+      }
+      
+      if (newPassword.length < 6) {
+        alert('La password deve essere di almeno 6 caratteri');
+        return;
+      }
+      
+      await updateUserPassword(showPasswordModal.id, newPassword);
+      setShowPasswordModal(null);
+      setNewPassword('');
+      alert('Password aggiornata con successo!');
+    } catch (error) {
+      console.error('Error updating password:', error);
+      alert('Errore nell\'aggiornamento della password');
     }
   }
 
@@ -200,6 +287,13 @@ export default function Admin() {
                   <h3 className="text-lg font-semibold text-gray-900">
                     Gestione Utenti ({users.length})
                   </h3>
+                  <button
+                    onClick={() => setShowAddUser(true)}
+                    className="flex items-center space-x-2 bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors"
+                  >
+                    <Plus className="h-5 w-5" />
+                    <span>Aggiungi Utente</span>
+                  </button>
                 </div>
                 
                 <div className="overflow-x-auto">
