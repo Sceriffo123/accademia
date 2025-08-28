@@ -54,7 +54,8 @@ export async function getNormativeById(id: string): Promise<Normative | null> {
 
 export async function getNormativesCount(): Promise<number> {
   try {
-    return await getNormativesCount();
+    const { getNormativesCount: getNormativesCountDB } = await import('./neonDatabase');
+    return await getNormativesCountDB();
   } catch (error) {
     console.error('Error counting normatives:', error);
     return 0;
@@ -63,7 +64,8 @@ export async function getNormativesCount(): Promise<number> {
 
 export async function getRecentNormativesCount(days: number = 30): Promise<number> {
   try {
-    return await getRecentNormativesCount(days);
+    const { getRecentNormativesCount: getRecentNormativesCountDB } = await import('./neonDatabase');
+    return await getRecentNormativesCountDB(days);
   } catch (error) {
     console.error('Error counting recent normatives:', error);
     return 0;
@@ -81,10 +83,21 @@ export async function getUsers(): Promise<any[]> {
 
 export async function getUsersCount(): Promise<number> {
   try {
-    return await getUsersCount();
+    const { getUsersCount: getUsersCountDB } = await import('./neonDatabase');
+    return await getUsersCountDB();
   } catch (error) {
     console.error('Error counting users:', error);
     return 0;
+  }
+}
+
+export async function createNormative(data: Omit<Normative, 'id' | 'created_at' | 'updated_at'>): Promise<Normative | null> {
+  try {
+    const { createNormative: createNormativeDB } = await import('./neonDatabase');
+    return await createNormativeDB(data);
+  } catch (error) {
+    console.error('Error creating normative:', error);
+    return null;
   }
 }
 

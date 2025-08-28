@@ -260,36 +260,103 @@ export async function getRecentNormativesCount(days: number = 30): Promise<numbe
   }
 }
 
-export async function updateNormative(id: string, data: Partial<Omit<Normative, 'id' | 'created_at' | 'updated_at'>>): Promise<Normative | null> {
+export async function createNormative(data: Omit<Normative, 'id' | 'created_at' | 'updated_at'>): Promise<Normative | null> {
   try {
     const result = await sql`
-      UPDATE normatives 
-      SET 
-        title = COALESCE(${data.title}, title),
-        content = COALESCE(${data.content}, content),
-        category = COALESCE(${data.category}, category),
-        type = COALESCE(${data.type}, type),
-        reference_number = COALESCE(${data.reference_number}, reference_number),
-        publication_date = COALESCE(${data.publication_date}, publication_date),
-        effective_date = COALESCE(${data.effective_date}, effective_date),
-        tags = COALESCE(${data.tags}, tags),
-        updated_at = NOW()
-      WHERE id = ${id}
+      INSERT INTO normatives (title, content, category, type, reference_number, publication_date, effective_date, tags)
+      VALUES (${data.title}, ${data.content}, ${data.category}, ${data.type}, ${data.reference_number}, ${data.publication_date}, ${data.effective_date}, ${data.tags})
       RETURNING *
     `;
     return result[0] || null;
   } catch (error) {
+    console.error('Errore creazione normativa:', error);
+    return null;
+  }
+}
+
+export async function updateNormative(id: string, data: Partial<Omit<Normative, 'id' | 'created_at' | 'updated_at'>>): Promise<Normative | null> {
+  try {
+    // Costruiamo dinamicamente la query UPDATE solo per i campi forniti
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (data.title !== undefined) {
+      updates.push(`title = $${paramIndex++}`);
+      values.push(data.title);
+    }
+    if (data.content !== undefined) {
+      updates.push(`content = $${paramIndex++}`);
+      values.push(data.content);
+    }
+    if (data.category !== undefined) {
+      updates.push(`category = $${paramIndex++}`);
+      values.push(data.category);
+    }
+    if (data.type !== undefined) {
+      updates.push(`type = $${paramIndex++}`);
+      values.push(data.type);
+    }
+    if (data.reference_number !== undefined) {
+      updates.push(`reference_number = $${paramIndex++}`);
+      values.push(data.reference_number);
+    }
+    if (data.publication_date !== undefined) {
+      updates.push(`publication_date = $${paramIndex++}`);
+      values.push(data.publication_date);
+    }
+    if (data.effective_date !== undefined) {
+      updates.push(`effective_date = $${paramIndex++}`);
+      values.push(data.effective_date);
+    }
+    if (data.tags !== undefined) {
+      updates.push(`tags = $${paramIndex++}`);
+      values.push(data.tags);
+    }
+
+    if (updates.length === 0) {
+      console.log('Nessun campo da aggiornare');
+      return await getNormativeById(id);
+    }
+
+    // Aggiungiamo sempre updated_at
+    updates.push(`updated_at = NOW()`);
+    values.push(id); // ID per la WHERE clause
+
+    const query = `
+      UPDATE normatives 
+      SET ${updates.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
+
+    console.log('Executing update query:', query);
+    console.log('With values:', values);
+
+    const result = await sql`
+      UPDATE normatives
+      SET ${sql.unsafe(updates.join(', '))}
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    
+    console.log('Update result:', result);
+    return result[0] || null;
+  } catch (error) {
     console.error('Errore aggiornamento normativa:', error);
+    console.error('Error details:', error);
     return null;
   }
 }
 
 export async function deleteNormative(id: string): Promise<boolean> {
   try {
+    console.log('Deleting normative with ID:', id);
     const result = await sql`
       DELETE FROM normatives 
       WHERE id = ${id}
     `;
+    console.log('Delete result:', result);
     return true;
   } catch (error) {
     console.error('Errore eliminazione normativa:', error);

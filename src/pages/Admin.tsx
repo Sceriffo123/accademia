@@ -79,15 +79,15 @@ export default function Admin() {
         setNormatives(prev => prev.map(n => n.id === id ? updated : n));
         setShowEditor(false);
         setEditingNormative(null);
-        // Ricarica i dati per essere sicuri
-        await fetchAdminData();
+        // Mostra messaggio di successo
+        alert('Normativa aggiornata con successo!');
       } else {
         console.error('Failed to update normative');
         alert('Errore durante il salvataggio della normativa');
       }
     } catch (error) {
       console.error('Error updating normative:', error);
-      alert('Errore durante il salvataggio: ' + error.message);
+      alert('Errore durante il salvataggio: ' + (error as Error).message);
     }
   }
 
@@ -100,15 +100,14 @@ export default function Admin() {
       if (success) {
         console.log('Normative deleted successfully');
         setNormatives(prev => prev.filter(n => n.id !== id));
-        // Ricarica i dati per essere sicuri
-        await fetchAdminData();
+        alert('Normativa eliminata con successo!');
       } else {
         console.error('Failed to delete normative');
         alert('Errore durante l\'eliminazione della normativa');
       }
     } catch (error) {
       console.error('Error deleting normative:', error);
-      alert('Errore durante l\'eliminazione: ' + error.message);
+      alert('Errore durante l\'eliminazione: ' + (error as Error).message);
     }
   }
 
