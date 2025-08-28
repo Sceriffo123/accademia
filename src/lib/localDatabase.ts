@@ -118,7 +118,7 @@ class LocalDatabase {
   }
 
   // Hash password usando Web Crypto API
-  async hashPassword(password: string): Promise<string> {
+  private async hashPassword(password: string): Promise<string> {
     const encoder = new TextEncoder();
     const data = encoder.encode(password + 'accademia_salt_2024');
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);

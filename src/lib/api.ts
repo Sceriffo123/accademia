@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { 
   getAllNormatives, 
   getNormativeById, 
@@ -87,36 +86,3 @@ export async function getUsersCount(): Promise<number> {
     return 0;
   }
 }
-=======
-// API facade that re-exports database functions
-import { 
-  getUsers as getAllUsers,
-  getUserById,
-  getUsersCount,
-  getNormatives as getAllNormatives,
-  getNormativeById,
-  getNormativesCount,
-  updateNormative,
-  deleteNormative,
-  createNormative,
-  createUser,
-  type User,
-  type Normative
-} from './neonDatabase';
-
-// Re-export all functions and types
-export {
-  getAllUsers as getUsers,
-  getUserById,
-  getUsersCount,
-  getAllNormatives as getNormatives,
-  getNormativeById,
-  getNormativesCount,
-  updateNormative,
-  deleteNormative,
-  createNormative,
-  createUser,
-  type User,
-  type Normative
-};
->>>>>>> aac547e7562aa787a54e24116dd3317f65d7dc6c
