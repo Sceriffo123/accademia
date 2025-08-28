@@ -11,7 +11,10 @@ import {
   BarChart3,
   X,
   Save,
-  Key
+  Key,
+  CheckCircle,
+  AlertCircle,
+  Info
 } from 'lucide-react';
 
 interface AdminStats {
@@ -19,6 +22,13 @@ interface AdminStats {
   totalNormatives: number;
   totalViews: number;
   newUsersThisMonth: number;
+}
+
+interface Notification {
+  id: string;
+  type: 'success' | 'error' | 'info';
+  title: string;
+  message: string;
 }
 
 export default function Admin() {
@@ -37,6 +47,7 @@ export default function Admin() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showPasswordModal, setShowPasswordModal] = useState<any>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [userForm, setUserForm] = useState({
     email: '',
     full_name: '',
@@ -47,6 +58,21 @@ export default function Admin() {
   useEffect(() => {
     fetchAdminData();
   }, []);
+
+  function addNotification(type: 'success' | 'error' | 'info', title: string, message: string) {
+    const id = Date.now().toString();
+    const notification = { id, type, title, message };
+    setNotifications(prev => [...prev, notification]);
+    
+    // Rimuovi automaticamente dopo 5 secondi
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 5000);
+  }
+
+  function removeNotification(id: string) {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  }
 
   async function fetchAdminData() {
     try {
@@ -77,7 +103,7 @@ export default function Admin() {
   async function handleCreateUser() {
     try {
       if (!userForm.email || !userForm.full_name || !userForm.password) {
-        alert('Tutti i campi sono obbligatori');
+        addNotification('error', 'Errore Validazione', 'Tutti i campi sono obbligatori per creare un utente');
         return;
       }
       
@@ -85,10 +111,10 @@ export default function Admin() {
       setShowAddUser(false);
       setUserForm({ email: '', full_name: '', password: '', role: 'user' });
       await fetchAdminData(); // Refresh data
-      alert('Utente creato con successo!');
+      addNotification('success', 'Utente Creato', `L'utente ${userForm.full_name} è stato aggiunto al sistema`);
     } catch (error) {
       console.error('Error creating user:', error);
-      alert('Errore nella creazione dell\'utente');
+      addNotification('error', 'Errore Creazione', 'Si è verificato un errore durante la creazione dell\'utente');
     }
   }
 
@@ -104,10 +130,10 @@ export default function Admin() {
       
       setEditingUser(null);
       await fetchAdminData(); // Refresh data
-      alert('Utente aggiornato con successo!');
+      addNotification('success', 'Utente Aggiornato', `Le informazioni di ${editingUser.full_name} sono state salvate`);
     } catch (error) {
       console.error('Error updating user:', error);
-      alert('Errore nell\'aggiornamento dell\'utente');
+      addNotification('error', 'Errore Aggiornamento', 'Non è stato possibile aggiornare le informazioni dell\'utente');
     }
   }
 
@@ -119,32 +145,32 @@ export default function Admin() {
     try {
       await deleteUser(userId);
       await fetchAdminData(); // Refresh data
-      alert('Utente eliminato con successo!');
+      addNotification('info', 'Utente Rimosso', `L'utente ${userEmail} è stato eliminato dal sistema`);
     } catch (error) {
       console.error('Error deleting user:', error);
-      alert('Errore nell\'eliminazione dell\'utente');
+      addNotification('error', 'Errore Eliminazione', 'Non è stato possibile eliminare l\'utente');
     }
   }
 
   async function handleUpdatePassword() {
     try {
       if (!showPasswordModal || !newPassword) {
-        alert('Inserisci una nuova password');
+        addNotification('error', 'Password Richiesta', 'Inserisci una nuova password per continuare');
         return;
       }
       
       if (newPassword.length < 6) {
-        alert('La password deve essere di almeno 6 caratteri');
+        addNotification('error', 'Password Troppo Corta', 'La password deve contenere almeno 6 caratteri');
         return;
       }
       
       await updateUserPassword(showPasswordModal.id, newPassword);
       setShowPasswordModal(null);
       setNewPassword('');
-      alert('Password aggiornata con successo!');
+      addNotification('success', 'Password Aggiornata', `La password di ${showPasswordModal.full_name} è stata modificata`);
     } catch (error) {
       console.error('Error updating password:', error);
-      alert('Errore nell\'aggiornamento della password');
+      addNotification('error', 'Errore Password', 'Non è stato possibile aggiornare la password');
     }
   }
 
@@ -190,6 +216,48 @@ export default function Admin() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
+        {/* Toast Notifications */}
+        <div className="fixed top-4 right-4 z-50 space-y-2">
+          {notifications.map((notification) => {
+            const Icon = notification.type === 'success' ? CheckCircle : 
+                        notification.type === 'error' ? AlertCircle : Info;
+            const bgColor = notification.type === 'success' ? 'bg-green-50 border-green-200' :
+                           notification.type === 'error' ? 'bg-red-50 border-red-200' :
+                           'bg-blue-50 border-blue-200';
+            const iconColor = notification.type === 'success' ? 'text-green-600' :
+                             notification.type === 'error' ? 'text-red-600' :
+                             'text-blue-600';
+            const textColor = notification.type === 'success' ? 'text-green-800' :
+                             notification.type === 'error' ? 'text-red-800' :
+                             'text-blue-800';
+            
+            return (
+              <div
+                key={notification.id}
+                className={`${bgColor} border rounded-lg p-4 shadow-lg max-w-sm animate-in slide-in-from-right duration-300`}
+              >
+                <div className="flex items-start space-x-3">
+                  <Icon className={`h-5 w-5 ${iconColor} flex-shrink-0 mt-0.5`} />
+                  <div className="flex-1 min-w-0">
+                    <h4 className={`text-sm font-semibold ${textColor}`}>
+                      {notification.title}
+                    </h4>
+                    <p className={`text-sm ${textColor} opacity-90 mt-1`}>
+                      {notification.message}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => removeNotification(notification.id)}
+                    className={`${iconColor} hover:opacity-70 transition-opacity`}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
