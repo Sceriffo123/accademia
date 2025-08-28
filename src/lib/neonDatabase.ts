@@ -31,6 +31,17 @@ export async function initializeTables() {
     console.log('🏗️ INIT DEBUG: Inizializzazione tabelle...');
     console.log('🏗️ INIT DEBUG: Database URL presente:', !!import.meta.env.VITE_DATABASE_URL);
     
+    // Controlla se gli utenti esistono già
+    console.log('🏗️ INIT DEBUG: Controllo utenti esistenti...');
+    const existingUsers = await sql`SELECT COUNT(*) as count FROM users`;
+    const userCount = parseInt(existingUsers[0].count);
+    console.log('🏗️ INIT DEBUG: Utenti esistenti:', userCount);
+    
+    if (userCount >= 2) {
+      console.log('🏗️ INIT DEBUG: Utenti già presenti, skip inizializzazione');
+      return true;
+    }
+    
     // Crea tabella users
     console.log('🏗️ INIT DEBUG: Creazione tabella users...');
     await sql`
@@ -62,8 +73,8 @@ export async function initializeTables() {
       )
     `;
 
-    // FORZA sempre l'inserimento di dati puliti
-    console.log('🏗️ INIT DEBUG: FORZANDO inserimento dati puliti...');
+    // Inserisci dati solo se necessario
+    console.log('🏗️ INIT DEBUG: Inserimento dati di esempio...');
     await insertSampleData();
 
     console.log('Database Neon inizializzato con successo!');
@@ -78,13 +89,6 @@ export async function initializeTables() {
 // Inserisci dati di esempio
 async function insertSampleData() {
   try {
-    console.log('🧹 CLEAN DEBUG: Pulizia dati esistenti...');
-    
-    // Cancella tutti i dati esistenti
-    await sql`DELETE FROM users`;
-    await sql`DELETE FROM normatives`;
-    console.log('🧹 CLEAN DEBUG: Dati cancellati');
-    
     console.log('📝 SAMPLE DEBUG: Inserimento dati di esempio...');
     
     // Hash password semplificato per demo
@@ -151,6 +155,7 @@ async function insertSampleData() {
           '2023-05-20',
           ARRAY['tar', 'autorizzazioni', 'giurisprudenza']
         )
+      ON CONFLICT (reference_number) DO NOTHING
     `;
     console.log('📝 SAMPLE DEBUG: Normative inserite con successo');
 

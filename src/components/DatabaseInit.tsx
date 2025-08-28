@@ -12,14 +12,14 @@ export default function DatabaseInit() {
 
   async function handleInitialization() {
     setStatus('loading');
-    setMessage('Ricreazione utenti puliti in corso...');
+    setMessage('Controllo database in corso...');
 
     try {
       // Inizializza database Neon
-      await initializeTables();
+      const result = await initializeTables();
 
       setStatus('success');
-      setMessage('Utenti ricreati con successo!');
+      setMessage('Database verificato con successo!');
       
       // Nascondi il messaggio dopo 2 secondi
       setTimeout(() => {
@@ -28,7 +28,7 @@ export default function DatabaseInit() {
     } catch (error) {
       console.error('Errore connessione database Neon:', error);
       setStatus('error');
-      setMessage('Errore nella ricreazione degli utenti');
+      setMessage('Errore nella verifica del database');
     }
   }
 
@@ -59,7 +59,7 @@ export default function DatabaseInit() {
           </div>
           
           <h2 className="text-xl font-bold text-gray-900 mb-2">
-            Ricreazione Utenti Database
+            Verifica Database
           </h2>
           
           <p className="text-gray-600 mb-4">
