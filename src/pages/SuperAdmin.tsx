@@ -8,6 +8,12 @@ import {
   updateRoleSection 
 } from '../lib/neonDatabase';
 import { 
+  getAllPermissions, 
+  getRolePermissionsMatrix, 
+  updateRolePermission, 
+  updateRoleSection 
+} from '../lib/neonDatabase';
+import { 
   Shield, 
   Users, 
   Settings, 
@@ -19,8 +25,19 @@ import {
   Lock,
   Unlock,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  CheckCircle,
+  AlertCircle,
+  Info,
+  X
 } from 'lucide-react';
+
+interface Notification {
+  id: string;
+  type: 'success' | 'error' | 'info';
+  title: string;
+  message: string;
+}
 
 export default function SuperAdmin() {
   const { profile } = useAuth();
@@ -30,6 +47,22 @@ export default function SuperAdmin() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['users']));
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  function addNotification(type: 'success' | 'error' | 'info', title: string, message: string) {
+    const id = Date.now().toString();
+    const notification = { id, type, title, message };
+    setNotifications(prev => [...prev, notification]);
+    
+    // Rimuovi automaticamente dopo 4 secondi
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 4000);
+  }
+
+  function removeNotification(id: string) {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  }
 
   // Solo SuperAdmin può accedere
   if (profile?.role !== 'superadmin') {
@@ -76,9 +109,14 @@ export default function SuperAdmin() {
       if (success) {
         await loadPermissionsData(); // Ricarica i dati
         setHasChanges(true);
+        const action = !hasPermission ? 'concesso' : 'revocato';
+        addNotification('success', 'Autorizzazione Aggiornata', 
+          `Permesso ${action} per il ruolo ${getRoleDisplayName(role)}`);
       }
     } catch (error) {
       console.error('Errore aggiornamento permesso:', error);
+      addNotification('error', 'Errore Sistema', 
+        'Impossibile aggiornare le autorizzazioni. Riprovare.');
     }
   };
 
@@ -91,15 +129,22 @@ export default function SuperAdmin() {
       if (success) {
         await loadPermissionsData(); // Ricarica i dati
         setHasChanges(true);
+        const action = !isVisible ? 'abilitata' : 'disabilitata';
+        addNotification('info', 'Visibilità Aggiornata', 
+          `Sezione ${action} per il ruolo ${getRoleDisplayName(role)}`);
       }
     } catch (error) {
       console.error('Errore aggiornamento sezione:', error);
+      addNotification('error', 'Errore Sistema', 
+        'Impossibile aggiornare la visibilità. Riprovare.');
     }
   };
 
   const saveChanges = () => {
     // Le modifiche sono già salvate nel database in tempo reale
     setHasChanges(false);
+    addNotification('success', 'Configurazione Salvata', 
+      'Tutte le modifiche sono state applicate al sistema');
   };
 
   const resetToDefaults = () => {
@@ -107,6 +152,8 @@ export default function SuperAdmin() {
       // Implementare reset ai default del database
       loadPermissionsData();
       setHasChanges(false);
+      addNotification('info', 'Configurazione Ripristinata', 
+        'I permessi sono stati riportati alle impostazioni predefinite');
     }
   };
 
@@ -146,6 +193,48 @@ export default function SuperAdmin() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-7xl mx-auto">
+        {/* Toast Notifications */}
+        <div className="fixed top-4 right-4 z-50 space-y-3">
+          {notifications.map((notification) => {
+            const Icon = notification.type === 'success' ? CheckCircle : 
+                        notification.type === 'error' ? AlertCircle : Info;
+            const bgColor = notification.type === 'success' ? 'bg-emerald-50 border-emerald-200' :
+                           notification.type === 'error' ? 'bg-red-50 border-red-200' :
+                           'bg-blue-50 border-blue-200';
+            const iconColor = notification.type === 'success' ? 'text-emerald-600' :
+                             notification.type === 'error' ? 'text-red-600' :
+                             'text-blue-600';
+            const textColor = notification.type === 'success' ? 'text-emerald-900' :
+                             notification.type === 'error' ? 'text-red-900' :
+                             'text-blue-900';
+            
+            return (
+              <div
+                key={notification.id}
+                className={`${bgColor} border rounded-xl p-4 shadow-lg max-w-sm animate-in slide-in-from-right duration-300 backdrop-blur-sm`}
+              >
+                <div className="flex items-start space-x-3">
+                  <Icon className={`h-5 w-5 ${iconColor} flex-shrink-0 mt-0.5`} />
+                  <div className="flex-1 min-w-0">
+                    <h4 className={`text-sm font-semibold ${textColor} mb-1`}>
+                      {notification.title}
+                    </h4>
+                    <p className={`text-sm ${textColor} opacity-90`}>
+                      {notification.message}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => removeNotification(notification.id)}
+                    className={`${iconColor} hover:opacity-70 transition-opacity`}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-3 mb-4">
