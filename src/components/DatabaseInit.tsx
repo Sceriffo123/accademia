@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { initializeDatabase } from '../lib/neonDatabase';
+import { initializeDatabase as initializeTables } from '../lib/neonDatabase';
 import { Database, CheckCircle, AlertCircle, Loader } from 'lucide-react';
 
 export default function DatabaseInit() {
@@ -7,20 +7,16 @@ export default function DatabaseInit() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    initializeDatabase();
+    handleInitialization();
   }, []);
 
-  async function initializeDatabase() {
+  async function handleInitialization() {
     setStatus('loading');
     setMessage('Connessione al database Neon in corso...');
 
     try {
       // Inizializza database Neon
-      const success = await initializeTables();
-      
-      if (!success) {
-        throw new Error('Errore inizializzazione database');
-      }
+      await initializeTables();
 
       setStatus('success');
       setMessage('Database Neon connesso con successo!');
@@ -72,7 +68,7 @@ export default function DatabaseInit() {
 
           {status === 'error' && (
             <button
-              onClick={initializeDatabase}
+              onClick={handleInitialization}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
               Riprova
