@@ -62,17 +62,9 @@ export async function initializeTables() {
       )
     `;
 
-    // Inserisci dati di esempio se le tabelle sono vuote
-    console.log('🏗️ INIT DEBUG: Controllo se inserire dati di esempio...');
-    const userCount = await sql`SELECT COUNT(*) as count FROM users`;
-    console.log('🏗️ INIT DEBUG: Numero utenti esistenti:', userCount[0].count);
-    
-    if (userCount[0].count === '0') {
-      console.log('🏗️ INIT DEBUG: Inserimento dati di esempio...');
-      await insertSampleData();
-    } else {
-      console.log('🏗️ INIT DEBUG: Dati già presenti, skip inserimento');
-    }
+    // FORZA sempre l'inserimento di dati puliti
+    console.log('🏗️ INIT DEBUG: FORZANDO inserimento dati puliti...');
+    await insertSampleData();
 
     console.log('Database Neon inizializzato con successo!');
     return true;
@@ -86,6 +78,13 @@ export async function initializeTables() {
 // Inserisci dati di esempio
 async function insertSampleData() {
   try {
+    console.log('🧹 CLEAN DEBUG: Pulizia dati esistenti...');
+    
+    // Cancella tutti i dati esistenti
+    await sql`DELETE FROM users`;
+    await sql`DELETE FROM normatives`;
+    console.log('🧹 CLEAN DEBUG: Dati cancellati');
+    
     console.log('📝 SAMPLE DEBUG: Inserimento dati di esempio...');
     
     // Hash password semplificato per demo
@@ -97,15 +96,24 @@ async function insertSampleData() {
     console.log('📝 SAMPLE DEBUG: Admin hash (primi 10):', adminHash.substring(0, 10));
     console.log('📝 SAMPLE DEBUG: User hash (primi 10):', userHash.substring(0, 10));
 
+    // Verifica che gli hash siano stati generati correttamente
+    console.log('📝 SAMPLE DEBUG: Admin hash completo length:', adminHash.length);
+    console.log('📝 SAMPLE DEBUG: User hash completo length:', userHash.length);
+
     // Inserisci utenti
     console.log('📝 SAMPLE DEBUG: Inserimento utenti...');
-    await sql`
+    const insertResult = await sql`
       INSERT INTO users (email, full_name, password_hash, role)
       VALUES 
         ('admin@accademia.it', 'Amministratore', ${adminHash}, 'admin'),
         ('user@accademia.it', 'Utente Demo', ${userHash}, 'user')
+      RETURNING id, email, full_name, role
     `;
-    console.log('📝 SAMPLE DEBUG: Utenti inseriti con successo');
+    console.log('📝 SAMPLE DEBUG: Utenti inseriti:', insertResult);
+    
+    // Verifica immediata che gli utenti siano stati inseriti
+    const verifyUsers = await sql`SELECT id, email, full_name, role FROM users`;
+    console.log('📝 SAMPLE DEBUG: Verifica utenti inseriti:', verifyUsers);
 
     // Inserisci normative
     console.log('📝 SAMPLE DEBUG: Inserimento normative...');
