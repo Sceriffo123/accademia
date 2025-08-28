@@ -100,7 +100,6 @@ export default function SuperAdmin() {
   const saveChanges = () => {
     // Le modifiche sono già salvate nel database in tempo reale
     setHasChanges(false);
-    alert('Modifiche salvate con successo!');
   };
 
   const resetToDefaults = () => {
