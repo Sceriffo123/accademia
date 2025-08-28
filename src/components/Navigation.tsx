@@ -66,7 +66,7 @@ export default function Navigation() {
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center space-x-2">
               <GraduationCap className="h-8 w-8 text-blue-800" />
-              <span className="text-xl font-bold text-gray-900">Accademia</span>
+              <span className="text-xl font-bold text-gray-900">Accademia TPL</span>
             </Link>
             <div className="flex items-center space-x-4">
               <Link
@@ -96,7 +96,7 @@ export default function Navigation() {
           <div className="flex items-center justify-between h-16">
             <Link to="/dashboard" className="flex items-center space-x-2">
               <GraduationCap className="h-8 w-8 text-blue-800" />
-              <span className="text-xl font-bold text-gray-900">Accademia</span>
+              <span className="text-xl font-bold text-gray-900">Accademia TPL</span>
             </Link>
             
             <div className="flex items-center space-x-6">
@@ -143,7 +143,7 @@ export default function Navigation() {
           <div className="flex items-center justify-between h-16">
             <Link to="/dashboard" className="flex items-center space-x-2">
               <GraduationCap className="h-7 w-7 text-blue-800" />
-              <span className="text-lg font-bold text-gray-900">Accademia</span>
+              <span className="text-lg font-bold text-gray-900">Accademia TPL</span>
             </Link>
             
             <button
