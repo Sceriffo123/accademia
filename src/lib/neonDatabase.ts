@@ -128,6 +128,32 @@ export async function getUsersCount(): Promise<number> {
   }
 }
 
+export async function updateUser(id: string, updates: Partial<User>): Promise<User | null> {
+  try {
+    const result = await sql`
+      UPDATE users
+      SET full_name = ${updates.full_name}, 
+          role = ${updates.role}
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    return result[0] || null;
+  } catch (error) {
+    console.error('Error updating user:', error);
+    return null;
+  }
+}
+
+export async function deleteUser(id: string): Promise<boolean> {
+  try {
+    await sql`DELETE FROM users WHERE id = ${id}`;
+    return true;
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    return false;
+  }
+}
+
 // Normative functions
 export async function createNormative(normativeData: Omit<Normative, 'id' | 'created_at' | 'updated_at'>): Promise<Normative | null> {
   try {

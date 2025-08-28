@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getNormativesCount, getUsersCount, getUsers, getNormatives, updateNormative, deleteNormative, type Normative } from '../lib/api';
+import { getNormativesCount, getUsersCount, getUsers, getNormatives, updateNormative, deleteNormative, getNormativeById, type Normative } from '../lib/api';
 import NormativeEditor from '../components/NormativeEditor';
 import { 
   Users, 
