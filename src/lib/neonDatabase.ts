@@ -76,6 +76,48 @@ export async function initializeTables() {
       )
     `;
 
+    // Crea tabella permissions
+    console.log('🏗️ INIT DEBUG: Creazione tabella permissions...');
+    await sql`
+      CREATE TABLE IF NOT EXISTS permissions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        permission_id VARCHAR(100) UNIQUE NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        category VARCHAR(50) NOT NULL,
+        level INTEGER NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+
+    // Crea tabella role_permissions
+    console.log('🏗️ INIT DEBUG: Creazione tabella role_permissions...');
+    await sql`
+      CREATE TABLE IF NOT EXISTS role_permissions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        role VARCHAR(20) NOT NULL,
+        permission_id VARCHAR(100) NOT NULL,
+        granted BOOLEAN DEFAULT true,
+        granted_by UUID REFERENCES users(id),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(role, permission_id)
+      )
+    `;
+
+    // Crea tabella role_sections
+    console.log('🏗️ INIT DEBUG: Creazione tabella role_sections...');
+    await sql`
+      CREATE TABLE IF NOT EXISTS role_sections (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        role VARCHAR(20) NOT NULL,
+        section VARCHAR(50) NOT NULL,
+        visible BOOLEAN DEFAULT true,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(role, section)
+      )
+    `;
+
     // Inserisci dati di esempio
     console.log('🏗️ INIT DEBUG: Inserimento dati di esempio...');
     await insertSampleData(true); // Forza inserimento
@@ -189,6 +231,14 @@ async function insertSampleData(forceInsert = false) {
       `;
       console.log('📝 SAMPLE DEBUG: Activity logs inseriti con successo');
     }
+
+    // Inserisci permessi di default
+    console.log('📝 SAMPLE DEBUG: Inserimento permessi di default...');
+    await insertDefaultPermissions();
+
+    // Inserisci configurazione ruoli di default
+    console.log('📝 SAMPLE DEBUG: Inserimento configurazione ruoli...');
+    await insertDefaultRoleConfiguration();
 
     console.log('Dati di esempio inseriti con successo!');
   } catch (error) {
