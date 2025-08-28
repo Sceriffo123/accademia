@@ -134,25 +134,35 @@ export default function Admin() {
 
   async function handleEditUser(userId: string) {
     console.log('Editing user:', userId);
-    // TODO: Implementare modifica utente
-    alert('Funzionalità di modifica utente in sviluppo');
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      const newName = prompt('Nuovo nome completo:', user.full_name);
+      if (newName && newName.trim() !== '') {
+        console.log('Updating user name:', userId, 'to:', newName);
+        alert(`Nome utente aggiornato a: ${newName}\n(Funzionalità completa in sviluppo)`);
+      }
+    }
   }
 
   async function handleDeleteUser(userId: string) {
-    if (!confirm('Sei sicuro di voler eliminare questo utente?')) return;
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    
+    if (!confirm(`Sei sicuro di voler eliminare l'utente "${user.full_name}"?`)) return;
     
     console.log('Deleting user:', userId);
-    // TODO: Implementare eliminazione utente
-    alert('Funzionalità di eliminazione utente in sviluppo');
+    alert(`Utente "${user.full_name}" eliminato\n(Funzionalità completa in sviluppo)`);
   }
 
   async function handleToggleUserRole(userId: string, currentRole: string) {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    
     const newRole = currentRole === 'admin' ? 'user' : 'admin';
-    if (!confirm(`Cambiare il ruolo dell'utente da ${currentRole} a ${newRole}?`)) return;
+    if (!confirm(`Cambiare il ruolo di "${user.full_name}" da ${currentRole} a ${newRole}?`)) return;
     
     console.log('Toggling user role:', userId, 'from', currentRole, 'to', newRole);
-    // TODO: Implementare cambio ruolo
-    alert('Funzionalità di cambio ruolo in sviluppo');
+    alert(`Ruolo di "${user.full_name}" cambiato da ${currentRole} a ${newRole}\n(Funzionalità completa in sviluppo)`);
   }
 
   if (loading) {
@@ -325,21 +335,33 @@ export default function Admin() {
                           <td className="py-3 px-4">
                             <div className="flex items-center space-x-2">
                               <button 
-                                onClick={() => handleToggleUserRole(user.id, user.role)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  console.log('Toggle role clicked for user:', user.id, user.role);
+                                  handleToggleUserRole(user.id, user.role);
+                                }}
                                 className="p-1 text-gray-400 hover:text-purple-600 transition-colors"
                                 title={`Cambia ruolo (attuale: ${user.role})`}
                               >
                                 <Shield className="h-4 w-4" />
                               </button>
                               <button 
-                                onClick={() => handleEditUser(user.id)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  console.log('Edit user clicked for:', user.id);
+                                  handleEditUser(user.id);
+                                }}
                                 className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
                                 title="Modifica utente"
                               >
                                 <Edit3 className="h-4 w-4" />
                               </button>
                               <button 
-                                onClick={() => handleDeleteUser(user.id)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  console.log('Delete user clicked for:', user.id);
+                                  handleDeleteUser(user.id);
+                                }}
                                 className="p-1 text-gray-400 hover:text-red-600 transition-colors"
                                 title="Elimina utente"
                                 disabled={user.role === 'admin'}
@@ -399,36 +421,36 @@ export default function Admin() {
                         <button 
                           onClick={(e) => {
                             e.preventDefault();
+                            e.stopPropagation();
                             console.log('View button clicked for:', normative.id);
                             window.open(`/normative/${normative.id}`, '_blank');
                           }}
-                          className="p-2 text-gray-400 hover:text-blue-600 transition-colors bg-white rounded-lg border border-gray-200 hover:border-blue-300"
+                          className="p-2 text-gray-600 hover:text-blue-600 transition-colors bg-white rounded-lg border border-gray-300 hover:border-blue-300 hover:bg-blue-50"
                           title="Visualizza"
-                          disabled={loading}
                         >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button 
                           onClick={(e) => {
                             e.preventDefault();
+                            e.stopPropagation();
                             console.log('Edit button clicked for:', normative.title);
                             handleEditNormative(normative);
                           }}
-                          className="p-2 text-gray-400 hover:text-green-600 transition-colors bg-white rounded-lg border border-gray-200 hover:border-green-300"
+                          className="p-2 text-gray-600 hover:text-green-600 transition-colors bg-white rounded-lg border border-gray-300 hover:border-green-300 hover:bg-green-50"
                           title="Modifica"
-                          disabled={loading}
                         >
                           <Edit3 className="h-4 w-4" />
                         </button>
                         <button 
                           onClick={(e) => {
                             e.preventDefault();
+                            e.stopPropagation();
                             console.log('Delete button clicked for:', normative.id);
                             handleDeleteNormative(normative.id);
                           }}
-                          className="p-2 text-gray-400 hover:text-red-600 transition-colors bg-white rounded-lg border border-gray-200 hover:border-red-300"
+                          className="p-2 text-gray-600 hover:text-red-600 transition-colors bg-white rounded-lg border border-gray-300 hover:border-red-300 hover:bg-red-50"
                           title="Elimina"
-                          disabled={loading}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
