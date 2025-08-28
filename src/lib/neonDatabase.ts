@@ -288,13 +288,25 @@ export async function createUser(email: string, fullName: string, passwordHash: 
   }
 }
 
-export async function getAllUsers(): Promise<User[]> {
+export async function getAllUsers(excludeSuperAdmin: boolean = false, currentUserId?: string): Promise<User[]> {
   try {
     const result = await sql`
       SELECT id, email, full_name, role, created_at
       FROM users
       ORDER BY created_at DESC
     `;
+    
+    if (excludeSuperAdmin) {
+      return result.filter(user => {
+        // Se è un SuperAdmin che sta guardando, può vedere se stesso
+        if (currentUserId && user.id === currentUserId) {
+          return true;
+        }
+        // Altrimenti nascondi tutti i SuperAdmin
+        return user.role !== 'superadmin';
+      });
+    }
+    
     return result;
   } catch (error) {
     console.error('Errore recupero tutti gli utenti:', error);

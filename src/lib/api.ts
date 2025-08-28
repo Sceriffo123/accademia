@@ -69,11 +69,11 @@ export async function getRecentNormativesCount(days: number = 30): Promise<numbe
   }
 }
 
-export async function getUsers(excludeSuperAdmin: boolean = false): Promise<any[]> {
+export async function getUsers(excludeSuperAdmin: boolean = false, currentUserId?: string): Promise<any[]> {
   try {
-    const users = await getAllUsers();
+    const users = await getAllUsers(excludeSuperAdmin, currentUserId);
     if (excludeSuperAdmin) {
-      return users.filter(user => user.role !== 'superadmin');
+      return users; // Il filtro è già applicato in getAllUsers
     }
     return users;
   } catch (error) {
