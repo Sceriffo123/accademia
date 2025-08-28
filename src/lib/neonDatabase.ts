@@ -28,7 +28,11 @@ export interface Normative {
 // Inizializza le tabelle se non esistono
 export async function initializeTables() {
   try {
+    console.log('🏗️ INIT DEBUG: Inizializzazione tabelle...');
+    console.log('🏗️ INIT DEBUG: Database URL presente:', !!import.meta.env.VITE_DATABASE_URL);
+    
     // Crea tabella users
+    console.log('🏗️ INIT DEBUG: Creazione tabella users...');
     await sql`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -41,6 +45,7 @@ export async function initializeTables() {
     `;
 
     // Crea tabella normatives
+    console.log('🏗️ INIT DEBUG: Creazione tabella normatives...');
     await sql`
       CREATE TABLE IF NOT EXISTS normatives (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -58,15 +63,22 @@ export async function initializeTables() {
     `;
 
     // Inserisci dati di esempio se le tabelle sono vuote
+    console.log('🏗️ INIT DEBUG: Controllo se inserire dati di esempio...');
     const userCount = await sql`SELECT COUNT(*) as count FROM users`;
+    console.log('🏗️ INIT DEBUG: Numero utenti esistenti:', userCount[0].count);
+    
     if (userCount[0].count === '0') {
+      console.log('🏗️ INIT DEBUG: Inserimento dati di esempio...');
       await insertSampleData();
+    } else {
+      console.log('🏗️ INIT DEBUG: Dati già presenti, skip inserimento');
     }
 
     console.log('Database Neon inizializzato con successo!');
     return true;
   } catch (error) {
     console.error('Errore inizializzazione Neon:', error);
+    console.error('🏗️ INIT DEBUG: Dettagli errore:', error?.message);
     return false;
   }
 }
@@ -74,19 +86,29 @@ export async function initializeTables() {
 // Inserisci dati di esempio
 async function insertSampleData() {
   try {
+    console.log('📝 SAMPLE DEBUG: Inserimento dati di esempio...');
+    
     // Hash password semplificato per demo
+    console.log('📝 SAMPLE DEBUG: Hash password admin...');
     const adminHash = await hashPassword('admin123');
+    console.log('📝 SAMPLE DEBUG: Hash password user...');
     const userHash = await hashPassword('user123');
+    
+    console.log('📝 SAMPLE DEBUG: Admin hash (primi 10):', adminHash.substring(0, 10));
+    console.log('📝 SAMPLE DEBUG: User hash (primi 10):', userHash.substring(0, 10));
 
     // Inserisci utenti
+    console.log('📝 SAMPLE DEBUG: Inserimento utenti...');
     await sql`
       INSERT INTO users (email, full_name, password_hash, role)
       VALUES 
         ('admin@accademia.it', 'Amministratore', ${adminHash}, 'admin'),
         ('user@accademia.it', 'Utente Demo', ${userHash}, 'user')
     `;
+    console.log('📝 SAMPLE DEBUG: Utenti inseriti con successo');
 
     // Inserisci normative
+    console.log('📝 SAMPLE DEBUG: Inserimento normative...');
     await sql`
       INSERT INTO normatives (title, content, category, type, reference_number, publication_date, effective_date, tags)
       VALUES 
@@ -121,10 +143,12 @@ async function insertSampleData() {
           ARRAY['tar', 'autorizzazioni', 'giurisprudenza']
         )
     `;
+    console.log('📝 SAMPLE DEBUG: Normative inserite con successo');
 
     console.log('Dati di esempio inseriti con successo!');
   } catch (error) {
     console.error('Errore inserimento dati:', error);
+    console.error('📝 SAMPLE DEBUG: Dettagli errore inserimento:', error?.message);
   }
 }
 
@@ -155,7 +179,9 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   try {
     console.log('🗄️ DB DEBUG: getUserByEmail chiamato per:', email);
     console.log('🗄️ DB DEBUG: Database URL:', import.meta.env.VITE_DATABASE_URL ? 'PRESENTE' : 'MANCANTE');
+    console.log('🗄️ DB DEBUG: Database URL (primi 20 char):', import.meta.env.VITE_DATABASE_URL?.substring(0, 20));
     
+    console.log('🗄️ DB DEBUG: Esecuzione query SQL...');
     const result = await sql`
       SELECT id, email, full_name, password_hash, role, created_at
       FROM users
@@ -163,6 +189,9 @@ export async function getUserByEmail(email: string): Promise<User | null> {
     `;
     
     console.log('🗄️ DB DEBUG: Query risultato:', result.length > 0 ? 'TROVATO' : 'NON TROVATO');
+    console.log('🗄️ DB DEBUG: Risultato completo:', result);
+    console.log('🗄️ DB DEBUG: Numero righe:', result.length);
+    
     if (result.length > 0) {
       console.log('🗄️ DB DEBUG: Utente:', { 
         id: result[0].id, 
@@ -175,6 +204,9 @@ export async function getUserByEmail(email: string): Promise<User | null> {
     return result[0] || null;
   } catch (error) {
     console.error('🗄️ DB DEBUG: Errore recupero utente per email:', error);
+    console.error('🗄️ DB DEBUG: Tipo errore:', typeof error);
+    console.error('🗄️ DB DEBUG: Messaggio errore:', error?.message);
+    console.error('🗄️ DB DEBUG: Stack errore:', error?.stack);
     return null;
   }
 }
