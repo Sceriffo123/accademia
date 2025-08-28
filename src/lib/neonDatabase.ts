@@ -62,9 +62,23 @@ export async function initializeTables() {
       )
     `;
 
+    // Crea tabella activity_logs
+    console.log('🏗️ INIT DEBUG: Creazione tabella activity_logs...');
+    await sql`
+      CREATE TABLE IF NOT EXISTS activity_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        action VARCHAR(100) NOT NULL,
+        resource_type VARCHAR(50) NOT NULL,
+        resource_id UUID,
+        details JSONB DEFAULT '{}',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+
     // Inserisci dati di esempio
     console.log('🏗️ INIT DEBUG: Inserimento dati di esempio...');
-    await insertSampleData();
+    await insertSampleData(true); // Forza inserimento
 
     console.log('Database Neon inizializzato con successo!');
     return true;
@@ -76,15 +90,25 @@ export async function initializeTables() {
 }
 
 // Inserisci dati di esempio
-async function insertSampleData() {
+async function insertSampleData(forceInsert = false) {
   try {
     console.log('📝 SAMPLE DEBUG: Inserimento dati di esempio...');
     
-    // Verifica se ci sono già utenti
-    const existingUsers = await sql`SELECT COUNT(*) as count FROM users`;
-    if (parseInt(existingUsers[0].count) > 0) {
-      console.log('📝 SAMPLE DEBUG: Utenti già presenti, skip inserimento');
-      return;
+    // Verifica se ci sono già utenti (solo se non forziamo l'inserimento)
+    if (!forceInsert) {
+      const existingUsers = await sql`SELECT COUNT(*) as count FROM users`;
+      if (parseInt(existingUsers[0].count) > 0) {
+        console.log('📝 SAMPLE DEBUG: Utenti già presenti, skip inserimento');
+        return;
+      }
+    }
+    
+    // Se forziamo l'inserimento, elimina i dati esistenti
+    if (forceInsert) {
+      console.log('📝 SAMPLE DEBUG: Pulizia dati esistenti...');
+      await sql`DELETE FROM activity_logs`;
+      await sql`DELETE FROM normatives`;
+      await sql`DELETE FROM users`;
     }
     
     // Hash password semplificato per demo
@@ -123,13 +147,6 @@ async function insertSampleData() {
     // Inserisci normative
     console.log('📝 SAMPLE DEBUG: Inserimento normative...');
     
-    // Verifica se ci sono già normative
-    const existingNormatives = await sql`SELECT COUNT(*) as count FROM normatives`;
-    if (parseInt(existingNormatives[0].count) > 0) {
-      console.log('📝 SAMPLE DEBUG: Normative già presenti, skip inserimento');
-      return;
-    }
-    
     await sql`
       INSERT INTO normatives (title, content, category, type, reference_number, publication_date, effective_date, tags)
       VALUES 
@@ -165,6 +182,20 @@ async function insertSampleData() {
         )
     `;
     console.log('📝 SAMPLE DEBUG: Normative inserite con successo');
+
+    // Inserisci alcuni log di attività di esempio
+    console.log('📝 SAMPLE DEBUG: Inserimento activity logs...');
+    const adminUser = await sql`SELECT id FROM users WHERE email = 'admin@accademia.it'`;
+    if (adminUser.length > 0) {
+      await sql`
+        INSERT INTO activity_logs (user_id, action, resource_type, resource_id, details)
+        VALUES 
+          (${adminUser[0].id}, 'CREATE', 'normative', gen_random_uuid(), '{"title": "Decreto Legislativo 285/1992"}'),
+          (${adminUser[0].id}, 'LOGIN', 'user', ${adminUser[0].id}, '{"ip": "127.0.0.1"}'),
+          (${adminUser[0].id}, 'VIEW', 'normative', gen_random_uuid(), '{"title": "Legge Regionale 15/2018"}')
+      `;
+      console.log('📝 SAMPLE DEBUG: Activity logs inseriti con successo');
+    }
 
     console.log('Dati di esempio inseriti con successo!');
   } catch (error) {
