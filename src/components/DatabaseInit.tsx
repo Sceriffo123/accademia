@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { initializeTables } from '../lib/neonDatabase';
-import { inspectDatabase, checkRoleMigrationCompatibility, validateDatabaseStructure } from '../lib/devTools';
-import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { Database, CheckCircle, AlertCircle, Loader } from 'lucide-react';
 
 export default function DatabaseInit() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -18,12 +17,6 @@ export default function DatabaseInit() {
     try {
       // Inizializza database Neon
       const result = await initializeTables();
-
-      // Ispeziona la struttura del database
-      console.log('🔍 AVVIO ISPEZIONE DATABASE...');
-      await inspectDatabase();
-      await checkRoleMigrationCompatibility();
-      await validateDatabaseStructure();
 
       setStatus('success');
       setMessage('Database verificato con successo!');

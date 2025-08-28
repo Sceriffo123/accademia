@@ -6,15 +6,14 @@ import {
   verifyPassword,
   type User 
 } from '../lib/neonDatabase';
-import { AuthMiddleware, type AuthContext as AuthContextType } from '../lib/authMiddleware';
-import { Role } from '../lib/rbac';
 
-interface AuthProviderContextType extends AuthContextType {
+interface AuthContextType {
+  user: User | null;
+  profile: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
-  refreshAuth: () => Promise<void>;
 }
 
 // Generazione token JWT semplificato
@@ -48,30 +47,48 @@ async function hashPassword(password: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-const AuthContext = createContext<AuthProviderContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [authContext, setAuthContext] = useState<AuthContextType>({
-    user: null,
-    isAuthenticated: false,
-    permissions: {
-      hasPermission: () => false,
-      canAccessAdmin: () => false,
-      canUseDevTools: () => false,
-      getRoleLevel: () => 0
-    }
-  });
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    refreshAuth();
+    // Verifica token esistente al caricamento
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      const decoded = verifyToken(token);
+      if (decoded) {
+        fetchUserByEmail(decoded.email);
+      } else {
+        localStorage.removeItem('auth_token');
+        setLoading(false);
+      }
+    } else {
+      setLoading(false);
+    }
   }, []);
 
-  async function refreshAuth() {
-    const token = localStorage.getItem('auth_token');
-    const newAuthContext = await AuthMiddleware.createAuthContext(token || undefined);
-    setAuthContext(newAuthContext);
-    setLoading(false);
+  async function fetchUserByEmail(email: string) {
+    try {
+      const userData = await getUserByEmail(email);
+      if (userData) {
+        setUser({
+          id: userData.id,
+          email: userData.email,
+          full_name: userData.full_name,
+          role: userData.role,
+          created_at: userData.created_at
+        });
+      } else {
+        localStorage.removeItem('auth_token');
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      localStorage.removeItem('auth_token');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function signIn(email: string, password: string) {
@@ -101,11 +118,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔐 AUTH DEBUG: Generazione token...');
       // Genera token
       const token = generateToken(user.email);
-      localStorage.setItem('auth_token', token);
 
-      // Aggiorna contesto auth con nuovo token
-      await refreshAuth();
+      console.log('🔐 AUTH DEBUG: Impostazione utente...');
+      // Imposta utente
+      setUser({
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        created_at: user.created_at
+      });
       
+      localStorage.setItem('auth_token', token);
       console.log('🔐 AUTH DEBUG: Login completato con successo');
       return { error: null };
     } catch (error) {
@@ -138,11 +162,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Genera token
       const token = generateToken(newUser.email);
-      localStorage.setItem('auth_token', token);
 
-      // Aggiorna contesto auth con nuovo token
-      await refreshAuth();
+      // Imposta utente
+      setUser({
+        id: newUser.id,
+        email: newUser.email,
+        full_name: newUser.full_name,
+        role: newUser.role,
+        created_at: newUser.created_at
+      });
       
+      localStorage.setItem('auth_token', token);
       return { error: null };
     } catch (error) {
       console.error('Errore registrazione:', error);

@@ -1,14 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getNormativesCount, getUsersCount, getUsers, getNormatives, updateUser, deleteUser, createNewUser, updateUserPassword } from '../lib/api';
 import { 
-  inspectDatabase, 
-  checkRoleMigrationCompatibility, 
-  validateDatabaseStructure, 
-  createUsersBackup, 
-  listBackups,
-  measurePerformance 
-} from '../lib/devTools';
-import { 
   Users, 
   FileText, 
   Plus, 
@@ -22,13 +14,7 @@ import {
   Key,
   CheckCircle,
   AlertCircle,
-  Info,
-  Database,
-  Search,
-  Shield,
-  Archive,
-  Play,
-  Terminal
+  Info
 } from 'lucide-react';
 
 interface AdminStats {
@@ -46,7 +32,7 @@ interface Notification {
 }
 
 export default function Admin() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'normatives' | 'services'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'normatives'>('overview');
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
     totalNormatives: 0,
@@ -317,8 +303,7 @@ export default function Admin() {
               {[
                 { id: 'overview', label: 'Panoramica', icon: Settings },
                 { id: 'users', label: 'Utenti', icon: Users },
-                { id: 'normatives', label: 'Normative', icon: FileText },
-                { id: 'services', label: 'Servizi', icon: Terminal }
+                { id: 'normatives', label: 'Normative', icon: FileText }
               ].map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -542,213 +527,6 @@ export default function Admin() {
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'services' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Strumenti di Controllo Database
-                  </h3>
-                  <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <Database className="h-4 w-4" />
-                    <span>Servizi di Sviluppo</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {/* Ispezione Database */}
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <div className="p-2 bg-blue-500 rounded-lg">
-                        <Search className="h-5 w-5 text-white" />
-                      </div>
-                      <h4 className="font-semibold text-gray-900">Ispezione Database</h4>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Analizza la struttura completa del database, tabelle, colonne e constraint.
-                    </p>
-                    <button
-                      onClick={async () => {
-                        addNotification('info', 'Avvio Ispezione', 'Controllo struttura database in corso...');
-                        try {
-                          await measurePerformance('Ispezione Database', inspectDatabase);
-                          addNotification('success', 'Ispezione Completata', 'Controlla la console per i risultati dettagliati');
-                        } catch (error) {
-                          addNotification('error', 'Errore Ispezione', 'Impossibile completare l\'ispezione del database');
-                        }
-                      }}
-                      className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      <Play className="h-4 w-4" />
-                      <span>Avvia Ispezione</span>
-                    </button>
-                  </div>
-
-                  {/* Verifica Migrazione Ruoli */}
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <div className="p-2 bg-green-500 rounded-lg">
-                        <Shield className="h-5 w-5 text-white" />
-                      </div>
-                      <h4 className="font-semibold text-gray-900">Verifica Migrazione</h4>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Controlla la compatibilità per l'implementazione del nuovo sistema di ruoli.
-                    </p>
-                    <button
-                      onClick={async () => {
-                        addNotification('info', 'Verifica Migrazione', 'Controllo compatibilità ruoli in corso...');
-                        try {
-                          const result = await measurePerformance('Verifica Migrazione', checkRoleMigrationCompatibility);
-                          if (result) {
-                            addNotification('success', 'Verifica Completata', 'Sistema pronto per migrazione ruoli');
-                          }
-                        } catch (error) {
-                          addNotification('error', 'Errore Verifica', 'Impossibile verificare compatibilità migrazione');
-                        }
-                      }}
-                      className="w-full flex items-center justify-center space-x-2 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      <Play className="h-4 w-4" />
-                      <span>Verifica Sistema</span>
-                    </button>
-                  </div>
-
-                  {/* Validazione Database */}
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <div className="p-2 bg-purple-500 rounded-lg">
-                        <CheckCircle className="h-5 w-5 text-white" />
-                      </div>
-                      <h4 className="font-semibold text-gray-900">Validazione Struttura</h4>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Verifica l'integrità e la correttezza della struttura del database.
-                    </p>
-                    <button
-                      onClick={async () => {
-                        addNotification('info', 'Validazione', 'Controllo integrità database in corso...');
-                        try {
-                          await measurePerformance('Validazione Database', validateDatabaseStructure);
-                          addNotification('success', 'Validazione Completata', 'Database strutturalmente corretto');
-                        } catch (error) {
-                          addNotification('error', 'Errore Validazione', 'Problemi rilevati nella struttura database');
-                        }
-                      }}
-                      className="w-full flex items-center justify-center space-x-2 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                      <Play className="h-4 w-4" />
-                      <span>Valida Struttura</span>
-                    </button>
-                  </div>
-
-                  {/* Backup Utenti */}
-                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <div className="p-2 bg-orange-500 rounded-lg">
-                        <Archive className="h-5 w-5 text-white" />
-                      </div>
-                      <h4 className="font-semibold text-gray-900">Backup Utenti</h4>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Crea un backup di sicurezza della tabella utenti prima delle modifiche.
-                    </p>
-                    <button
-                      onClick={async () => {
-                        addNotification('info', 'Backup', 'Creazione backup tabella utenti...');
-                        try {
-                          const backupName = await measurePerformance('Backup Utenti', createUsersBackup);
-                          addNotification('success', 'Backup Creato', `Backup salvato: ${backupName}`);
-                        } catch (error) {
-                          addNotification('error', 'Errore Backup', 'Impossibile creare backup utenti');
-                        }
-                      }}
-                      className="w-full flex items-center justify-center space-x-2 bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 transition-colors"
-                    >
-                      <Archive className="h-4 w-4" />
-                      <span>Crea Backup</span>
-                    </button>
-                  </div>
-
-                  {/* Lista Backup */}
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <div className="p-2 bg-gray-500 rounded-lg">
-                        <Database className="h-5 w-5 text-white" />
-                      </div>
-                      <h4 className="font-semibold text-gray-900">Lista Backup</h4>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Visualizza tutti i backup esistenti della tabella utenti.
-                    </p>
-                    <button
-                      onClick={async () => {
-                        addNotification('info', 'Lista Backup', 'Recupero lista backup...');
-                        try {
-                          const backups = await measurePerformance('Lista Backup', listBackups);
-                          addNotification('success', 'Lista Aggiornata', `Trovati ${backups.length} backup`);
-                        } catch (error) {
-                          addNotification('error', 'Errore Lista', 'Impossibile recuperare lista backup');
-                        }
-                      }}
-                      className="w-full flex items-center justify-center space-x-2 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
-                    >
-                      <Database className="h-4 w-4" />
-                      <span>Mostra Lista</span>
-                    </button>
-                  </div>
-
-                  {/* Strumento Completo */}
-                  <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 border border-indigo-200">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <div className="p-2 bg-indigo-500 rounded-lg">
-                        <Terminal className="h-5 w-5 text-white" />
-                      </div>
-                      <h4 className="font-semibold text-gray-900">Controllo Completo</h4>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Esegue tutti i controlli: ispezione, validazione e verifica migrazione.
-                    </p>
-                    <button
-                      onClick={async () => {
-                        addNotification('info', 'Controllo Completo', 'Esecuzione di tutti i controlli...');
-                        try {
-                          await measurePerformance('Ispezione Completa', async () => {
-                            await inspectDatabase();
-                            await validateDatabaseStructure();
-                            await checkRoleMigrationCompatibility();
-                          });
-                          addNotification('success', 'Controllo Completato', 'Tutti i controlli eseguiti con successo');
-                        } catch (error) {
-                          addNotification('error', 'Errore Controllo', 'Errore durante l\'esecuzione dei controlli');
-                        }
-                      }}
-                      className="w-full flex items-center justify-center space-x-2 bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors"
-                    >
-                      <Terminal className="h-4 w-4" />
-                      <span>Controllo Completo</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Informazioni Aggiuntive */}
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-                  <div className="flex items-start space-x-3">
-                    <Info className="h-5 w-5 text-blue-600 mt-0.5" />
-                    <div>
-                      <h4 className="font-semibold text-blue-900 mb-2">Informazioni sui Servizi</h4>
-                      <div className="text-sm text-blue-800 space-y-2">
-                        <p>• <strong>Ispezione Database:</strong> Mostra struttura tabelle, colonne, constraint e dati esistenti</p>
-                        <p>• <strong>Verifica Migrazione:</strong> Controlla compatibilità per implementazione nuovi ruoli</p>
-                        <p>• <strong>Validazione:</strong> Verifica integrità e correttezza struttura database</p>
-                        <p>• <strong>Backup:</strong> Crea copie di sicurezza prima di modifiche importanti</p>
-                        <p>• <strong>Performance:</strong> Tutti gli strumenti misurano i tempi di esecuzione</p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             )}

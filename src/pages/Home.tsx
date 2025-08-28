@@ -57,14 +57,14 @@ export default function Home() {
             </div>
             
             <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-              Accademia del Trasporto
+              Accademia del
               <br />
-              <span className="text-blue-200">Pubblico Locale</span>
+              <span className="text-blue-200">Trasporto Locale</span>
             </h1>
             
             <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto">
-              Piattaforma professionale per la formazione e consultazione normativa
-              nel settore del trasporto pubblico locale
+              Piattaforma professionale per la formazione e consultazione normativa 
+              nel settore del trasporto pubblico locale non di linea
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -188,11 +188,11 @@ export default function Home() {
             <div className="flex flex-col md:flex-row justify-between items-center">
               <div className="flex items-center space-x-2 mb-4 md:mb-0">
                 <GraduationCap className="h-8 w-8 text-blue-400" />
-                <span className="text-xl font-bold">Accademia-TPL</span>
+                <span className="text-xl font-bold">Accademia</span>
               </div>
               
               <p className="text-gray-400 text-center md:text-right">
-                © 2024 Accademia del Trasporto Pubblico Locale. Tutti i diritti riservati.
+                © 2024 Accademia del Trasporto Locale. Tutti i diritti riservati.
               </p>
             </div>
           </div>
