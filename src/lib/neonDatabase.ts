@@ -94,22 +94,15 @@ async function insertSampleData(forceInsert = false) {
   try {
     console.log('📝 SAMPLE DEBUG: Inserimento dati di esempio...');
     
-    // Verifica se ci sono già utenti (solo se non forziamo l'inserimento)
+    // Verifica se ci sono già utenti
     if (!forceInsert) {
       const existingUsers = await sql`SELECT COUNT(*) as count FROM users`;
       if (parseInt(existingUsers[0].count) > 0) {
-        console.log('📝 SAMPLE DEBUG: Utenti già presenti, skip inserimento');
+        console.log('📝 SAMPLE DEBUG: Database già popolato, skip inserimento');
         return;
       }
     }
     
-    // Se forziamo l'inserimento, elimina i dati esistenti
-    if (forceInsert) {
-      console.log('📝 SAMPLE DEBUG: Pulizia dati esistenti...');
-      await sql`DELETE FROM activity_logs`;
-      await sql`DELETE FROM normatives`;
-      await sql`DELETE FROM users`;
-    }
     
     // Hash password semplificato per demo
     console.log('📝 SAMPLE DEBUG: Hash password admin...');

@@ -7,15 +7,44 @@ export default function DatabaseInit() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    handleInitialization();
+    checkDatabaseStatus();
   }, []);
+
+  async function checkDatabaseStatus() {
+    setStatus('loading');
+    setMessage('Verifica stato database...');
+
+    try {
+      // Verifica se il database è già inizializzato controllando se esistono utenti
+      const { getUsersCount } = await import('../lib/neonDatabase');
+      const userCount = await getUsersCount();
+      
+      if (userCount > 0) {
+        // Database già inizializzato
+        setStatus('success');
+        setMessage('Database già inizializzato');
+        
+        // Nascondi il messaggio dopo 2 secondi
+        setTimeout(() => {
+          setStatus('idle');
+        }, 2000);
+      } else {
+        // Database vuoto, inizializza
+        await handleInitialization();
+      }
+    } catch (error) {
+      console.error('Errore verifica database:', error);
+      // Se c'è un errore, prova a inizializzare
+      await handleInitialization();
+    }
+  }
 
   async function handleInitialization() {
     setStatus('loading');
     setMessage('Inizializzazione database in corso...');
 
     try {
-      console.log('🔄 INIT: Forzando inizializzazione database...');
+      console.log('🔄 INIT: Inizializzazione database necessaria...');
       setMessage('Creazione tabelle e inserimento dati...');
       
       const result = await initializeTables();
