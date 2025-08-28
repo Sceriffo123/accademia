@@ -188,7 +188,7 @@ export default function Home() {
             <div className="flex flex-col md:flex-row justify-between items-center">
               <div className="flex items-center space-x-2 mb-4 md:mb-0">
                 <GraduationCap className="h-8 w-8 text-blue-400" />
-                <span className="text-xl font-bold">Accademia</span>
+                <span className="text-xl font-bold">Accademia-TPL</span>
               </div>
               
               <p className="text-gray-400 text-center md:text-right">
