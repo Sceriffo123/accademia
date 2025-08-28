@@ -9,6 +9,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
 
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -16,17 +17,35 @@ export default function Login() {
 
   const from = location.state?.from?.pathname || '/dashboard';
 
+  const addDebug = (message: string) => {
+    console.log('🐛 LOGIN DEBUG:', message);
+    setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+  };
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setDebugInfo([]);
     setLoading(true);
+    
+    addDebug(`Tentativo login con email: ${email}`);
+    addDebug(`Password length: ${password.length}`);
+    addDebug(`Database URL presente: ${!!import.meta.env.VITE_DATABASE_URL}`);
 
-    const { error } = await signIn(email, password);
+    try {
+      addDebug('Chiamata signIn in corso...');
+      const result = await signIn(email, password);
+      addDebug(`Risultato signIn: ${JSON.stringify(result)}`);
 
-    if (error) {
-      setError('Email o password non validi');
-    } else {
-      navigate(from, { replace: true });
+      if (result.error) {
+        addDebug(`Errore ricevuto: ${result.error}`);
+        setError(result.error);
+      } else {
+        addDebug('Login riuscito, navigazione in corso...');
+        navigate(from, { replace: true });
+      }
+    } catch (err) {
+      addDebug(`Errore catch: ${err}`);
+      setError('Errore durante il login');
     }
 
     setLoading(false);
@@ -54,6 +73,18 @@ export default function Login() {
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
                 {error}
+              </div>
+            )}
+
+            {/* Debug Panel */}
+            {debugInfo.length > 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-yellow-800 mb-2">🐛 Debug Info:</h4>
+                <div className="text-xs text-yellow-700 space-y-1 max-h-32 overflow-y-auto">
+                  {debugInfo.map((info, index) => (
+                    <div key={index} className="font-mono">{info}</div>
+                  ))}
+                </div>
               </div>
             )}
 

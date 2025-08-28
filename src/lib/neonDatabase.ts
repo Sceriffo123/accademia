@@ -139,21 +139,42 @@ async function hashPassword(password: string): Promise<string> {
 
 // Verifica password
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  console.log('🔒 PASSWORD DEBUG: Verifica password in corso...');
+  console.log('🔒 PASSWORD DEBUG: Password length:', password.length);
+  console.log('🔒 PASSWORD DEBUG: Hash length:', hash.length);
+  
   const passwordHash = await hashPassword(password);
+  console.log('🔒 PASSWORD DEBUG: Hash calcolato:', passwordHash.substring(0, 10) + '...');
+  console.log('🔒 PASSWORD DEBUG: Hash database:', hash.substring(0, 10) + '...');
+  
   return passwordHash === hash;
 }
 
 // === METODI PER UTENTI ===
 export async function getUserByEmail(email: string): Promise<User | null> {
   try {
+    console.log('🗄️ DB DEBUG: getUserByEmail chiamato per:', email);
+    console.log('🗄️ DB DEBUG: Database URL:', import.meta.env.VITE_DATABASE_URL ? 'PRESENTE' : 'MANCANTE');
+    
     const result = await sql`
       SELECT id, email, full_name, password_hash, role, created_at
       FROM users
       WHERE email = ${email}
     `;
+    
+    console.log('🗄️ DB DEBUG: Query risultato:', result.length > 0 ? 'TROVATO' : 'NON TROVATO');
+    if (result.length > 0) {
+      console.log('🗄️ DB DEBUG: Utente:', { 
+        id: result[0].id, 
+        email: result[0].email, 
+        full_name: result[0].full_name,
+        role: result[0].role 
+      });
+    }
+    
     return result[0] || null;
   } catch (error) {
-    console.error('Errore recupero utente per email:', error);
+    console.error('🗄️ DB DEBUG: Errore recupero utente per email:', error);
     return null;
   }
 }
