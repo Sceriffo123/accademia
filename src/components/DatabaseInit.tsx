@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { initializeDatabase as initializeTables } from '../lib/neonDatabase';
+import { initializeTables } from '../lib/neonDatabase';
 import { Database, CheckCircle, AlertCircle, Loader } from 'lucide-react';
 
 export default function DatabaseInit() {
