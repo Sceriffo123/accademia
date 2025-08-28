@@ -69,9 +69,13 @@ export async function getRecentNormativesCount(days: number = 30): Promise<numbe
   }
 }
 
-export async function getUsers(): Promise<any[]> {
+export async function getUsers(excludeSuperAdmin: boolean = false): Promise<any[]> {
   try {
-    return await getAllUsers();
+    const users = await getAllUsers();
+    if (excludeSuperAdmin) {
+      return users.filter(user => user.role !== 'superadmin');
+    }
+    return users;
   } catch (error) {
     console.error('Error fetching users:', error);
     return [];

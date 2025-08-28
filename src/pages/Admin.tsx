@@ -82,7 +82,7 @@ export default function Admin() {
       const [totalUsers, totalNormatives, usersData, normativesData] = await Promise.all([
         getUsersCount(),
         getNormativesCount(),
-        getUsers(),
+        getUsers(true), // Escludi SuperAdmin dalla vista
         getNormatives()
       ]);
 
