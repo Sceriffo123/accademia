@@ -2,7 +2,7 @@ import {
   getAllNormatives, 
   getNormativeById, 
   getNormativesCount as getNormativesCountFromDB, 
-  getRecentNormativesCount,
+  getRecentNormativesCount as getRecentNormativesCountFromDB,
   getAllUsers,
   getUsersCount as getUsersCountFromDB,
   type Normative 
@@ -62,7 +62,7 @@ export async function getNormativesCount(): Promise<number> {
 
 export async function getRecentNormativesCount(days: number = 30): Promise<number> {
   try {
-    return await getRecentNormativesCount(days);
+    return await getRecentNormativesCountFromDB(days);
   } catch (error) {
     console.error('Error counting recent normatives:', error);
     return 0;
