@@ -80,7 +80,7 @@ export async function getUsers(): Promise<any[]> {
 
 export async function getUsersCount(): Promise<number> {
   try {
-    return await getUsersCount();
+    return await getUsersCountFromDB();
   } catch (error) {
     console.error('Error counting users:', error);
     return 0;
