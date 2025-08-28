@@ -172,6 +172,7 @@ async function insertSampleData(forceInsert = false) {
         ('superadmin@accademiatpl.org', 'Super Amministratore', ${superAdminHash}, 'superadmin'),
         ('admin@accademia.it', 'Amministratore', ${adminHash}, 'admin'),
         ('user@accademia.it', 'Utente Demo', ${userHash}, 'user')
+      ON CONFLICT (email) DO NOTHING
     `;
     console.log('📝 SAMPLE DEBUG: Utenti inseriti con successo');
     
@@ -215,6 +216,7 @@ async function insertSampleData(forceInsert = false) {
           '2023-05-20',
           ARRAY['tar', 'autorizzazioni', 'giurisprudenza']
         )
+      ON CONFLICT (reference_number) DO NOTHING
     `;
     console.log('📝 SAMPLE DEBUG: Normative inserite con successo');
 
