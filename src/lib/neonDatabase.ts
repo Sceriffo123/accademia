@@ -78,20 +78,26 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 }
 
 export async function getUserById(id: string): Promise<User | null> {
-  try {
-    // Verifica formato UUID v4
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
-      throw new Error('ID utente non valido');
-    }
-    
-    const result = await sql`
-      SELECT * FROM users WHERE id = ${id}::uuid
-    `;
-    return result[0] as User || null;
-  } catch (error) {
-    console.error('Errore recupero utente per ID:', error);
+  console.log('[DEBUG] getUserById called with ID:', id);
+  
+  if (!isValidUUID(id)) {
+    console.error('[ERROR] Invalid UUID format:', id);
     return null;
   }
+
+  try {
+    const result = await sql`SELECT * FROM users WHERE id = ${id}::uuid`;
+    console.log('[DEBUG] Query result:', result.length > 0 ? 'User found' : 'User not found');
+    return result[0] as User || null;
+  } catch (error) {
+    console.error('[ERROR] Database error:', error);
+    return null;
+  }
+}
+
+function isValidUUID(id: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
 }
 
 export async function getUsers(): Promise<User[]> {
@@ -127,7 +133,7 @@ export async function getUsersCount(): Promise<number> {
 
 export async function updateUser(id: string, updates: Partial<User>): Promise<User | null> {
   try {
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    if (!isValidUUID(id)) {
       throw new Error('ID utente non valido');
     }
     
@@ -147,7 +153,7 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
 
 export async function deleteUser(id: string): Promise<boolean> {
   try {
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    if (!isValidUUID(id)) {
       throw new Error('ID utente non valido');
     }
     
