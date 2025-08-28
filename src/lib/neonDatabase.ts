@@ -1,0 +1,261 @@
+import { neon } from '@neondatabase/serverless';
+
+const sql = neon(import.meta.env.VITE_DATABASE_URL!);
+
+export interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  password_hash: string;
+  role: 'user' | 'admin';
+  created_at: string;
+}
+
+export interface Normative {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  type: 'law' | 'regulation' | 'ruling';
+  reference_number: string;
+  publication_date: string;
+  effective_date: string;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+// Inizializza le tabelle se non esistono
+export async function initializeTables() {
+  try {
+    // Crea tabella users
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        email VARCHAR(255) UNIQUE NOT NULL,
+        full_name VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+
+    // Crea tabella normatives
+    await sql`
+      CREATE TABLE IF NOT EXISTS normatives (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        type VARCHAR(20) NOT NULL CHECK (type IN ('law', 'regulation', 'ruling')),
+        reference_number VARCHAR(100) NOT NULL,
+        publication_date DATE NOT NULL,
+        effective_date DATE NOT NULL,
+        tags TEXT[] DEFAULT '{}',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+
+    // Inserisci dati di esempio se le tabelle sono vuote
+    const userCount = await sql`SELECT COUNT(*) as count FROM users`;
+    if (userCount[0].count === '0') {
+      await insertSampleData();
+    }
+
+    console.log('Database Neon inizializzato con successo!');
+    return true;
+  } catch (error) {
+    console.error('Errore inizializzazione Neon:', error);
+    return false;
+  }
+}
+
+// Inserisci dati di esempio
+async function insertSampleData() {
+  try {
+    // Hash password semplificato per demo
+    const adminHash = await hashPassword('admin123');
+    const userHash = await hashPassword('user123');
+
+    // Inserisci utenti
+    await sql`
+      INSERT INTO users (email, full_name, password_hash, role)
+      VALUES 
+        ('admin@accademia.it', 'Amministratore', ${adminHash}, 'admin'),
+        ('user@accademia.it', 'Utente Demo', ${userHash}, 'user')
+    `;
+
+    // Inserisci normative
+    await sql`
+      INSERT INTO normatives (title, content, category, type, reference_number, publication_date, effective_date, tags)
+      VALUES 
+        (
+          'Decreto Legislativo 285/1992 - Codice della Strada',
+          'Il presente decreto disciplina la circolazione stradale e stabilisce le norme per il trasporto pubblico locale non di linea. Articolo 1: Definizioni e campo di applicazione. Il trasporto pubblico locale non di linea comprende tutti i servizi di trasporto di persone effettuati con veicoli adibiti al trasporto di persone aventi più di nove posti compreso quello del conducente.',
+          'Trasporto Pubblico',
+          'law',
+          'D.Lgs. 285/1992',
+          '1992-04-30',
+          '1993-01-01',
+          ARRAY['trasporto', 'codice strada', 'pubblico locale']
+        ),
+        (
+          'Legge Regionale 15/2018 - Disciplina TPL non di linea',
+          'La presente legge disciplina il trasporto pubblico locale non di linea nella regione, stabilendo requisiti, procedure e controlli. Articolo 1: Oggetto e finalità. La presente legge disciplina il trasporto pubblico locale non di linea al fine di garantire la sicurezza degli utenti e la qualità del servizio.',
+          'Normativa Regionale',
+          'regulation',
+          'L.R. 15/2018',
+          '2018-03-15',
+          '2018-06-01',
+          ARRAY['trasporto locale', 'regionale', 'licenze']
+        ),
+        (
+          'Sentenza TAR Lazio n. 1234/2023',
+          'Il Tribunale Amministrativo Regionale del Lazio si è pronunciato sulla questione relativa ai requisiti per il rilascio delle autorizzazioni per il trasporto pubblico locale non di linea. La sentenza chiarisce i criteri di valutazione delle domande di autorizzazione.',
+          'Giurisprudenza',
+          'ruling',
+          'TAR Lazio 1234/2023',
+          '2023-05-20',
+          '2023-05-20',
+          ARRAY['tar', 'autorizzazioni', 'giurisprudenza']
+        )
+    `;
+
+    console.log('Dati di esempio inseriti con successo!');
+  } catch (error) {
+    console.error('Errore inserimento dati:', error);
+  }
+}
+
+// Hash password usando Web Crypto API
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password + 'accademia_salt_2024');
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Verifica password
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  const passwordHash = await hashPassword(password);
+  return passwordHash === hash;
+}
+
+// === METODI PER UTENTI ===
+export async function getUserByEmail(email: string): Promise<User | null> {
+  try {
+    const result = await sql`
+      SELECT id, email, full_name, password_hash, role, created_at
+      FROM users
+      WHERE email = ${email}
+    `;
+    return result[0] || null;
+  } catch (error) {
+    console.error('Errore recupero utente per email:', error);
+    return null;
+  }
+}
+
+export async function getUserById(id: string): Promise<User | null> {
+  try {
+    const result = await sql`
+      SELECT id, email, full_name, role, created_at
+      FROM users
+      WHERE id = ${id}
+    `;
+    return result[0] || null;
+  } catch (error) {
+    console.error('Errore recupero utente per ID:', error);
+    return null;
+  }
+}
+
+export async function createUser(email: string, fullName: string, passwordHash: string, role: 'user' | 'admin' = 'user'): Promise<User | null> {
+  try {
+    const result = await sql`
+      INSERT INTO users (email, full_name, password_hash, role)
+      VALUES (${email}, ${fullName}, ${passwordHash}, ${role})
+      RETURNING id, email, full_name, role, created_at
+    `;
+    return result[0] || null;
+  } catch (error) {
+    console.error('Errore creazione utente:', error);
+    return null;
+  }
+}
+
+export async function getAllUsers(): Promise<User[]> {
+  try {
+    const result = await sql`
+      SELECT id, email, full_name, role, created_at
+      FROM users
+      ORDER BY created_at DESC
+    `;
+    return result;
+  } catch (error) {
+    console.error('Errore recupero tutti gli utenti:', error);
+    return [];
+  }
+}
+
+export async function getUsersCount(): Promise<number> {
+  try {
+    const result = await sql`SELECT COUNT(*) as count FROM users`;
+    return parseInt(result[0].count);
+  } catch (error) {
+    console.error('Errore conteggio utenti:', error);
+    return 0;
+  }
+}
+
+// === METODI PER NORMATIVE ===
+export async function getAllNormatives(): Promise<Normative[]> {
+  try {
+    const result = await sql`
+      SELECT * FROM normatives
+      ORDER BY publication_date DESC
+    `;
+    return result;
+  } catch (error) {
+    console.error('Errore recupero normative:', error);
+    return [];
+  }
+}
+
+export async function getNormativeById(id: string): Promise<Normative | null> {
+  try {
+    const result = await sql`
+      SELECT * FROM normatives
+      WHERE id = ${id}
+    `;
+    return result[0] || null;
+  } catch (error) {
+    console.error('Errore recupero normativa per ID:', error);
+    return null;
+  }
+}
+
+export async function getNormativesCount(): Promise<number> {
+  try {
+    const result = await sql`SELECT COUNT(*) as count FROM normatives`;
+    return parseInt(result[0].count);
+  } catch (error) {
+    console.error('Errore conteggio normative:', error);
+    return 0;
+  }
+}
+
+export async function getRecentNormativesCount(days: number = 30): Promise<number> {
+  try {
+    const result = await sql`
+      SELECT COUNT(*) as count FROM normatives 
+      WHERE created_at >= NOW() - INTERVAL '${days} days'
+    `;
+    return parseInt(result[0].count);
+  } catch (error) {
+    console.error('Errore conteggio normative recenti:', error);
+    return 0;
+  }
+}

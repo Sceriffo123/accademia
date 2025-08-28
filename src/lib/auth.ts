@@ -1,4 +1,10 @@
-import { localDB, type User } from './localDatabase';
+import { 
+  getUserByEmail, 
+  getUserById, 
+  createUser, 
+  verifyPassword,
+  type User 
+} from './neonDatabase';
 
 export interface AuthResponse {
   user?: User;
@@ -41,7 +47,7 @@ async function hashPassword(password: string): Promise<string> {
 export async function signUp(email: string, password: string, fullName: string): Promise<AuthResponse> {
   try {
     // Verifica se l'utente esiste già
-    const existingUser = await localDB.getUserByEmail(email);
+    const existingUser = await getUserByEmail(email);
     if (existingUser) {
       return { error: 'Email già registrata' };
     }
@@ -50,7 +56,7 @@ export async function signUp(email: string, password: string, fullName: string):
     const passwordHash = await hashPassword(password);
 
     // Crea nuovo utente
-    const newUser = await localDB.createUser(email, fullName, passwordHash);
+    const newUser = await createUser(email, fullName, passwordHash);
     
     if (!newUser) {
       return { error: 'Errore nella creazione dell\'utente' };
@@ -79,13 +85,13 @@ export async function signUp(email: string, password: string, fullName: string):
 export async function signIn(email: string, password: string): Promise<AuthResponse> {
   try {
     // Trova utente
-    const user = await localDB.getUserByEmail(email);
+    const user = await getUserByEmail(email);
     if (!user) {
       return { error: 'Email o password non validi' };
     }
 
     // Verifica password
-    const isValidPassword = await localDB.verifyPassword(password, user.password_hash);
+    const isValidPassword = await verifyPassword(password, user.password_hash);
     if (!isValidPassword) {
       return { error: 'Email o password non validi' };
     }
@@ -112,7 +118,7 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
 // Ottieni utente da ID
 export async function getCurrentUser(id: string): Promise<User | null> {
   try {
-    const user = await localDB.getUserById(id);
+    const user = await getUserById(id);
     if (!user) return null;
 
     return {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { localDB } from '../lib/localDatabase';
+import { initializeTables } from '../lib/neonDatabase';
 import { Database, CheckCircle, AlertCircle, Loader } from 'lucide-react';
 
 export default function DatabaseInit() {
@@ -12,23 +12,27 @@ export default function DatabaseInit() {
 
   async function initializeDatabase() {
     setStatus('loading');
-    setMessage('Inizializzazione database locale in corso...');
+    setMessage('Connessione al database Neon in corso...');
 
     try {
-      // Inizializza dati locali
-      await localDB.initializeData();
+      // Inizializza database Neon
+      const success = await initializeTables();
+      
+      if (!success) {
+        throw new Error('Errore inizializzazione database');
+      }
 
       setStatus('success');
-      setMessage('Database locale inizializzato con successo!');
+      setMessage('Database Neon connesso con successo!');
       
       // Nascondi il messaggio dopo 2 secondi
       setTimeout(() => {
         setStatus('idle');
       }, 2000);
     } catch (error) {
-      console.error('Errore inizializzazione database:', error);
+      console.error('Errore connessione database Neon:', error);
       setStatus('error');
-      setMessage('Errore nell\'inizializzazione del database locale');
+      setMessage('Errore nella connessione al database Neon');
     }
   }
 
@@ -59,7 +63,7 @@ export default function DatabaseInit() {
           </div>
           
           <h2 className="text-xl font-bold text-gray-900 mb-2">
-            Inizializzazione Database
+            Connessione Database Neon
           </h2>
           
           <p className="text-gray-600 mb-4">
