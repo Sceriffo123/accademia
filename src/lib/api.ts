@@ -1,6 +1,6 @@
 import { 
   getAllNormatives, 
-  getNormativeById, 
+  getNormativeById as getNormativeByIdFromDB, 
   getNormativesCount as getNormativesCountFromDB, 
   getRecentNormativesCount as getRecentNormativesCountFromDB,
   getAllUsers,
@@ -44,7 +44,7 @@ export async function getNormatives(filters?: {
 
 export async function getNormativeById(id: string): Promise<Normative | null> {
   try {
-    return await getNormativeById(id);
+    return await getNormativeByIdFromDB(id);
   } catch (error) {
     console.error('Error fetching normative:', error);
     return null;
