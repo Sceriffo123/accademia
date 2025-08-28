@@ -31,6 +31,12 @@ export async function initializeTables() {
     console.log('🏗️ INIT DEBUG: Inizializzazione tabelle...');
     console.log('🏗️ INIT DEBUG: Database URL presente:', !!import.meta.env.VITE_DATABASE_URL);
     
+    // Drop existing tables to ensure schema compatibility
+    console.log('🏗️ INIT DEBUG: Rimozione tabelle esistenti per aggiornamento schema...');
+    await sql`DROP TABLE IF EXISTS activity_logs CASCADE`;
+    await sql`DROP TABLE IF EXISTS normatives CASCADE`;
+    await sql`DROP TABLE IF EXISTS users CASCADE`;
+    
     // Crea tabella users
     console.log('🏗️ INIT DEBUG: Creazione tabella users...');
     await sql`
