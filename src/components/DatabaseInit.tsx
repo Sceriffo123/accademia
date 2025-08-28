@@ -12,23 +12,29 @@ export default function DatabaseInit() {
 
   async function handleInitialization() {
     setStatus('loading');
-    setMessage('Controllo database in corso...');
+    setMessage('Inizializzazione database in corso...');
 
     try {
-      // Inizializza database Neon
+      console.log('🔄 INIT: Forzando inizializzazione database...');
+      setMessage('Creazione tabelle e inserimento dati...');
+      
       const result = await initializeTables();
 
-      setStatus('success');
-      setMessage('Database verificato con successo!');
-      
-      // Nascondi il messaggio dopo 2 secondi
-      setTimeout(() => {
-        setStatus('idle');
-      }, 2000);
+      if (result) {
+        setStatus('success');
+        setMessage('Database inizializzato con successo!');
+        
+        // Nascondi il messaggio dopo 3 secondi
+        setTimeout(() => {
+          setStatus('idle');
+        }, 3000);
+      } else {
+        throw new Error('Inizializzazione fallita');
+      }
     } catch (error) {
-      console.error('Errore connessione database Neon:', error);
+      console.error('Errore inizializzazione database:', error);
       setStatus('error');
-      setMessage('Errore nella verifica del database');
+      setMessage('Errore nell\'inizializzazione del database. Riprova.');
     }
   }
 

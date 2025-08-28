@@ -80,6 +80,13 @@ async function insertSampleData() {
   try {
     console.log('📝 SAMPLE DEBUG: Inserimento dati di esempio...');
     
+    // Verifica se ci sono già utenti
+    const existingUsers = await sql`SELECT COUNT(*) as count FROM users`;
+    if (parseInt(existingUsers[0].count) > 0) {
+      console.log('📝 SAMPLE DEBUG: Utenti già presenti, skip inserimento');
+      return;
+    }
+    
     // Hash password semplificato per demo
     console.log('📝 SAMPLE DEBUG: Hash password admin...');
     const adminHash = await hashPassword('admin123');
@@ -100,16 +107,14 @@ async function insertSampleData() {
 
     // Inserisci utenti
     console.log('📝 SAMPLE DEBUG: Inserimento utenti...');
-    const insertResult = await sql`
+    await sql`
       INSERT INTO users (email, full_name, password_hash, role)
       VALUES 
         ('superadmin@accademiatpl.org', 'Super Amministratore', ${superAdminHash}, 'superadmin'),
         ('admin@accademia.it', 'Amministratore', ${adminHash}, 'admin'),
         ('user@accademia.it', 'Utente Demo', ${userHash}, 'user')
-      ON CONFLICT (email) DO NOTHING
-      RETURNING id, email, full_name, role
     `;
-    console.log('📝 SAMPLE DEBUG: Utenti inseriti:', insertResult);
+    console.log('📝 SAMPLE DEBUG: Utenti inseriti con successo');
     
     // Verifica immediata che gli utenti siano stati inseriti
     const verifyUsers = await sql`SELECT id, email, full_name, role FROM users`;
@@ -117,6 +122,14 @@ async function insertSampleData() {
 
     // Inserisci normative
     console.log('📝 SAMPLE DEBUG: Inserimento normative...');
+    
+    // Verifica se ci sono già normative
+    const existingNormatives = await sql`SELECT COUNT(*) as count FROM normatives`;
+    if (parseInt(existingNormatives[0].count) > 0) {
+      console.log('📝 SAMPLE DEBUG: Normative già presenti, skip inserimento');
+      return;
+    }
+    
     await sql`
       INSERT INTO normatives (title, content, category, type, reference_number, publication_date, effective_date, tags)
       VALUES 
@@ -150,7 +163,6 @@ async function insertSampleData() {
           '2023-05-20',
           ARRAY['tar', 'autorizzazioni', 'giurisprudenza']
         )
-      ON CONFLICT (reference_number) DO NOTHING
     `;
     console.log('📝 SAMPLE DEBUG: Normative inserite con successo');
 
