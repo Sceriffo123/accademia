@@ -7,63 +7,34 @@ export default function DatabaseInit() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    checkDatabaseStatus();
+    handleInitialization();
   }, []);
 
-  async function checkDatabaseStatus() {
+  async function handleInitialization() {
     setStatus('loading');
-    setMessage('Verifica stato database...');
+    setMessage('Verifica e inizializzazione database...');
 
     try {
-      // Verifica se il database è già inizializzato controllando se esistono utenti
-      const { getUsersCount } = await import('../lib/neonDatabase');
-      const userCount = await getUsersCount();
+      console.log('🔄 INIT: Verifica e inizializzazione database...');
+      setMessage('Verifica tabelle e struttura database...');
       
-      if (userCount > 0) {
-        // Database già inizializzato
+      const result = await initializeTables();
+
+      if (result) {
         setStatus('success');
-        setMessage('Database già inizializzato');
+        setMessage('Database verificato e pronto!');
         
         // Nascondi il messaggio dopo 2 secondi
         setTimeout(() => {
           setStatus('idle');
         }, 2000);
       } else {
-        // Database vuoto, inizializza
-        await handleInitialization();
-      }
-    } catch (error) {
-      console.error('Errore verifica database:', error);
-      // Se c'è un errore, prova a inizializzare
-      await handleInitialization();
-    }
-  }
-
-  async function handleInitialization() {
-    setStatus('loading');
-    setMessage('Inizializzazione database in corso...');
-
-    try {
-      console.log('🔄 INIT: Inizializzazione database necessaria...');
-      setMessage('Creazione tabelle e inserimento dati...');
-      
-      const result = await initializeTables();
-
-      if (result) {
-        setStatus('success');
-        setMessage('Database inizializzato con successo!');
-        
-        // Nascondi il messaggio dopo 3 secondi
-        setTimeout(() => {
-          setStatus('idle');
-        }, 3000);
-      } else {
         throw new Error('Inizializzazione fallita');
       }
     } catch (error) {
       console.error('Errore inizializzazione database:', error);
       setStatus('error');
-      setMessage('Errore nell\'inizializzazione del database. Riprova.');
+      setMessage('Errore nella verifica del database. Riprova.');
     }
   }
 
