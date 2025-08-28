@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { getNormativesCount, getUsersCount, getUsers, getNormatives, updateNormative, deleteNormative, type Normative } from '../lib/api';
 import NormativeEditor from '../components/NormativeEditor';
 import { 
@@ -9,7 +10,9 @@ import {
   Trash2, 
   Eye,
   Settings,
-  BarChart3
+  BarChart3,
+  Shield,
+  UserX
 } from 'lucide-react';
 
 interface AdminStats {
@@ -20,6 +23,7 @@ interface AdminStats {
 }
 
 export default function Admin() {
+  const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'normatives'>('overview');
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
@@ -32,6 +36,23 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [editingNormative, setEditingNormative] = useState<Normative | null>(null);
   const [showEditor, setShowEditor] = useState(false);
+
+  // Verifica autorizzazione admin
+  if (!user || profile?.role !== 'admin') {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <Shield className="h-12 w-12 text-red-400 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Accesso Negato
+          </h1>
+          <p className="text-gray-600 mb-6">
+            Solo gli amministratori possono accedere a questa sezione.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     fetchAdminData();
@@ -109,6 +130,29 @@ export default function Admin() {
       console.error('Error deleting normative:', error);
       alert('Errore durante l\'eliminazione: ' + (error as Error).message);
     }
+  }
+
+  async function handleEditUser(userId: string) {
+    console.log('Editing user:', userId);
+    // TODO: Implementare modifica utente
+    alert('Funzionalità di modifica utente in sviluppo');
+  }
+
+  async function handleDeleteUser(userId: string) {
+    if (!confirm('Sei sicuro di voler eliminare questo utente?')) return;
+    
+    console.log('Deleting user:', userId);
+    // TODO: Implementare eliminazione utente
+    alert('Funzionalità di eliminazione utente in sviluppo');
+  }
+
+  async function handleToggleUserRole(userId: string, currentRole: string) {
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    if (!confirm(`Cambiare il ruolo dell'utente da ${currentRole} a ${newRole}?`)) return;
+    
+    console.log('Toggling user role:', userId, 'from', currentRole, 'to', newRole);
+    // TODO: Implementare cambio ruolo
+    alert('Funzionalità di cambio ruolo in sviluppo');
   }
 
   if (loading) {
@@ -280,11 +324,31 @@ export default function Admin() {
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex items-center space-x-2">
-                              <button className="p-1 text-gray-400 hover:text-blue-600 transition-colors">
+                              <button 
+                                onClick={() => handleToggleUserRole(user.id, user.role)}
+                                className="p-1 text-gray-400 hover:text-purple-600 transition-colors"
+                                title={`Cambia ruolo (attuale: ${user.role})`}
+                              >
+                                <Shield className="h-4 w-4" />
+                              </button>
+                              <button 
+                                onClick={() => handleEditUser(user.id)}
+                                className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                                title="Modifica utente"
+                              >
                                 <Edit3 className="h-4 w-4" />
                               </button>
-                              <button className="p-1 text-gray-400 hover:text-red-600 transition-colors">
-                                <Trash2 className="h-4 w-4" />
+                              <button 
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                                title="Elimina utente"
+                                disabled={user.role === 'admin'}
+                              >
+                                {user.role === 'admin' ? (
+                                  <UserX className="h-4 w-4 opacity-50" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
                               </button>
                             </div>
                           </td>
@@ -340,6 +404,7 @@ export default function Admin() {
                           }}
                           className="p-2 text-gray-400 hover:text-blue-600 transition-colors bg-white rounded-lg border border-gray-200 hover:border-blue-300"
                           title="Visualizza"
+                          disabled={loading}
                         >
                           <Eye className="h-4 w-4" />
                         </button>
@@ -351,6 +416,7 @@ export default function Admin() {
                           }}
                           className="p-2 text-gray-400 hover:text-green-600 transition-colors bg-white rounded-lg border border-gray-200 hover:border-green-300"
                           title="Modifica"
+                          disabled={loading}
                         >
                           <Edit3 className="h-4 w-4" />
                         </button>
@@ -362,6 +428,7 @@ export default function Admin() {
                           }}
                           className="p-2 text-gray-400 hover:text-red-600 transition-colors bg-white rounded-lg border border-gray-200 hover:border-red-300"
                           title="Elimina"
+                          disabled={loading}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
