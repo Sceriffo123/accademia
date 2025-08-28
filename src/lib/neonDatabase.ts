@@ -178,10 +178,19 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 export async function getUserByEmail(email: string): Promise<User | null> {
   try {
     console.log('🗄️ DB DEBUG: getUserByEmail chiamato per:', email);
-    console.log('🗄️ DB DEBUG: Database URL:', import.meta.env.VITE_DATABASE_URL ? 'PRESENTE' : 'MANCANTE');
-    console.log('🗄️ DB DEBUG: Database URL (primi 20 char):', import.meta.env.VITE_DATABASE_URL?.substring(0, 20));
+    console.log('🗄️ DB DEBUG: Email type:', typeof email);
+    console.log('🗄️ DB DEBUG: Email length:', email.length);
+    console.log('🗄️ DB DEBUG: Email trimmed:', email.trim());
     
     console.log('🗄️ DB DEBUG: Esecuzione query SQL...');
+    console.log('🗄️ DB DEBUG: Query: SELECT * FROM users WHERE email = ', email);
+    
+    // Prima proviamo a vedere tutti gli utenti
+    console.log('🗄️ DB DEBUG: Controllo tutti gli utenti...');
+    const allUsers = await sql`SELECT email, full_name FROM users`;
+    console.log('🗄️ DB DEBUG: Tutti gli utenti nel DB:', allUsers);
+    
+    // Poi la query specifica
     const result = await sql`
       SELECT id, email, full_name, password_hash, role, created_at
       FROM users
@@ -189,8 +198,16 @@ export async function getUserByEmail(email: string): Promise<User | null> {
     `;
     
     console.log('🗄️ DB DEBUG: Query risultato:', result.length > 0 ? 'TROVATO' : 'NON TROVATO');
-    console.log('🗄️ DB DEBUG: Risultato completo:', result);
     console.log('🗄️ DB DEBUG: Numero righe:', result.length);
+    
+    // Proviamo anche una query case-insensitive
+    console.log('🗄️ DB DEBUG: Provo query case-insensitive...');
+    const resultCaseInsensitive = await sql`
+      SELECT id, email, full_name, password_hash, role, created_at
+      FROM users
+      WHERE LOWER(email) = LOWER(${email})
+    `;
+    console.log('🗄️ DB DEBUG: Risultato case-insensitive:', resultCaseInsensitive.length);
     
     if (result.length > 0) {
       console.log('🗄️ DB DEBUG: Utente:', { 
@@ -199,14 +216,17 @@ export async function getUserByEmail(email: string): Promise<User | null> {
         full_name: result[0].full_name,
         role: result[0].role 
       });
+      return result[0];
+    } else if (resultCaseInsensitive.length > 0) {
+      console.log('🗄️ DB DEBUG: Trovato con case-insensitive:', resultCaseInsensitive[0]);
+      return resultCaseInsensitive[0];
     }
     
-    return result[0] || null;
+    return null;
   } catch (error) {
     console.error('🗄️ DB DEBUG: Errore recupero utente per email:', error);
     console.error('🗄️ DB DEBUG: Tipo errore:', typeof error);
     console.error('🗄️ DB DEBUG: Messaggio errore:', error?.message);
-    console.error('🗄️ DB DEBUG: Stack errore:', error?.stack);
     return null;
   }
 }
