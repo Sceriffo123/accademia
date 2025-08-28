@@ -64,34 +64,47 @@ export default function Admin() {
   }
 
   async function handleEditNormative(normative: Normative) {
+    console.log('Editing normative:', normative.title);
     setEditingNormative(normative);
     setShowEditor(true);
   }
 
   async function handleSaveNormative(id: string, data: Partial<Normative>) {
+    console.log('Saving normative:', id, data);
     try {
       const updated = await updateNormative(id, data);
       if (updated) {
+        console.log('Normative updated successfully:', updated);
         // Aggiorna la lista locale
         setNormatives(prev => prev.map(n => n.id === id ? updated : n));
         setShowEditor(false);
         setEditingNormative(null);
+      } else {
+        console.error('Failed to update normative');
+        alert('Errore durante il salvataggio della normativa');
       }
     } catch (error) {
       console.error('Error updating normative:', error);
+      alert('Errore durante il salvataggio: ' + error.message);
     }
   }
 
   async function handleDeleteNormative(id: string) {
     if (!confirm('Sei sicuro di voler eliminare questa normativa?')) return;
     
+    console.log('Deleting normative:', id);
     try {
       const success = await deleteNormative(id);
       if (success) {
+        console.log('Normative deleted successfully');
         setNormatives(prev => prev.filter(n => n.id !== id));
+      } else {
+        console.error('Failed to delete normative');
+        alert('Errore durante l\'eliminazione della normativa');
       }
     } catch (error) {
       console.error('Error deleting normative:', error);
+      alert('Errore durante l\'eliminazione: ' + error.message);
     }
   }
 
@@ -292,7 +305,7 @@ export default function Admin() {
                   {normatives.map((normative) => (
                     <div
                       key={normative.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      className="flex items-start justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                     >
                       <div className="flex-1">
                         <h4 className="font-medium text-gray-900 mb-1">
@@ -310,26 +323,29 @@ export default function Admin() {
                           <span>{normative.reference_number}</span>
                           <span>{new Date(normative.publication_date).toLocaleDateString('it-IT')}</span>
                         </div>
+                        <p className="text-sm text-gray-500 mt-2 line-clamp-2">
+                          {normative.content.substring(0, 150)}...
+                        </p>
                       </div>
                       
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 ml-4 flex-shrink-0">
                         <button 
                           onClick={() => window.open(`/normative/${normative.id}`, '_blank')}
-                          className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                          className="p-2 text-gray-400 hover:text-blue-600 transition-colors bg-white rounded-lg border border-gray-200 hover:border-blue-300"
                           title="Visualizza"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button 
                           onClick={() => handleEditNormative(normative)}
-                          className="p-2 text-gray-400 hover:text-green-600 transition-colors"
+                          className="p-2 text-gray-400 hover:text-green-600 transition-colors bg-white rounded-lg border border-gray-200 hover:border-green-300"
                           title="Modifica"
                         >
                           <Edit3 className="h-4 w-4" />
                         </button>
                         <button 
                           onClick={() => handleDeleteNormative(normative.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                          className="p-2 text-gray-400 hover:text-red-600 transition-colors bg-white rounded-lg border border-gray-200 hover:border-red-300"
                           title="Elimina"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -337,6 +353,14 @@ export default function Admin() {
                       </div>
                     </div>
                   ))}
+                  
+                  {normatives.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                      <p className="text-lg">Nessuna normativa trovata</p>
+                      <p className="text-sm">Le normative appariranno qui una volta caricate dal database</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
