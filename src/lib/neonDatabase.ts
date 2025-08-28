@@ -31,17 +31,6 @@ export async function initializeTables() {
     console.log('🏗️ INIT DEBUG: Inizializzazione tabelle...');
     console.log('🏗️ INIT DEBUG: Database URL presente:', !!import.meta.env.VITE_DATABASE_URL);
     
-    // Controlla se gli utenti esistono già
-    console.log('🏗️ INIT DEBUG: Controllo utenti esistenti...');
-    const existingUsers = await sql`SELECT COUNT(*) as count FROM users`;
-    const userCount = parseInt(existingUsers[0].count);
-    console.log('🏗️ INIT DEBUG: Utenti esistenti:', userCount);
-    
-    if (userCount >= 2) {
-      console.log('🏗️ INIT DEBUG: Utenti già presenti, skip inizializzazione');
-      return true;
-    }
-    
     // Crea tabella users
     console.log('🏗️ INIT DEBUG: Creazione tabella users...');
     await sql`
@@ -73,7 +62,7 @@ export async function initializeTables() {
       )
     `;
 
-    // Inserisci dati solo se necessario
+    // Forza inserimento dati
     console.log('🏗️ INIT DEBUG: Inserimento dati di esempio...');
     await insertSampleData();
 
@@ -109,6 +98,10 @@ async function insertSampleData() {
     console.log('📝 SAMPLE DEBUG: Admin hash completo length:', adminHash.length);
     console.log('📝 SAMPLE DEBUG: User hash completo length:', userHash.length);
 
+    // Prima elimina tutti gli utenti esistenti per evitare conflitti
+    console.log('📝 SAMPLE DEBUG: Pulizia utenti esistenti...');
+    await sql`DELETE FROM users WHERE email IN ('superadmin@accademiatpl.org', 'admin@accademia.it', 'user@accademia.it')`;
+
     // Inserisci utenti
     console.log('📝 SAMPLE DEBUG: Inserimento utenti...');
     const insertResult = await sql`
@@ -117,7 +110,6 @@ async function insertSampleData() {
         ('superadmin@accademiatpl.org', 'Super Amministratore', ${superAdminHash}, 'superadmin'),
         ('admin@accademia.it', 'Amministratore', ${adminHash}, 'admin'),
         ('user@accademia.it', 'Utente Demo', ${userHash}, 'user')
-     ON CONFLICT (email) DO NOTHING
       RETURNING id, email, full_name, role
     `;
     console.log('📝 SAMPLE DEBUG: Utenti inseriti:', insertResult);
