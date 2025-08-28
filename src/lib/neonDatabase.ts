@@ -7,7 +7,7 @@ export interface User {
   email: string;
   full_name: string;
   password_hash: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'superadmin' | 'operator';
   created_at: string;
 }
 
@@ -50,7 +50,7 @@ export async function initializeTables() {
         email VARCHAR(255) UNIQUE NOT NULL,
         full_name VARCHAR(255) NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
-        role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+        role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin', 'superadmin', 'operator')),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
     `;
@@ -97,8 +97,13 @@ async function insertSampleData() {
     console.log('📝 SAMPLE DEBUG: Hash password user...');
     const userHash = await hashPassword('user123');
     
+    // Hash password per SuperAdmin
+    console.log('📝 SAMPLE DEBUG: Hash password superadmin...');
+    const superAdminHash = await hashPassword('superadmin2024!');
+    
     console.log('📝 SAMPLE DEBUG: Admin hash (primi 10):', adminHash.substring(0, 10));
     console.log('📝 SAMPLE DEBUG: User hash (primi 10):', userHash.substring(0, 10));
+    console.log('📝 SAMPLE DEBUG: SuperAdmin hash (primi 10):', superAdminHash.substring(0, 10));
 
     // Verifica che gli hash siano stati generati correttamente
     console.log('📝 SAMPLE DEBUG: Admin hash completo length:', adminHash.length);
@@ -109,6 +114,7 @@ async function insertSampleData() {
     const insertResult = await sql`
       INSERT INTO users (email, full_name, password_hash, role)
       VALUES 
+        ('superadmin@accademiatpl.org', 'Super Amministratore', ${superAdminHash}, 'superadmin'),
         ('admin@accademia.it', 'Amministratore', ${adminHash}, 'admin'),
         ('user@accademia.it', 'Utente Demo', ${userHash}, 'user')
      ON CONFLICT (email) DO NOTHING
@@ -259,7 +265,7 @@ export async function getUserById(id: string): Promise<User | null> {
   }
 }
 
-export async function createUser(email: string, fullName: string, passwordHash: string, role: 'user' | 'admin' = 'user'): Promise<User | null> {
+export async function createUser(email: string, fullName: string, passwordHash: string, role: 'user' | 'admin' | 'superadmin' | 'operator' = 'user'): Promise<User | null> {
   try {
     const result = await sql`
       INSERT INTO users (email, full_name, password_hash, role)
@@ -297,7 +303,7 @@ export async function getUsersCount(): Promise<number> {
   }
 }
 
-export async function updateUser(id: string, data: { email?: string; full_name?: string; role?: 'user' | 'admin' }): Promise<User | null> {
+export async function updateUser(id: string, data: { email?: string; full_name?: string; role?: 'user' | 'admin' | 'superadmin' | 'operator' }): Promise<User | null> {
   try {
     const updates = [];
     const values = [];

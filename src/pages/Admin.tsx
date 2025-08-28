@@ -52,7 +52,7 @@ export default function Admin() {
     email: '',
     full_name: '',
     password: '',
-    role: 'user' as 'user' | 'admin'
+    role: 'user' as 'user' | 'admin' | 'superadmin' | 'operator'
   });
 
   useEffect(() => {
@@ -406,17 +406,26 @@ export default function Admin() {
                             {editingUser?.id === user.id ? (
                               <select
                                 value={editingUser.role}
-                                onChange={(e) => setEditingUser({...editingUser, role: e.target.value as 'user' | 'admin'})}
+                                onChange={(e) => setEditingUser({...editingUser, role: e.target.value as 'user' | 'admin' | 'superadmin' | 'operator'})}
                                 className="px-2 py-1 border border-gray-300 rounded text-xs"
                               >
                                 <option value="user">Utente</option>
+                                <option value="operator">Operatore</option>
                                 <option value="admin">Admin</option>
+                                {profile?.role === 'superadmin' && (
+                                  <option value="superadmin">SuperAdmin</option>
+                                )}
                               </select>
                             ) : (
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                                user.role === 'superadmin' ? 'bg-purple-100 text-purple-800' :
+                                user.role === 'admin' ? 'bg-red-100 text-red-800' : 
+                                user.role === 'operator' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-blue-100 text-blue-800'
                               }`}>
-                                {user.role === 'admin' ? 'Admin' : 'Utente'}
+                                {user.role === 'superadmin' ? 'SuperAdmin' :
+                                 user.role === 'admin' ? 'Admin' : 
+                                 user.role === 'operator' ? 'Operatore' : 'Utente'}
                               </span>
                             )}
                           </td>
@@ -585,11 +594,15 @@ export default function Admin() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo</label>
                   <select
                     value={userForm.role}
-                    onChange={(e) => setUserForm({...userForm, role: e.target.value as 'user' | 'admin'})}
+                    onChange={(e) => setUserForm({...userForm, role: e.target.value as 'user' | 'admin' | 'superadmin' | 'operator'})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="user">Utente</option>
+                    <option value="operator">Operatore</option>
                     <option value="admin">Amministratore</option>
+                    {profile?.role === 'superadmin' && (
+                      <option value="superadmin">Super Amministratore</option>
+                    )}
                   </select>
                 </div>
               </div>

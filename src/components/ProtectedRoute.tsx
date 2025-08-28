@@ -5,9 +5,16 @@ import { useAuth } from '../contexts/AuthContext';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   adminOnly?: boolean;
+  superAdminOnly?: boolean;
+  operatorOnly?: boolean;
 }
 
-export default function ProtectedRoute({ children, adminOnly = false }: ProtectedRouteProps) {
+export default function ProtectedRoute({ 
+  children, 
+  adminOnly = false, 
+  superAdminOnly = false,
+  operatorOnly = false 
+}: ProtectedRouteProps) {
   const { user, profile, loading } = useAuth();
   const location = useLocation();
 
@@ -23,7 +30,21 @@ export default function ProtectedRoute({ children, adminOnly = false }: Protecte
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (adminOnly && profile?.role !== 'admin') {
+  // SuperAdmin ha accesso a tutto
+  if (profile?.role === 'superadmin') {
+    return <>{children}</>;
+  }
+
+  // Controlli specifici per ruolo
+  if (superAdminOnly && profile?.role !== 'superadmin') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (adminOnly && !['admin', 'superadmin'].includes(profile?.role || '')) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (operatorOnly && !['operator', 'admin', 'superadmin'].includes(profile?.role || '')) {
     return <Navigate to="/dashboard" replace />;
   }
 

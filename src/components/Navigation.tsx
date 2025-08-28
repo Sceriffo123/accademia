@@ -30,7 +30,8 @@ export default function Navigation() {
     { to: '/education', icon: GraduationCap, label: 'Formazione' },
   ];
 
-  if (profile?.role === 'admin') {
+  // Admin e SuperAdmin possono accedere al pannello amministrativo
+  if (profile?.role === 'admin' || profile?.role === 'superadmin') {
     navItems.push({ to: '/admin', icon: Settings, label: 'Admin' });
   }
 

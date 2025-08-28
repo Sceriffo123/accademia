@@ -87,7 +87,7 @@ export async function getUsersCount(): Promise<number> {
   }
 }
 
-export async function updateUser(id: string, data: { email?: string; full_name?: string; role?: 'user' | 'admin' }): Promise<any> {
+export async function updateUser(id: string, data: { email?: string; full_name?: string; role?: 'user' | 'admin' | 'superadmin' | 'operator' }): Promise<any> {
   const { updateUser } = await import('./neonDatabase');
   return await updateUser(id, data);
 }
@@ -97,7 +97,7 @@ export async function deleteUser(id: string): Promise<boolean> {
   return await deleteUser(id);
 }
 
-export async function createNewUser(email: string, fullName: string, password: string, role: 'user' | 'admin' = 'user'): Promise<any> {
+export async function createNewUser(email: string, fullName: string, password: string, role: 'user' | 'admin' | 'superadmin' | 'operator' = 'user'): Promise<any> {
   const { createUser } = await import('./neonDatabase');
   const { hashPassword } = await import('./neonDatabase');
   
