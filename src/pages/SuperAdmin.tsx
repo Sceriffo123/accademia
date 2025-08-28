@@ -103,9 +103,6 @@ export default function SuperAdmin() {
       if (success) {
         await loadPermissionsData(); // Ricarica i dati
         setHasChanges(true);
-        const action = !hasPermission ? 'concesso' : 'revocato';
-        addNotification('success', 'Autorizzazione Aggiornata', 
-          `Permesso ${action} per il ruolo ${getRoleDisplayName(role)}`);
       }
     } catch (error) {
       console.error('Errore aggiornamento permesso:', error);
@@ -123,9 +120,6 @@ export default function SuperAdmin() {
       if (success) {
         await loadPermissionsData(); // Ricarica i dati
         setHasChanges(true);
-        const action = !isVisible ? 'abilitata' : 'disabilitata';
-        addNotification('info', 'Visibilità Aggiornata', 
-          `Sezione ${action} per il ruolo ${getRoleDisplayName(role)}`);
       }
     } catch (error) {
       console.error('Errore aggiornamento sezione:', error);
@@ -135,7 +129,6 @@ export default function SuperAdmin() {
   };
 
   const saveChanges = () => {
-    // Le modifiche sono già salvate nel database in tempo reale
     setHasChanges(false);
     addNotification('success', 'Configurazione Salvata', 
       'Tutte le modifiche sono state applicate al sistema');
