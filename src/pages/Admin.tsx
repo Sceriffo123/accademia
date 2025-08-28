@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { getNormativesCount, getUsersCount, getUsers, getNormatives, updateUser, deleteUser, createNewUser, updateUserPassword } from '../lib/api';
 import { 
   Users, 
@@ -32,6 +33,7 @@ interface Notification {
 }
 
 export default function Admin() {
+  const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'normatives'>('overview');
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
