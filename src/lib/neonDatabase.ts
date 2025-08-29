@@ -118,6 +118,30 @@ export async function initializeTables() {
       )
     `;
 
+    // Crea tabella documents
+    console.log('🎓 ACCADEMIA: Configurazione archivio documenti...');
+    await sql`
+      CREATE TABLE IF NOT EXISTS documents (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        filename VARCHAR(255) NOT NULL,
+        file_path VARCHAR(500),
+        file_size INTEGER,
+        mime_type VARCHAR(100),
+        type VARCHAR(50) NOT NULL CHECK (type IN ('template', 'form', 'guide', 'report', 'manual')),
+        category VARCHAR(100) NOT NULL,
+        tags TEXT[] DEFAULT '{}',
+        version VARCHAR(20) DEFAULT '1.0',
+        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'archived', 'draft')),
+        download_count INTEGER DEFAULT 0,
+        uploaded_by UUID REFERENCES users(id),
+        approved_by UUID REFERENCES users(id),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+
     // Inserisci dati di esempio
     console.log('🎓 ACCADEMIA: Popolamento archivio con dati iniziali...');
     await insertSampleData();
@@ -206,6 +230,77 @@ async function insertSampleData() {
           (${adminUser[0].id}, 'CREATE', 'normative', gen_random_uuid(), '{"title": "Decreto Legislativo 285/1992"}'),
           (${adminUser[0].id}, 'LOGIN', 'user', ${adminUser[0].id}, '{"ip": "127.0.0.1"}'),
           (${adminUser[0].id}, 'VIEW', 'normative', gen_random_uuid(), '{"title": "Legge Regionale 15/2018"}')
+      `;
+    }
+
+    // Inserisci documenti di esempio
+    console.log('🎓 ACCADEMIA: Popolamento archivio documenti...');
+    const adminUser = await sql`SELECT id FROM users WHERE email = 'admin@accademia.it'`;
+    if (adminUser.length > 0) {
+      await sql`
+        INSERT INTO documents (title, description, filename, file_size, mime_type, type, category, tags, uploaded_by, approved_by)
+        VALUES 
+          (
+            'Modulo Richiesta Licenza Taxi',
+            'Template per la richiesta di nuova licenza taxi comunale',
+            'modulo_licenza_taxi.docx',
+            251904,
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'template',
+            'Licenze',
+            ARRAY['taxi', 'licenza', 'modulo'],
+            ${adminUser[0].id},
+            ${adminUser[0].id}
+          ),
+          (
+            'Guida Compilazione Domanda NCC',
+            'Istruzioni dettagliate per la compilazione della domanda di autorizzazione NCC',
+            'guida_ncc.pdf',
+            1258291,
+            'application/pdf',
+            'guide',
+            'Guide',
+            ARRAY['ncc', 'autorizzazione', 'guida'],
+            ${adminUser[0].id},
+            ${adminUser[0].id}
+          ),
+          (
+            'Report Controlli 2023',
+            'Relazione annuale sui controlli effettuati nel settore TPL',
+            'report_controlli_2023.pdf',
+            3567616,
+            'application/pdf',
+            'report',
+            'Report',
+            ARRAY['controlli', 'report', '2023'],
+            ${adminUser[0].id},
+            ${adminUser[0].id}
+          ),
+          (
+            'Modulo Comunicazione Variazioni',
+            'Form per comunicare variazioni ai dati dell''autorizzazione',
+            'modulo_variazioni.docx',
+            184320,
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'form',
+            'Modulistica',
+            ARRAY['variazioni', 'comunicazione', 'modulo'],
+            ${adminUser[0].id},
+            ${adminUser[0].id}
+          ),
+          (
+            'Checklist Requisiti Veicoli',
+            'Lista di controllo per la verifica dei requisiti tecnici dei veicoli',
+            'checklist_veicoli.docx',
+            327680,
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'template',
+            'Controlli',
+            ARRAY['veicoli', 'requisiti', 'checklist'],
+            ${adminUser[0].id},
+            ${adminUser[0].id}
+          )
+        ON CONFLICT DO NOTHING
       `;
     }
 
