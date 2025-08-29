@@ -650,6 +650,157 @@ export default function SuperAdmin() {
           </div>
         </div>
       </div>
+
+      {/* Schema Modal */}
+      {showSchemaModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Schema Tabella: {selectedTableStructure?.tableName || 'Caricamento...'}
+                </h3>
+                {selectedTableStructure && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {selectedTableStructure.recordCount.toLocaleString()} record • {selectedTableStructure.columns.length} colonne
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setShowSchemaModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {loadingSchema ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-gray-600">Caricamento schema...</span>
+                </div>
+              ) : selectedTableStructure ? (
+                <div className="space-y-6">
+                  {/* Sezione Colonne */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Database className="h-5 w-5 mr-2 text-blue-600" />
+                      Colonne ({selectedTableStructure.columns.length})
+                    </h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border border-gray-200 rounded-lg">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Nome</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Tipo</th>
+                            <th className="text-center py-3 px-4 font-medium text-gray-700">Nullable</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Default</th>
+                            <th className="text-center py-3 px-4 font-medium text-gray-700">Chiavi</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Relazioni</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedTableStructure.columns.map((column: any, index: number) => (
+                            <tr key={column.name} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                              <td className="py-3 px-4 font-medium text-gray-900">{column.name}</td>
+                              <td className="py-3 px-4 text-gray-600">
+                                {column.type}
+                                {column.maxLength && `(${column.maxLength})`}
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                {column.nullable ? (
+                                  <span className="text-yellow-600">✓</span>
+                                ) : (
+                                  <span className="text-red-600">✗</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-gray-600 text-sm">
+                                {column.defaultValue || '-'}
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <div className="flex justify-center space-x-1">
+                                  {column.isPrimaryKey && (
+                                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded font-medium">
+                                      PK
+                                    </span>
+                                  )}
+                                  {column.isForeignKey && (
+                                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded font-medium">
+                                      FK
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-gray-600 text-sm">
+                                {column.isForeignKey ? (
+                                  <span>
+                                    → {column.referencedTable}.{column.referencedColumn}
+                                  </span>
+                                ) : (
+                                  '-'
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Sezione Indici */}
+                  {selectedTableStructure.indexes.length > 0 && (
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <Settings className="h-5 w-5 mr-2 text-green-600" />
+                        Indici ({selectedTableStructure.indexes.length})
+                      </h4>
+                      <div className="space-y-2">
+                        {selectedTableStructure.indexes.map((index: string, i: number) => (
+                          <div key={i} className="bg-gray-50 p-3 rounded-lg">
+                            <code className="text-sm text-gray-800">{index}</code>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sezione Relazioni */}
+                  {selectedTableStructure.columns.some((col: any) => col.isForeignKey) && (
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <ChevronRight className="h-5 w-5 mr-2 text-purple-600" />
+                        Relazioni
+                      </h4>
+                      <div className="space-y-2">
+                        {selectedTableStructure.columns
+                          .filter((col: any) => col.isForeignKey)
+                          .map((col: any, i: number) => (
+                            <div key={i} className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                              <span className="font-medium text-purple-900">
+                                {col.name}
+                              </span>
+                              <span className="text-purple-700 mx-2">→</span>
+                              <span className="text-purple-800">
+                                {col.referencedTable}.{col.referencedColumn}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg">Errore caricamento schema</p>
+                  <p className="text-sm">Impossibile caricare la struttura della tabella</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
