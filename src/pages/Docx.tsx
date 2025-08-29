@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  FileIcon, 
+  FolderOpen, 
   Search, 
   Filter, 
   Upload, 
@@ -12,7 +12,7 @@ import {
   User,
   ChevronRight,
   Plus,
-  FolderOpen
+  FileIcon
 } from 'lucide-react';
 
 interface Document {
