@@ -475,9 +475,32 @@ export async function updateNormative(id: string, updates: Partial<Omit<Normativ
   try {
     console.log('🎓 ACCADEMIA: Aggiornamento normativa ID:', id);
     
-    const setClause = Object.keys(updates)
-      .map((
-      )
-      )
+    // Costruisci la query di aggiornamento dinamicamente
+    const updateFields = Object.entries(updates);
+    if (updateFields.length === 0) {
+      return await getNormativeById(id);
+    }
+
+    // Costruisci la parte SET della query
+    const setParts = updateFields.map(([key, value]) => {
+      if (key === 'tags' && Array.isArray(value)) {
+        return sql`${sql(key)} = ${value}`;
+      }
+      return sql`${sql(key)} = ${value}`;
+    });
+
+    const result = await sql`
+      UPDATE normatives 
+      SET ${sql.join(setParts, sql`, `)}, updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING id, title, content, category, type, reference_number, 
+                publication_date, effective_date, tags, created_at, updated_at
+    `;
+    
+    console.log('🎓 ACCADEMIA: Normativa aggiornata con successo');
+    return result[0] || null;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore aggiornamento normativa:', error);
+    return null;
   }
 }
