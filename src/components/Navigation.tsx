@@ -16,12 +16,22 @@ import {
 } from 'lucide-react';
 
 export default function Navigation() {
-  const { user, profile, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [visibleSections, setVisibleSections] = useState<string[]>([]);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
+
+  // Gestisci il caso in cui AuthProvider non è ancora disponibile
+  let authData;
+  try {
+    authData = useAuth();
+  } catch (error) {
+    // AuthProvider non è ancora disponibile, usa valori di default
+    authData = { user: null, profile: null, signOut: () => {} };
+  }
+
+  const { user, profile, signOut } = authData;
 
   React.useEffect(() => {
     if (profile?.role) {

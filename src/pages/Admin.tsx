@@ -155,8 +155,12 @@ export default function Admin() {
         category: editingNormative.category,
         type: editingNormative.type,
         reference_number: editingNormative.reference_number,
-        publication_date: editingNormative.publication_date,
-        effective_date: editingNormative.effective_date,
+        publication_date: editingNormative.publication_date instanceof Date 
+          ? editingNormative.publication_date.toISOString().split('T')[0]
+          : editingNormative.publication_date,
+        effective_date: editingNormative.effective_date instanceof Date 
+          ? editingNormative.effective_date.toISOString().split('T')[0]
+          : editingNormative.effective_date,
         tags: editingNormative.tags
       });
 
