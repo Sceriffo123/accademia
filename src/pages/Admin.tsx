@@ -1023,7 +1023,7 @@ export default function Admin() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
                   <div className="flex flex-wrap gap-2">
-                    {editingNormative.tags && editingNormative.tags.map((tag: string, index: number) => (
+                    {editingNormative.tags?.map((tag: string, index: number) => (
                       <span
                         key={index}
                         className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
@@ -1032,7 +1032,7 @@ export default function Admin() {
                         <button
                           type="button"
                           onClick={() => {
-                            const newTags = editingNormative.tags.filter((_: string, i: number) => i !== index);
+                            const newTags = editingNormative.tags?.filter((_: string, i: number) => i !== index) || [];
                             setEditingNormative({...editingNormative, tags: newTags});
                           }}
                           className="ml-2 text-blue-600 hover:text-blue-800"
