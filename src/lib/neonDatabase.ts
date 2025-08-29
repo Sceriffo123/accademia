@@ -407,3 +407,73 @@ export async function getAllUsers(excludeSuperAdmin: boolean = false, currentUse
     return [];
   }
 }
+
+// === METODI PER NORMATIVE ===
+export async function getAllNormatives(): Promise<Normative[]> {
+  try {
+    console.log('🎓 ACCADEMIA: Recupero archivio normativo...');
+    
+    const result = await sql`
+      SELECT id, title, content, category, type, reference_number, 
+             publication_date, effective_date, tags, created_at, updated_at
+      FROM normatives
+      ORDER BY publication_date DESC
+    `;
+    
+    console.log('🎓 ACCADEMIA: Trovate', result.length, 'normative');
+    return result;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore recupero normative:', error);
+    return [];
+  }
+}
+
+export async function getNormativeById(id: string): Promise<Normative | null> {
+  try {
+    console.log('🎓 ACCADEMIA: Recupero normativa ID:', id);
+    
+    const result = await sql`
+      SELECT id, title, content, category, type, reference_number,
+             publication_date, effective_date, tags, created_at, updated_at
+      FROM normatives
+      WHERE id = ${id}
+    `;
+    
+    if (result.length > 0) {
+      console.log('🎓 ACCADEMIA: Normativa trovata:', result[0].title);
+      return result[0];
+    }
+    
+    console.log('🎓 ACCADEMIA: Normativa non trovata per ID:', id);
+    return null;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore recupero normativa:', error);
+    return null;
+  }
+}
+
+export async function createNormative(normative: Omit<Normative, 'id' | 'created_at' | 'updated_at'>): Promise<Normative | null> {
+  try {
+    console.log('🎓 ACCADEMIA: Creazione nuova normativa:', normative.title);
+    
+    const result = await sql`
+      INSERT INTO normatives (title, content, category, type, reference_number, publication_date, effective_date, tags)
+      VALUES (${normative.title}, ${normative.content}, ${normative.category}, ${normative.type}, 
+              ${normative.reference_number}, ${normative.publication_date}, ${normative.effective_date}, ${normative.tags})
+      RETURNING id, title, content, category, type, reference_number, publication_date, effective_date, tags, created_at, updated_at
+    `;
+    
+    console.log('🎓 ACCADEMIA: Normativa creata con successo');
+    return result[0] || null;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore creazione normativa:', error);
+    return null;
+  }
+}
+
+export async function updateNormative(id: string, updates: Partial<Omit<Normative, 'id' | 'created_at'>>): Promise<Normative | null> {
+  try {
+    console.log('🎓 ACCADEMIA: Aggiornamento normativa ID:', id);
+    
+    const setClause = Object.keys(updates)
+      .map((
