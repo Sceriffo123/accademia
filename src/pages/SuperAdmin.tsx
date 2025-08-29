@@ -50,6 +50,12 @@ export default function SuperAdmin() {
   const [showSchemaModal, setShowSchemaModal] = useState(false);
   const [selectedTableStructure, setSelectedTableStructure] = useState<any>(null);
   const [loadingSchema, setLoadingSchema] = useState(false);
+  const [showExploreModal, setShowExploreModal] = useState(false);
+  const [selectedTableRecords, setSelectedTableRecords] = useState<any>(null);
+  const [loadingRecords, setLoadingRecords] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTableName, setSelectedTableName] = useState('');
 
   function addNotification(type: 'success' | 'error' | 'info', title: string, message: string) {
     const id = Date.now().toString();
@@ -102,6 +108,56 @@ export default function SuperAdmin() {
     } catch (error) {
       console.error('🚨 ACCADEMIA: Errore caricamento tabelle database:', error);
       addNotification('error', 'Errore Database', 'Impossibile caricare le informazioni delle tabelle');
+    }
+  }
+
+  async function loadTableRecords(tableName: string, page: number = 1, search: string = '') {
+    try {
+      setLoadingRecords(true);
+      console.log(`🎓 ACCADEMIA: Caricamento record tabella ${tableName}...`);
+      
+      const { getTableRecords } = await import('../lib/neonDatabase');
+      const result = await getTableRecords(tableName, {
+        page,
+        limit: 20, // Limite più basso per UI migliore
+        search: search.trim(),
+        orderBy: 'created_at',
+        orderDirection: 'DESC'
+      });
+      
+      if (result) {
+        setSelectedTableRecords(result);
+        setSelectedTableName(tableName);
+        setCurrentPage(page);
+        setSearchQuery(search);
+        setShowExploreModal(true);
+        
+        if (result.hiddenColumns.length > 0) {
+          addNotification('info', 'Colonne Nascoste', 
+            `Per sicurezza, ${result.hiddenColumns.length} colonne sensibili sono state nascoste`);
+        }
+        
+        console.log(`🎓 ACCADEMIA: Caricati ${result.records.length} record di ${result.totalCount}`);
+      } else {
+        addNotification('error', 'Errore Caricamento', 'Impossibile caricare i record della tabella');
+      }
+    } catch (error) {
+      console.error('🚨 ACCADEMIA: Errore caricamento record:', error);
+      addNotification('error', 'Errore Sistema', 'Si è verificato un errore durante il caricamento');
+    } finally {
+      setLoadingRecords(false);
+    }
+  }
+
+  function handleSearchRecords(search: string) {
+    if (selectedTableName) {
+      loadTableRecords(selectedTableName, 1, search);
+    }
+  }
+
+  function handlePageChange(newPage: number) {
+    if (selectedTableName) {
+      loadTableRecords(selectedTableName, newPage, searchQuery);
     }
   }
 
