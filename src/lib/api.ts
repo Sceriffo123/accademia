@@ -1,11 +1,6 @@
 import { 
-  getAllNormatives, 
-  getNormativeById, 
-  getNormativesCount, 
-  getRecentNormativesCount,
-  getAllUsers,
-  getUsersCount,
-  type Normative 
+  localDB,
+  type Normative
 } from './localDatabase';
 
 
@@ -15,7 +10,7 @@ export async function getNormatives(filters?: {
   category?: string;
 }): Promise<Normative[]> {
   try {
-    let normatives = await getAllNormatives();
+    let normatives = await localDB.getAllNormatives();
 
     if (filters?.searchTerm) {
       const searchLower = filters.searchTerm.toLowerCase();
@@ -43,7 +38,7 @@ export async function getNormatives(filters?: {
 
 export async function getNormativeById(id: string): Promise<Normative | null> {
   try {
-    return await getNormativeById(id);
+    return await localDB.getNormativeById(id);
   } catch (error) {
     console.error('Error fetching normative:', error);
     return null;
@@ -52,7 +47,7 @@ export async function getNormativeById(id: string): Promise<Normative | null> {
 
 export async function getNormativesCount(): Promise<number> {
   try {
-    return await getNormativesCount();
+    return await localDB.getNormativesCount();
   } catch (error) {
     console.error('Error counting normatives:', error);
     return 0;
@@ -61,7 +56,7 @@ export async function getNormativesCount(): Promise<number> {
 
 export async function getRecentNormativesCount(days: number = 30): Promise<number> {
   try {
-    return await getRecentNormativesCount(days);
+    return await localDB.getRecentNormativesCount(days);
   } catch (error) {
     console.error('Error counting recent normatives:', error);
     return 0;
@@ -70,7 +65,7 @@ export async function getRecentNormativesCount(days: number = 30): Promise<numbe
 
 export async function getUsers(excludeSuperAdmin: boolean = false, currentUserId?: string): Promise<any[]> {
   try {
-    const users = await getAllUsers();
+    const users = await localDB.getAllUsers();
     if (excludeSuperAdmin) {
       return users.filter(user => {
         if (user.role !== 'superadmin') return true;
@@ -86,7 +81,7 @@ export async function getUsers(excludeSuperAdmin: boolean = false, currentUserId
 
 export async function getUsersCount(): Promise<number> {
   try {
-    return await getUsersCount();
+    return await localDB.getUsersCount();
   } catch (error) {
     console.error('Error counting users:', error);
     return 0;
@@ -104,8 +99,6 @@ export async function deleteUser(id: string): Promise<boolean> {
 }
 
 export async function createNewUser(email: string, fullName: string, password: string, role: 'user' | 'admin' | 'superadmin' | 'operator' = 'user'): Promise<any> {
-  const { createUser } = await import('./localDatabase');
-  
   // Hash password usando la stessa funzione del database
   const encoder = new TextEncoder();
   const data = encoder.encode(password + 'accademia_salt_2024');
@@ -113,10 +106,9 @@ export async function createNewUser(email: string, fullName: string, password: s
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   
-  return await createUser(email, fullName, passwordHash, role);
+  return await localDB.createUser(email, fullName, passwordHash, role);
 }
 
 export async function updateUserPassword(id: string, newPassword: string): Promise<boolean> {
-  const { updateUserPassword } = await import('./localDatabase');
-  return await updateUserPassword(id, newPassword);
+  return await localDB.updateUserPassword(id, newPassword);
 }
