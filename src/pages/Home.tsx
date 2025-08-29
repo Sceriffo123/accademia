@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+// import { useAuth } from '../contexts/AuthContext'; // RIMOSSO - Home non deve usare autenticazione
 import { 
   GraduationCap, 
   FileText, 
@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 export default function Home() {
-  const { user } = useAuth();
+  // const { user } = useAuth(); // RIMOSSO - Home è pagina pubblica
 
   const features = [
     {
@@ -68,31 +68,22 @@ export default function Home() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {user ? (
+              {/* Sempre pulsanti di registrazione/login per homepage pubblica */}
+              <>
                 <Link
-                  to="/dashboard"
+                  to="/register"
                   className="inline-flex items-center justify-center px-8 py-4 bg-white text-blue-800 font-semibold rounded-xl hover:bg-blue-50 transition-all transform hover:scale-105 shadow-lg"
                 >
-                  Vai alla Dashboard
+                  Inizia Subito
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
-              ) : (
-                <>
-                  <Link
-                    to="/register"
-                    className="inline-flex items-center justify-center px-8 py-4 bg-white text-blue-800 font-semibold rounded-xl hover:bg-blue-50 transition-all transform hover:scale-105 shadow-lg"
-                  >
-                    Inizia Subito
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Link>
-                  <Link
-                    to="/login"
-                    className="inline-flex items-center justify-center px-8 py-4 border-2 border-white text-white font-semibold rounded-xl hover:bg-white hover:text-blue-800 transition-all"
-                  >
-                    Accedi
-                  </Link>
-                </>
-              )}
+                <Link
+                  to="/login"
+                  className="inline-flex items-center justify-center px-8 py-4 border-2 border-white text-white font-semibold rounded-xl hover:bg-white hover:text-blue-800 transition-all"
+                >
+                  Accedi
+                </Link>
+              </>
             </div>
           </div>
         </div>
@@ -166,15 +157,14 @@ export default function Home() {
                   Unisciti a centinaia di professionisti che già utilizzano 
                   Accademia per rimanere aggiornati e competenti nel settore.
                 </p>
-                {!user && (
-                  <Link
-                    to="/register"
-                    className="inline-flex items-center justify-center w-full px-6 py-3 bg-blue-800 text-white font-semibold rounded-xl hover:bg-blue-900 transition-colors"
-                  >
-                    Registrati Gratuitamente
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Link>
-                )}
+                {/* Homepage pubblica - sempre mostra pulsante registrazione */}
+                <Link
+                  to="/register"
+                  className="inline-flex items-center justify-center w-full px-6 py-3 bg-blue-800 text-white font-semibold rounded-xl hover:bg-blue-900 transition-colors"
+                >
+                  Registrati Gratuitamente
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
               </div>
             </div>
           </div>
