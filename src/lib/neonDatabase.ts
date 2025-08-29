@@ -150,6 +150,8 @@ export async function initializeTables() {
     // Inserisci permessi e configurazioni di default
     await insertDefaultPermissions();
     await insertDefaultRoleConfiguration();
+    await insertDefaultPermissions();
+    await insertDefaultRoleConfiguration();
 
     console.log('🎓 ACCADEMIA: Sistema inizializzato con successo!');
     return true;
