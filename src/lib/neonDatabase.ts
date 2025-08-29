@@ -988,8 +988,17 @@ export async function getTableRecords(
       sql.unsafe(recordsQuery, recordsParams)
     ]);
 
-    const totalCount = parseInt(countResult[0]?.count || '0');
-    const records = recordsResult || [];
+    // Estrai i dati correttamente dal QueryResult
+    const countData = Array.isArray(countResult) ? countResult : 
+                     (countResult && typeof countResult === 'object' && 'rows' in countResult) ? countResult.rows : [];
+    const recordsData = Array.isArray(recordsResult) ? recordsResult :
+                       (recordsResult && typeof recordsResult === 'object' && 'rows' in recordsResult) ? recordsResult.rows : [];
+
+    console.log(`🎓 ACCADEMIA: countData estratto:`, countData);
+    console.log(`🎓 ACCADEMIA: recordsData estratto:`, recordsData);
+
+    const totalCount = parseInt(countData[0]?.count || '0');
+    const records = recordsData || [];
     const hasMore = (offset + safeLimit) < totalCount;
 
     console.log(`🎓 ACCADEMIA: Trovati ${records.length} record di ${totalCount} totali`);
