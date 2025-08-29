@@ -197,24 +197,6 @@ export default function Admin() {
     });
   }
 
-  // Handler per gestire i tag nel modal di modifica
-  function handleAddTagToEditing(newTag: string) {
-    if (newTag.trim() && editingNormative && !editingNormative.tags?.includes(newTag.trim())) {
-      setEditingNormative({
-        ...editingNormative,
-        tags: [...(editingNormative.tags || []), newTag.trim()]
-      });
-    }
-  }
-
-  function handleRemoveTagFromEditing(tagToRemove: string) {
-    if (editingNormative) {
-      setEditingNormative({
-        ...editingNormative,
-        tags: editingNormative.tags?.filter(tag => tag !== tagToRemove) || []
-      });
-    }
-  }
   function addNotification(type: 'success' | 'error' | 'info', title: string, message: string) {
     const id = Date.now().toString();
     const notification = { id, type, title, message };
@@ -1040,34 +1022,8 @@ export default function Admin() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
-                  <div className="flex items-center space-x-2 mb-2">
-                    <input
-                      type="text"
-                      placeholder="Aggiungi nuovo tag..."
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          const input = e.target as HTMLInputElement;
-                          handleAddTagToEditing(input.value);
-                          input.value = '';
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                        handleAddTagToEditing(input.value);
-                        input.value = '';
-                      }}
-                      className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                    >
-                      Aggiungi
-                    </button>
-                  </div>
                   <div className="flex flex-wrap gap-2">
-                    {editingNormative.tags?.map((tag: string, index: number) => (
+                    {editingNormative.tags && editingNormative.tags.map((tag: string, index: number) => (
                       <span
                         key={index}
                         className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
@@ -1075,7 +1031,10 @@ export default function Admin() {
                         {tag}
                         <button
                           type="button"
-                          onClick={() => handleRemoveTagFromEditing(tag)}
+                          onClick={() => {
+                            const newTags = editingNormative.tags.filter((_: string, i: number) => i !== index);
+                            setEditingNormative({...editingNormative, tags: newTags});
+                          }}
                           className="ml-2 text-blue-600 hover:text-blue-800"
                         >
                           <X className="h-3 w-3" />
