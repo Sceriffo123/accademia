@@ -989,13 +989,53 @@ export async function getTableRecords(
     ]);
 
     // Estrai i dati correttamente dal QueryResult
-    const countData = Array.isArray(countResult) ? countResult : 
-                     (countResult && typeof countResult === 'object' && 'rows' in countResult) ? countResult.rows : [];
-    const recordsData = Array.isArray(recordsResult) ? recordsResult :
-                       (recordsResult && typeof recordsResult === 'object' && 'rows' in recordsResult) ? recordsResult.rows : [];
-
+    console.log(`🎓 ACCADEMIA: === DEBUG DETTAGLIATO ===`);
+    console.log(`🎓 ACCADEMIA: countResult raw:`, countResult);
+    console.log(`🎓 ACCADEMIA: recordsResult raw:`, recordsResult);
+    console.log(`🎓 ACCADEMIA: Tipo countResult:`, typeof countResult, Array.isArray(countResult));
+    console.log(`🎓 ACCADEMIA: Tipo recordsResult:`, typeof recordsResult, Array.isArray(recordsResult));
+    
+    // Prova diverse modalità di estrazione
+    let countData: any[] = [];
+    let recordsData: any[] = [];
+    
+    if (Array.isArray(countResult)) {
+      countData = countResult;
+      console.log(`🎓 ACCADEMIA: countResult è array diretto`);
+    } else if (countResult && typeof countResult === 'object') {
+      if ('rows' in countResult) {
+        countData = countResult.rows;
+        console.log(`🎓 ACCADEMIA: Estratto da countResult.rows`);
+      } else if ('result' in countResult && Array.isArray(countResult.result)) {
+        countData = countResult.result;
+        console.log(`🎓 ACCADEMIA: Estratto da countResult.result`);
+      } else {
+        // Prova a iterare sull'oggetto
+        countData = Object.values(countResult).filter(Array.isArray)[0] || [];
+        console.log(`🎓 ACCADEMIA: Estratto da Object.values`);
+      }
+    }
+    
+    if (Array.isArray(recordsResult)) {
+      recordsData = recordsResult;
+      console.log(`🎓 ACCADEMIA: recordsResult è array diretto`);
+    } else if (recordsResult && typeof recordsResult === 'object') {
+      if ('rows' in recordsResult) {
+        recordsData = recordsResult.rows;
+        console.log(`🎓 ACCADEMIA: Estratto da recordsResult.rows`);
+      } else if ('result' in recordsResult && Array.isArray(recordsResult.result)) {
+        recordsData = recordsResult.result;
+        console.log(`🎓 ACCADEMIA: Estratto da recordsResult.result`);
+      } else {
+        // Prova a iterare sull'oggetto
+        recordsData = Object.values(recordsResult).filter(Array.isArray)[0] || [];
+        console.log(`🎓 ACCADEMIA: Estratto da Object.values`);
+      }
+    }
+    
     console.log(`🎓 ACCADEMIA: countData estratto:`, countData);
     console.log(`🎓 ACCADEMIA: recordsData estratto:`, recordsData);
+    console.log(`🎓 ACCADEMIA: === FINE DEBUG ===`);
 
     const totalCount = parseInt(countData[0]?.count || '0');
     const records = recordsData || [];
