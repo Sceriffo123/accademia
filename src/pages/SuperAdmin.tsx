@@ -314,7 +314,8 @@ export default function SuperAdmin() {
                           {category === 'users' ? 'Gestione Utenti' :
                            category === 'normatives' ? 'Gestione Normative' :
                            category === 'system' ? 'Sistema' :
-                           category === 'reports' ? 'Report' : category}
+                           category === 'reports' ? 'Report' :
+                           category === 'documents' ? 'Gestione Documenti' : category}
                         </span>
                       </div>
                     </button>

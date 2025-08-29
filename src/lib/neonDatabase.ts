@@ -469,6 +469,14 @@ async function insertDefaultPermissions() {
       // Report
       { id: 'reports.view', name: 'Visualizza Report', description: 'Può vedere i report', category: 'reports', level: 3 },
       { id: 'reports.export', name: 'Esporta Report', description: 'Può esportare i report', category: 'reports', level: 2 }
+      
+      // Documenti
+      { id: 'documents.view', name: 'Visualizza Documenti', description: 'Può vedere i documenti', category: 'documents', level: 4 },
+      { id: 'documents.download', name: 'Scarica Documenti', description: 'Può scaricare i documenti', category: 'documents', level: 4 },
+      { id: 'documents.upload', name: 'Carica Documenti', description: 'Può caricare nuovi documenti', category: 'documents', level: 3 },
+      { id: 'documents.edit', name: 'Modifica Documenti', description: 'Può modificare i documenti', category: 'documents', level: 2 },
+      { id: 'documents.delete', name: 'Elimina Documenti', description: 'Può eliminare i documenti', category: 'documents', level: 2 },
+      { id: 'documents.manage', name: 'Gestione Completa', description: 'Controllo completo sui documenti', category: 'documents', level: 1 }
     ];
 
     for (const perm of permissions) {
@@ -492,23 +500,25 @@ async function insertDefaultRoleConfiguration() {
         role: 'superadmin',
         permissions: ['users.view', 'users.create', 'users.edit', 'users.delete', 'users.manage_roles', 
                      'normatives.view', 'normatives.create', 'normatives.edit', 'normatives.delete', 'normatives.publish',
-                     'system.settings', 'system.permissions', 'system.logs', 'reports.view', 'reports.export'],
+                     'system.settings', 'system.permissions', 'system.logs', 'reports.view', 'reports.export',
+                     'documents.view', 'documents.download', 'documents.upload', 'documents.edit', 'documents.delete', 'documents.manage'],
         sections: ['dashboard', 'users', 'normatives', 'education', 'docx', 'admin', 'superadmin', 'reports', 'settings']
       },
       {
         role: 'admin',
         permissions: ['users.view', 'users.create', 'users.edit', 'normatives.view', 'normatives.create', 
-                     'normatives.edit', 'normatives.delete', 'normatives.publish', 'system.logs', 'reports.view', 'reports.export'],
+                     'normatives.edit', 'normatives.delete', 'normatives.publish', 'system.logs', 'reports.view', 'reports.export',
+                     'documents.view', 'documents.download', 'documents.upload', 'documents.edit', 'documents.delete'],
         sections: ['dashboard', 'users', 'normatives', 'education', 'docx', 'admin', 'reports']
       },
       {
         role: 'operator',
-        permissions: ['normatives.view', 'normatives.create', 'reports.view'],
+        permissions: ['normatives.view', 'normatives.create', 'reports.view', 'documents.view', 'documents.download', 'documents.upload'],
         sections: ['dashboard', 'normatives', 'education', 'docx', 'reports']
       },
       {
         role: 'user',
-        permissions: ['normatives.view'],
+        permissions: ['normatives.view', 'documents.view', 'documents.download'],
         sections: ['dashboard', 'normatives', 'education', 'docx']
       },
       {
