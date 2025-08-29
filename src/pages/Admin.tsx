@@ -689,6 +689,8 @@ export default function Admin() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
 
         {/* Modal Aggiungi Utente */}
         {showAddUser && (
