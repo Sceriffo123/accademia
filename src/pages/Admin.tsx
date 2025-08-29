@@ -50,6 +50,23 @@ export default function Admin() {
   const [showPasswordModal, setShowPasswordModal] = useState<any>(null);
   const [newPassword, setNewPassword] = useState('');
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  
+  // Stati per gestione normative
+  const [showAddNormative, setShowAddNormative] = useState(false);
+  const [showEditNormative, setShowEditNormative] = useState(false);
+  const [editingNormative, setEditingNormative] = useState<any>(null);
+  const [normativeForm, setNormativeForm] = useState({
+    title: '',
+    content: '',
+    category: '',
+    type: 'law' as 'law' | 'regulation' | 'ruling',
+    reference_number: '',
+    publication_date: '',
+    effective_date: '',
+    tags: [] as string[]
+  });
+  const [tagInput, setTagInput] = useState('');
+  
   const [userForm, setUserForm] = useState({
     email: '',
     full_name: '',
