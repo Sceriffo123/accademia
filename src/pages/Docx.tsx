@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { getUserPermissions } from '../lib/neonDatabase';
 import { 
   FolderOpen, 
   Search, 
@@ -28,10 +30,50 @@ interface Document {
 }
 
 export default function Docx() {
+  const { profile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+
+  React.useEffect(() => {
+    if (profile?.role) {
+      loadUserPermissions();
+    }
+  }, [profile?.role]);
+
+  async function loadUserPermissions() {
+    try {
+      const permissions = await getUserPermissions(profile?.role || '');
+      setUserPermissions(permissions);
+    } catch (error) {
+      console.error('Errore caricamento permessi:', error);
+      setUserPermissions([]);
+    }
+  }
+
+  const canView = userPermissions.includes('documents.view');
+  const canCreate = userPermissions.includes('documents.create');
+  const canEdit = userPermissions.includes('documents.edit');
+  const canDelete = userPermissions.includes('documents.delete');
+  const canUpload = userPermissions.includes('documents.upload');
+
+  if (!canView) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <FileIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Accesso Negato
+          </h1>
+          <p className="text-gray-600">
+            Non hai i permessi necessari per accedere a questa sezione.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const documents: Document[] = [
     {
@@ -232,7 +274,14 @@ export default function Docx() {
                 </div>
 
                 <div className="flex items-end">
-                  <button className="w-full flex items-center justify-center space-x-2 bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors">
+                  <button 
+                    disabled={!canUpload}
+                    className={`w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                      canUpload 
+                        ? 'bg-blue-800 text-white hover:bg-blue-900' 
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
                     <Upload className="h-4 w-4" />
                     <span>Carica Documento</span>
                   </button>
@@ -248,7 +297,14 @@ export default function Docx() {
             <h2 className="text-lg font-semibold text-gray-900">
               Documenti ({filteredDocuments.length})
             </h2>
-            <button className="flex items-center space-x-2 border border-gray-300 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+            <button 
+              disabled={!canCreate}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                canCreate 
+                  ? 'border border-gray-300 text-gray-600 hover:bg-gray-50' 
+                  : 'border border-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
+            >
               <Plus className="h-4 w-4" />
               <span>Nuovo Documento</span>
             </button>

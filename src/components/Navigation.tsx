@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getUserSections } from '../lib/neonDatabase';
+import { getUserSections, getUserPermissions } from '../lib/neonDatabase';
 import { 
   Home, 
   FileText, 
@@ -21,10 +21,12 @@ export default function Navigation() {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [visibleSections, setVisibleSections] = useState<string[]>([]);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
 
   React.useEffect(() => {
     if (profile?.role) {
       loadVisibleSections();
+      loadUserPermissions();
     }
   }, [profile?.role]);
 
@@ -39,6 +41,16 @@ export default function Navigation() {
     }
   }
 
+  async function loadUserPermissions() {
+    try {
+      const permissions = await getUserPermissions(profile?.role || '');
+      setUserPermissions(permissions);
+    } catch (error) {
+      console.error('Errore caricamento permessi utente:', error);
+      setUserPermissions([]);
+    }
+  }
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
@@ -49,8 +61,12 @@ export default function Navigation() {
     { to: '/dashboard', icon: Home, label: 'Dashboard', section: 'dashboard' },
     { to: '/normative', icon: FileText, label: 'Normative', section: 'normatives' },
     { to: '/education', icon: GraduationCap, label: 'Formazione', section: 'education' },
-    { to: '/docx', icon: FileIcon, label: 'Documenti', section: 'docx' },
   ].filter(item => visibleSections.includes(item.section));
+
+  // Aggiungi Documenti solo se ha i permessi per visualizzare documenti
+  if (visibleSections.includes('docx') && userPermissions.includes('documents.view')) {
+    navItems.push({ to: '/docx', icon: FileIcon, label: 'Documenti', section: 'docx' });
+  }
 
   // Aggiungi sezioni amministrative se visibili
   if (visibleSections.includes('admin') && (profile?.role === 'admin' || profile?.role === 'superadmin')) {
