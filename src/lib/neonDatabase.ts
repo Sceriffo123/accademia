@@ -477,3 +477,7 @@ export async function updateNormative(id: string, updates: Partial<Omit<Normativ
     
     const setClause = Object.keys(updates)
       .map((
+      )
+      )
+  }
+}
