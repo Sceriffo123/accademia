@@ -48,6 +48,7 @@ export default function Navigation() {
     { to: '/dashboard', icon: Home, label: 'Dashboard', section: 'dashboard' },
     { to: '/normative', icon: FileText, label: 'Normative', section: 'normatives' },
     { to: '/education', icon: GraduationCap, label: 'Formazione', section: 'education' },
+    { to: '/docx', icon: FileText, label: 'Documenti', section: 'documents' },
   ].filter(item => visibleSections.includes(item.section));
 
   // Aggiungi sezioni amministrative se visibili
