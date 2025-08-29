@@ -225,7 +225,7 @@ async function insertSampleData() {
 
     // Inserisci alcuni log di attività di esempio
     console.log('🎓 ACCADEMIA: Inizializzazione registro attività...');
-    const adminUser = await sql`SELECT id FROM users WHERE email = 'admin@accademia.it'`;
+    let adminUser = await sql`SELECT id FROM users WHERE email = 'admin@accademia.it'`;
     if (adminUser.length > 0) {
       await sql`
         INSERT INTO activity_logs (user_id, action, resource_type, resource_id, details)
