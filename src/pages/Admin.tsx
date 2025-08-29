@@ -124,14 +124,31 @@ export default function Admin() {
 
   // Handler per modifica normativa
   async function handleUpdateNormative() {
+    console.log('🔄 handleUpdateNormative chiamato');
+    console.log('📝 editingNormative:', editingNormative);
+
     try {
-      if (!editingNormative) return;
-      
+      if (!editingNormative) {
+        console.error('❌ Nessuna normativa da modificare');
+        return;
+      }
+
       if (!editingNormative.title || !editingNormative.content || !editingNormative.reference_number) {
+        console.error('❌ Campi obbligatori mancanti:', {
+          title: !!editingNormative.title,
+          content: !!editingNormative.content,
+          reference_number: !!editingNormative.reference_number
+        });
         addNotification('error', 'Errore Validazione', 'Titolo, contenuto e numero di riferimento sono obbligatori');
         return;
       }
-      
+
+      console.log('📤 Chiamando updateNormative con dati:', {
+        id: editingNormative.id,
+        title: editingNormative.title,
+        reference_number: editingNormative.reference_number
+      });
+
       await updateNormative(editingNormative.id, {
         title: editingNormative.title,
         content: editingNormative.content,
@@ -142,13 +159,16 @@ export default function Admin() {
         effective_date: editingNormative.effective_date,
         tags: editingNormative.tags
       });
-      
+
+      console.log('✅ updateNormative completato');
+
       setEditingNormative(null);
       setShowEditNormative(false);
       await fetchAdminData(); // Refresh data
       addNotification('success', 'Normativa Aggiornata', `La normativa "${editingNormative.title}" è stata modificata`);
     } catch (error) {
-      console.error('Error updating normative:', error);
+      console.error('🚨 Errore in handleUpdateNormative:', error);
+      console.error('🚨 Dettagli errore:', error?.message);
       addNotification('error', 'Errore Aggiornamento', 'Non è stato possibile aggiornare la normativa');
     }
   }

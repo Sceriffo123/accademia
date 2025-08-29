@@ -523,8 +523,8 @@ export async function updateNormative(id: string, data: {
   tags?: string[];
 }): Promise<Normative | null> {
   try {
-    console.log('🎓 ACCADEMIA: Aggiornamento normativa:', id);
-    
+    console.log('🎓 ACCADEMIA: updateNormative chiamata con:', { id, data });
+
     const updates = [];
     const values = [];
     let paramIndex = 1;
@@ -571,18 +571,24 @@ export async function updateNormative(id: string, data: {
     updates.push(`updated_at = NOW()`);
 
     const query = `
-      UPDATE normatives 
-      SET ${updates.join(', ')} 
+      UPDATE normatives
+      SET ${updates.join(', ')}
       WHERE id = $${paramIndex}
       RETURNING *
     `;
     values.push(id);
 
+    console.log('🎓 ACCADEMIA: Query SQL:', query);
+    console.log('🎓 ACCADEMIA: Valori:', values);
+
     const result = await sql.unsafe(query, values);
+    console.log('🎓 ACCADEMIA: Risultato query:', result);
+
     console.log('🎓 ACCADEMIA: Normativa aggiornata:', result[0]?.title);
     return result[0] || null;
   } catch (error) {
     console.error('🚨 ACCADEMIA: Errore aggiornamento normativa:', error?.message);
+    console.error('🚨 ACCADEMIA: Dettagli errore:', error);
     throw error;
   }
 }
