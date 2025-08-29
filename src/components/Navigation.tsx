@@ -46,7 +46,7 @@ export default function Navigation() {
 
   const navItems = [
     { to: '/dashboard', icon: Home, label: 'Dashboard', section: 'dashboard' },
-    { to: '/normative', icon: FileText, label: 'Banca Dati', section: 'normatives' },
+    { to: '/normative', icon: FileText, label: 'Normative', section: 'normatives' },
     { to: '/education', icon: GraduationCap, label: 'Formazione', section: 'education' },
   ].filter(item => visibleSections.includes(item.section));
 

@@ -141,7 +141,7 @@ export default function Dashboard() {
               >
                 <div className="flex items-center space-x-3">
                   <FileText className="h-5 w-5 text-blue-600" />
-                  <span className="font-medium text-gray-900">Consulta Banca Dati</span>
+                  <span className="font-medium text-gray-900">Consulta Normative</span>
                 </div>
                 <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
               </Link>

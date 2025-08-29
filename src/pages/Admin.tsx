@@ -305,7 +305,7 @@ export default function Admin() {
               {[
                 { id: 'overview', label: 'Panoramica', icon: Settings },
                 { id: 'users', label: 'Utenti', icon: Users },
-                { id: 'normatives', label: 'Banca Dati', icon: FileText }
+                { id: 'normatives', label: 'Normative', icon: FileText }
               ].map((tab) => {
                 const Icon = tab.icon;
                 return (
