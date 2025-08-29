@@ -154,7 +154,7 @@ export async function initializeTables() {
 
     // Inserisci dati di esempio
     console.log('🎓 ACCADEMIA: Popolamento archivio con dati iniziali...');
-    await insertSampleData();
+    // await insertSampleData(); // DISATTIVATO: Non rigenerare dati di esempio
     
     // Inserisci permessi e configurazioni di default
     await insertDefaultPermissions();
@@ -194,41 +194,9 @@ async function insertSampleData() {
     // Inserisci normative
     console.log('🎓 ACCADEMIA: Popolamento archivio normativo...');
     
-    await sql`
-      INSERT INTO normatives (title, content, category, type, reference_number, publication_date, effective_date, tags)
-      VALUES 
-        (
-          'Decreto Legislativo 285/1992 - Codice della Strada',
-          'Il presente decreto disciplina la circolazione stradale e stabilisce le norme per il trasporto pubblico locale non di linea. Articolo 1: Definizioni e campo di applicazione. Il trasporto pubblico locale non di linea comprende tutti i servizi di trasporto di persone effettuati con veicoli adibiti al trasporto di persone aventi più di nove posti compreso quello del conducente.',
-          'Trasporto Pubblico',
-          'law',
-          'D.Lgs. 285/1992',
-          '1992-04-30',
-          '1993-01-01',
-          ARRAY['trasporto', 'codice strada', 'pubblico locale']
-        ),
-        (
-          'Legge Regionale 15/2018 - Disciplina TPL non di linea',
-          'La presente legge disciplina il trasporto pubblico locale non di linea nella regione, stabilendo requisiti, procedure e controlli. Articolo 1: Oggetto e finalità. La presente legge disciplina il trasporto pubblico locale non di linea al fine di garantire la sicurezza degli utenti e la qualità del servizio.',
-          'Normativa Regionale',
-          'regulation',
-          'L.R. 15/2018',
-          '2018-03-15',
-          '2018-06-01',
-          ARRAY['trasporto locale', 'regionale', 'licenze']
-        ),
-        (
-          'Sentenza TAR Lazio n. 1234/2023',
-          'Il Tribunale Amministrativo Regionale del Lazio si è pronunciato sulla questione relativa ai requisiti per il rilascio delle autorizzazioni per il trasporto pubblico locale non di linea. La sentenza chiarisce i criteri di valutazione delle domande di autorizzazione.',
-          'Giurisprudenza',
-          'ruling',
-          'TAR Lazio 1234/2023',
-          '2023-05-20',
-          '2023-05-20',
-          ARRAY['tar', 'autorizzazioni', 'giurisprudenza']
-        )
-      ON CONFLICT (reference_number) DO NOTHING
-    `;
+    // NORMATIVE DI ESEMPIO DISATTIVATE
+    // Non inserire più dati fittizi che creano confusione
+    console.log('🎓 ACCADEMIA: Archivio normativo pronto (senza dati di esempio)');
 
     // Inserisci alcuni log di attività di esempio
     console.log('🎓 ACCADEMIA: Inizializzazione registro attività...');
