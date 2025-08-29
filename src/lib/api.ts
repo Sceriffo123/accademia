@@ -1,8 +1,14 @@
 import { 
-  localDB,
-  type Normative
-} from './localDatabase';
+  getAllNormatives, 
+  getNormativeById as getNormativeByIdFromDB, 
+  getNormativesCount as getNormativesCountFromDB, 
+  getRecentNormativesCount as getRecentNormativesCountFromDB,
+  getAllUsers,
+  getUsersCount as getUsersCountFromDB,
+  type Normative 
+} from './neonDatabase';
 
+export type { Normative } from './neonDatabase';
 
 export async function getNormatives(filters?: {
   searchTerm?: string;
@@ -10,7 +16,7 @@ export async function getNormatives(filters?: {
   category?: string;
 }): Promise<Normative[]> {
   try {
-    let normatives = await localDB.getAllNormatives();
+    let normatives = await getAllNormatives();
 
     if (filters?.searchTerm) {
       const searchLower = filters.searchTerm.toLowerCase();
@@ -38,7 +44,7 @@ export async function getNormatives(filters?: {
 
 export async function getNormativeById(id: string): Promise<Normative | null> {
   try {
-    return await localDB.getNormativeById(id);
+    return await getNormativeByIdFromDB(id);
   } catch (error) {
     console.error('Error fetching normative:', error);
     return null;
@@ -47,7 +53,7 @@ export async function getNormativeById(id: string): Promise<Normative | null> {
 
 export async function getNormativesCount(): Promise<number> {
   try {
-    return await localDB.getNormativesCount();
+    return await getNormativesCountFromDB();
   } catch (error) {
     console.error('Error counting normatives:', error);
     return 0;
@@ -56,7 +62,7 @@ export async function getNormativesCount(): Promise<number> {
 
 export async function getRecentNormativesCount(days: number = 30): Promise<number> {
   try {
-    return await localDB.getRecentNormativesCount(days);
+    return await getRecentNormativesCountFromDB(days);
   } catch (error) {
     console.error('Error counting recent normatives:', error);
     return 0;
@@ -65,12 +71,9 @@ export async function getRecentNormativesCount(days: number = 30): Promise<numbe
 
 export async function getUsers(excludeSuperAdmin: boolean = false, currentUserId?: string): Promise<any[]> {
   try {
-    const users = await localDB.getAllUsers();
+    const users = await getAllUsers(excludeSuperAdmin, currentUserId);
     if (excludeSuperAdmin) {
-      return users.filter(user => {
-        if (user.role !== 'superadmin') return true;
-        return currentUserId && user.id === currentUserId;
-      });
+      return users; // Il filtro è già applicato in getAllUsers
     }
     return users;
   } catch (error) {
@@ -81,7 +84,7 @@ export async function getUsers(excludeSuperAdmin: boolean = false, currentUserId
 
 export async function getUsersCount(): Promise<number> {
   try {
-    return await localDB.getUsersCount();
+    return await getUsersCountFromDB();
   } catch (error) {
     console.error('Error counting users:', error);
     return 0;
@@ -99,6 +102,9 @@ export async function deleteUser(id: string): Promise<boolean> {
 }
 
 export async function createNewUser(email: string, fullName: string, password: string, role: 'user' | 'admin' | 'superadmin' | 'operator' = 'user'): Promise<any> {
+  const { createUser } = await import('./neonDatabase');
+  const { hashPassword } = await import('./neonDatabase');
+  
   // Hash password usando la stessa funzione del database
   const encoder = new TextEncoder();
   const data = encoder.encode(password + 'accademia_salt_2024');
@@ -106,9 +112,10 @@ export async function createNewUser(email: string, fullName: string, password: s
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   
-  return await localDB.createUser(email, fullName, passwordHash, role);
+  return await createUser(email, fullName, passwordHash, role);
 }
 
 export async function updateUserPassword(id: string, newPassword: string): Promise<boolean> {
-  return await localDB.updateUserPassword(id, newPassword);
+  const { updateUserPassword } = await import('./neonDatabase');
+  return await updateUserPassword(id, newPassword);
 }

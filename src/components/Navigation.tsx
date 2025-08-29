@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { permissionManager } from '../lib/permissions';
+import { getUserSections } from '../lib/neonDatabase';
 import { 
   Home, 
   FileText, 
@@ -11,8 +11,7 @@ import {
   Menu, 
   X,
   User,
-  Crown,
-  FolderOpen
+  Crown
 } from 'lucide-react';
 
 export default function Navigation() {
@@ -30,7 +29,7 @@ export default function Navigation() {
 
   async function loadVisibleSections() {
     try {
-      const sections = permissionManager.getVisibleSections(profile?.role || '');
+      const sections = await getUserSections(profile?.role || '');
       setVisibleSections(sections);
     } catch (error) {
       console.error('Errore caricamento sezioni visibili:', error);
@@ -49,7 +48,6 @@ export default function Navigation() {
     { to: '/dashboard', icon: Home, label: 'Dashboard', section: 'dashboard' },
     { to: '/normative', icon: FileText, label: 'Normative', section: 'normatives' },
     { to: '/education', icon: GraduationCap, label: 'Formazione', section: 'education' },
-    { to: '/docx', icon: FolderOpen, label: 'Docx', section: 'docx' },
   ].filter(item => visibleSections.includes(item.section));
 
   // Aggiungi sezioni amministrative se visibili

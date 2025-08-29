@@ -167,7 +167,7 @@ export default function SuperAdmin() {
   };
 
   const categories = [...new Set(permissions.map(p => p.category))];
-  const sections = ['dashboard', 'users', 'normatives', 'education', 'docx', 'admin', 'superadmin', 'reports', 'settings'];
+  const sections = ['dashboard', 'users', 'normatives', 'education', 'admin', 'superadmin', 'reports', 'settings'];
 
   if (loading) {
     return (
@@ -314,8 +314,7 @@ export default function SuperAdmin() {
                           {category === 'users' ? 'Gestione Utenti' :
                            category === 'normatives' ? 'Gestione Normative' :
                            category === 'system' ? 'Sistema' :
-                           category === 'reports' ? 'Report' :
-                           category === 'documents' ? 'Gestione Documenti' : category}
+                           category === 'reports' ? 'Report' : category}
                         </span>
                       </div>
                     </button>
@@ -410,7 +409,6 @@ export default function SuperAdmin() {
                              section === 'users' ? 'Gestione Utenti' :
                              section === 'normatives' ? 'Normative' :
                              section === 'education' ? 'Formazione' :
-                             section === 'docx' ? 'Documenti' :
                              section === 'admin' ? 'Amministrazione' :
                              section === 'superadmin' ? 'Super Admin' :
                              section === 'reports' ? 'Report' :

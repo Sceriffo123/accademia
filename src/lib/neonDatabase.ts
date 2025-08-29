@@ -1,5 +1,4 @@
 import { neon } from '@neondatabase/serverless';
-import { PERMISSIONS, DEFAULT_ROLE_PERMISSIONS } from './permissions';
 
 const sql = neon(import.meta.env.VITE_DATABASE_URL!);
 
@@ -119,30 +118,6 @@ export async function initializeTables() {
       )
     `;
 
-    // Crea tabella documents
-    console.log('🎓 ACCADEMIA: Configurazione archivio documenti...');
-    await sql`
-      CREATE TABLE IF NOT EXISTS documents (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        title VARCHAR(255) NOT NULL,
-        description TEXT,
-        filename VARCHAR(255) NOT NULL,
-        file_path VARCHAR(500),
-        file_size INTEGER,
-        mime_type VARCHAR(100),
-        type VARCHAR(50) NOT NULL CHECK (type IN ('template', 'form', 'guide', 'report', 'manual')),
-        category VARCHAR(100) NOT NULL,
-        tags TEXT[] DEFAULT '{}',
-        version VARCHAR(20) DEFAULT '1.0',
-        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'archived', 'draft')),
-        download_count INTEGER DEFAULT 0,
-        uploaded_by UUID REFERENCES users(id),
-        approved_by UUID REFERENCES users(id),
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      )
-    `;
-
     // Inserisci dati di esempio
     console.log('🎓 ACCADEMIA: Popolamento archivio con dati iniziali...');
     await insertSampleData();
@@ -234,77 +209,6 @@ async function insertSampleData() {
       `;
     }
 
-    // Inserisci documenti di esempio
-    console.log('🎓 ACCADEMIA: Popolamento archivio documenti...');
-    adminUser = await sql`SELECT id FROM users WHERE email = 'admin@accademia.it'`;
-    if (adminUser.length > 0) {
-      await sql`
-        INSERT INTO documents (title, description, filename, file_size, mime_type, type, category, tags, uploaded_by, approved_by)
-        VALUES 
-          (
-            'Modulo Richiesta Licenza Taxi',
-            'Template per la richiesta di nuova licenza taxi comunale',
-            'modulo_licenza_taxi.docx',
-            251904,
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'template',
-            'Licenze',
-            ARRAY['taxi', 'licenza', 'modulo'],
-            ${adminUser[0].id},
-            ${adminUser[0].id}
-          ),
-          (
-            'Guida Compilazione Domanda NCC',
-            'Istruzioni dettagliate per la compilazione della domanda di autorizzazione NCC',
-            'guida_ncc.pdf',
-            1258291,
-            'application/pdf',
-            'guide',
-            'Guide',
-            ARRAY['ncc', 'autorizzazione', 'guida'],
-            ${adminUser[0].id},
-            ${adminUser[0].id}
-          ),
-          (
-            'Report Controlli 2023',
-            'Relazione annuale sui controlli effettuati nel settore TPL',
-            'report_controlli_2023.pdf',
-            3567616,
-            'application/pdf',
-            'report',
-            'Report',
-            ARRAY['controlli', 'report', '2023'],
-            ${adminUser[0].id},
-            ${adminUser[0].id}
-          ),
-          (
-            'Modulo Comunicazione Variazioni',
-            'Form per comunicare variazioni ai dati dell''autorizzazione',
-            'modulo_variazioni.docx',
-            184320,
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'form',
-            'Modulistica',
-            ARRAY['variazioni', 'comunicazione', 'modulo'],
-            ${adminUser[0].id},
-            ${adminUser[0].id}
-          ),
-          (
-            'Checklist Requisiti Veicoli',
-            'Lista di controllo per la verifica dei requisiti tecnici dei veicoli',
-            'checklist_veicoli.docx',
-            327680,
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'template',
-            'Controlli',
-            ARRAY['veicoli', 'requisiti', 'checklist'],
-            ${adminUser[0].id},
-            ${adminUser[0].id}
-          )
-        ON CONFLICT DO NOTHING
-      `;
-    }
-
     console.log('🎓 ACCADEMIA: Archivio popolato con successo!');
   } catch (error) {
     console.error('🚨 ACCADEMIA: Errore durante il popolamento archivio:', error);
@@ -332,4 +236,396 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return isValid;
 }
 
-// === METODI P
+// === METODI PER UTENTI ===
+export async function getUserByEmail(email: string): Promise<User | null> {
+  try {
+    console.log('🎓 ACCADEMIA: Ricerca profilo utente:', email);
+    
+    const result = await sql`
+      SELECT id, email, full_name, password_hash, role, created_at
+      FROM users
+      WHERE email = ${email}
+    `;
+    
+    if (result.length > 0) {
+      console.log('🎓 ACCADEMIA: Profilo trovato:', result[0].full_name, `(${result[0].role})`);
+      return result[0];
+    }
+    
+    console.log('🎓 ACCADEMIA: Profilo non trovato per:', email);
+    return null;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore ricerca profilo utente:', error?.message);
+    return null;
+  }
+}
+
+export async function getUserById(id: string): Promise<User | null> {
+  try {
+    const result = await sql`
+      SELECT id, email, full_name, role, created_at
+      FROM users
+      WHERE id = ${id}
+    `;
+    return result[0] || null;
+  } catch (error) {
+    console.error('Errore recupero utente per ID:', error);
+    return null;
+  }
+}
+
+export async function createUser(email: string, fullName: string, passwordHash: string, role: 'user' | 'admin' | 'superadmin' | 'operator' = 'user'): Promise<User | null> {
+  try {
+    const result = await sql`
+      INSERT INTO users (email, full_name, password_hash, role)
+      VALUES (${email}, ${fullName}, ${passwordHash}, ${role})
+      RETURNING id, email, full_name, role, created_at
+    `;
+    return result[0] || null;
+  } catch (error) {
+    console.error('Errore creazione utente:', error);
+    return null;
+  }
+}
+
+export async function getAllUsers(excludeSuperAdmin: boolean = false, currentUserId?: string): Promise<User[]> {
+  try {
+    const result = await sql`
+      SELECT id, email, full_name, role, created_at
+      FROM users
+      ORDER BY created_at DESC
+    `;
+    
+    if (excludeSuperAdmin) {
+      return result.filter(user => {
+        // Se è un SuperAdmin che sta guardando, può vedere se stesso
+        if (currentUserId && user.id === currentUserId) {
+          return true;
+        }
+        // Altrimenti nascondi tutti i SuperAdmin
+        return user.role !== 'superadmin';
+      });
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Errore recupero tutti gli utenti:', error);
+    return [];
+  }
+}
+
+export async function getUsersCount(): Promise<number> {
+  try {
+    const result = await sql`SELECT COUNT(*) as count FROM users`;
+    return parseInt(result[0].count);
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore conteggio profili utente:', error?.message);
+    return 0;
+  }
+}
+
+export async function updateUser(id: string, data: { email?: string; full_name?: string; role?: 'user' | 'admin' | 'superadmin' | 'operator' }): Promise<User | null> {
+  try {
+    console.log('🎓 ACCADEMIA: Aggiornamento profilo utente...');
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (data.email) {
+      updates.push(`email = $${paramIndex++}`);
+      values.push(data.email);
+    }
+    if (data.full_name) {
+      updates.push(`full_name = $${paramIndex++}`);
+      values.push(data.full_name);
+    }
+    if (data.role) {
+      updates.push(`role = $${paramIndex++}`);
+      values.push(data.role);
+    }
+
+    if (updates.length === 0) return null;
+
+    const query = `
+      UPDATE users 
+      SET ${updates.join(', ')} 
+      WHERE id = $${paramIndex}
+      RETURNING id, email, full_name, role, created_at
+    `;
+    values.push(id);
+
+    const result = await sql.unsafe(query, values);
+    return result[0] || null;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore aggiornamento profilo:', error?.message);
+    throw error;
+  }
+}
+
+export async function deleteUser(id: string): Promise<boolean> {
+  try {
+    console.log('🎓 ACCADEMIA: Rimozione profilo utente...');
+    const result = await sql`
+      DELETE FROM users 
+      WHERE id = ${id}
+      RETURNING id
+    `;
+    return result.length > 0;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore rimozione profilo:', error?.message);
+    throw error;
+  }
+}
+
+export async function updateUserPassword(id: string, newPassword: string): Promise<boolean> {
+  try {
+    const passwordHash = await hashPassword(newPassword);
+    const result = await sql`
+      UPDATE users 
+      SET password_hash = ${passwordHash}
+      WHERE id = ${id}
+      RETURNING id
+    `;
+    return result.length > 0;
+  } catch (error) {
+    console.error('Errore aggiornamento password:', error);
+    throw error;
+  }
+}
+
+// === METODI PER NORMATIVE ===
+export async function getAllNormatives(): Promise<Normative[]> {
+  try {
+    const result = await sql`
+      SELECT * FROM normatives
+      ORDER BY publication_date DESC
+    `;
+    return result;
+  } catch (error) {
+    console.error('Errore recupero normative:', error);
+    return [];
+  }
+}
+
+export async function getNormativeById(id: string): Promise<Normative | null> {
+  try {
+    const result = await sql`
+      SELECT * FROM normatives
+      WHERE id = ${id}
+    `;
+    return result[0] || null;
+  } catch (error) {
+    console.error('Errore recupero normativa per ID:', error);
+    return null;
+  }
+}
+
+export async function getNormativesCount(): Promise<number> {
+  try {
+    const result = await sql`SELECT COUNT(*) as count FROM normatives`;
+    return parseInt(result[0].count);
+  } catch (error) {
+    console.error('Errore conteggio normative:', error);
+    return 0;
+  }
+}
+
+export async function getRecentNormativesCount(days: number = 30): Promise<number> {
+  try {
+    const result = await sql`
+      SELECT COUNT(*) as count FROM normatives 
+      WHERE created_at >= NOW() - INTERVAL '1 day' * ${days}
+    `;
+    return parseInt(result[0].count);
+  } catch (error) {
+    console.error('Errore conteggio normative recenti:', error);
+    return 0;
+  }
+}
+
+// === METODI PER PERMESSI ===
+async function insertDefaultPermissions() {
+  try {
+    const permissions = [
+      // Gestione Utenti
+      { id: 'users.view', name: 'Visualizza Utenti', description: 'Può vedere la lista utenti', category: 'users', level: 2 },
+      { id: 'users.create', name: 'Crea Utenti', description: 'Può creare nuovi utenti', category: 'users', level: 2 },
+      { id: 'users.edit', name: 'Modifica Utenti', description: 'Può modificare utenti esistenti', category: 'users', level: 2 },
+      { id: 'users.delete', name: 'Elimina Utenti', description: 'Può eliminare utenti', category: 'users', level: 1 },
+      { id: 'users.manage_roles', name: 'Gestisce Ruoli', description: 'Può modificare i ruoli utente', category: 'users', level: 1 },
+      
+      // Gestione Normative
+      { id: 'normatives.view', name: 'Visualizza Normative', description: 'Può vedere le normative', category: 'normatives', level: 4 },
+      { id: 'normatives.create', name: 'Crea Normative', description: 'Può creare nuove normative', category: 'normatives', level: 3 },
+      { id: 'normatives.edit', name: 'Modifica Normative', description: 'Può modificare normative', category: 'normatives', level: 2 },
+      { id: 'normatives.delete', name: 'Elimina Normative', description: 'Può eliminare normative', category: 'normatives', level: 2 },
+      { id: 'normatives.publish', name: 'Pubblica Normative', description: 'Può pubblicare normative', category: 'normatives', level: 2 },
+      
+      // Sistema
+      { id: 'system.settings', name: 'Impostazioni Sistema', description: 'Accesso alle impostazioni', category: 'system', level: 1 },
+      { id: 'system.permissions', name: 'Gestione Permessi', description: 'Può modificare i permessi', category: 'system', level: 1 },
+      { id: 'system.logs', name: 'Log Sistema', description: 'Può vedere i log di sistema', category: 'system', level: 2 },
+      
+      // Report
+      { id: 'reports.view', name: 'Visualizza Report', description: 'Può vedere i report', category: 'reports', level: 3 },
+      { id: 'reports.export', name: 'Esporta Report', description: 'Può esportare i report', category: 'reports', level: 2 }
+    ];
+
+    for (const perm of permissions) {
+      await sql`
+        INSERT INTO permissions (permission_id, name, description, category, level)
+        VALUES (${perm.id}, ${perm.name}, ${perm.description}, ${perm.category}, ${perm.level})
+        ON CONFLICT (permission_id) DO NOTHING
+      `;
+    }
+    
+    console.log('🎓 ACCADEMIA: Sistema permessi configurato');
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore configurazione permessi:', error);
+  }
+}
+
+async function insertDefaultRoleConfiguration() {
+  try {
+    const roleConfigs = [
+      {
+        role: 'superadmin',
+        permissions: ['users.view', 'users.create', 'users.edit', 'users.delete', 'users.manage_roles', 
+                     'normatives.view', 'normatives.create', 'normatives.edit', 'normatives.delete', 'normatives.publish',
+                     'system.settings', 'system.permissions', 'system.logs', 'reports.view', 'reports.export'],
+        sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'superadmin', 'reports', 'settings']
+      },
+      {
+        role: 'admin',
+        permissions: ['users.view', 'users.create', 'users.edit', 'normatives.view', 'normatives.create', 
+                     'normatives.edit', 'normatives.delete', 'normatives.publish', 'system.logs', 'reports.view', 'reports.export'],
+        sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'reports']
+      },
+      {
+        role: 'operator',
+        permissions: ['normatives.view', 'normatives.create', 'reports.view'],
+        sections: ['dashboard', 'normatives', 'education', 'reports']
+      },
+      {
+        role: 'user',
+        permissions: ['normatives.view'],
+        sections: ['dashboard', 'normatives', 'education']
+      },
+      {
+        role: 'guest',
+        permissions: [],
+        sections: ['dashboard']
+      }
+    ];
+
+    // Inserisci permessi per ruoli
+    for (const config of roleConfigs) {
+      for (const permissionId of config.permissions) {
+        await sql`
+          INSERT INTO role_permissions (role, permission_id, granted)
+          VALUES (${config.role}, ${permissionId}, true)
+          ON CONFLICT (role, permission_id) DO NOTHING
+        `;
+      }
+      
+      // Inserisci sezioni visibili per ruoli
+      for (const section of config.sections) {
+        await sql`
+          INSERT INTO role_sections (role, section, visible)
+          VALUES (${config.role}, ${section}, true)
+          ON CONFLICT (role, section) DO NOTHING
+        `;
+      }
+    }
+    
+    console.log('🎓 ACCADEMIA: Matrice ruoli configurata');
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore configurazione ruoli:', error);
+  }
+}
+
+export async function getUserPermissions(role: string): Promise<string[]> {
+  try {
+    const result = await sql`
+      SELECT permission_id FROM role_permissions 
+      WHERE role = ${role} AND granted = true
+    `;
+    return result.map(r => r.permission_id);
+  } catch (error) {
+    console.error('Errore recupero permessi utente:', error);
+    return [];
+  }
+}
+
+export async function getUserSections(role: string): Promise<string[]> {
+  try {
+    const result = await sql`
+      SELECT section FROM role_sections 
+      WHERE role = ${role} AND visible = true
+    `;
+    return result.map(r => r.section);
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore recupero sezioni autorizzate:', error?.message);
+    return [];
+  }
+}
+
+export async function updateRolePermission(role: string, permissionId: string, granted: boolean, grantedBy: string): Promise<boolean> {
+  try {
+    await sql`
+      INSERT INTO role_permissions (role, permission_id, granted, granted_by, updated_at)
+      VALUES (${role}, ${permissionId}, ${granted}, ${grantedBy}, NOW())
+      ON CONFLICT (role, permission_id) 
+      DO UPDATE SET granted = ${granted}, granted_by = ${grantedBy}, updated_at = NOW()
+    `;
+    return true;
+  } catch (error) {
+    console.error('Errore aggiornamento permesso ruolo:', error);
+    return false;
+  }
+}
+
+export async function updateRoleSection(role: string, section: string, visible: boolean): Promise<boolean> {
+  try {
+    await sql`
+      INSERT INTO role_sections (role, section, visible)
+      VALUES (${role}, ${section}, ${visible})
+      ON CONFLICT (role, section) 
+      DO UPDATE SET visible = ${visible}
+    `;
+    return true;
+  } catch (error) {
+    console.error('Errore aggiornamento sezione ruolo:', error);
+    return false;
+  }
+}
+
+export async function getAllPermissions(): Promise<any[]> {
+  try {
+    const result = await sql`
+      SELECT * FROM permissions ORDER BY category, level, name
+    `;
+    return result;
+  } catch (error) {
+    console.error('Errore recupero tutti i permessi:', error);
+    return [];
+  }
+}
+
+export async function getRolePermissionsMatrix(): Promise<Map<string, any>> {
+  try {
+    const roles = ['superadmin', 'admin', 'operator', 'user', 'guest'];
+    const matrix = new Map();
+    
+    for (const role of roles) {
+      const permissions = await getUserPermissions(role);
+      const sections = await getUserSections(role);
+      matrix.set(role, { permissions, sections });
+    }
+    
+    return matrix;
+  } catch (error) {
+    console.error('Errore recupero matrice permessi:', error);
+    return new Map();
+  }
+}

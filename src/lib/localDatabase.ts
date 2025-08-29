@@ -166,46 +166,6 @@ class LocalDatabase {
     return this.getUsers().length;
   }
 
-  // Metodi per aggiornamento utenti
-  async updateUser(id: string, data: { email?: string; full_name?: string; role?: 'user' | 'admin' | 'superadmin' | 'operator' }): Promise<User | null> {
-    const users = this.getUsers();
-    const userIndex = users.findIndex(u => u.id === id);
-    
-    if (userIndex === -1) {
-      return null;
-    }
-    
-    users[userIndex] = { ...users[userIndex], ...data };
-    this.saveUsers(users);
-    return users[userIndex];
-  }
-
-  async deleteUser(id: string): Promise<boolean> {
-    const users = this.getUsers();
-    const filteredUsers = users.filter(u => u.id !== id);
-    
-    if (filteredUsers.length === users.length) {
-      return false; // Utente non trovato
-    }
-    
-    this.saveUsers(filteredUsers);
-    return true;
-  }
-
-  async updateUserPassword(id: string, newPassword: string): Promise<boolean> {
-    const users = this.getUsers();
-    const userIndex = users.findIndex(u => u.id === id);
-    
-    if (userIndex === -1) {
-      return false;
-    }
-    
-    const passwordHash = await this.hashPassword(newPassword);
-    users[userIndex].password_hash = passwordHash;
-    this.saveUsers(users);
-    return true;
-  }
-
   // Metodi per normative
   async getAllNormatives(): Promise<Normative[]> {
     return this.getNormatives();
