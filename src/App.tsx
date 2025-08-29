@@ -50,11 +50,6 @@ function App() {
                 <Docx />
               </ProtectedRoute>
             } />
-            <Route path="/docx" element={
-              <ProtectedRoute>
-                <Docx />
-              </ProtectedRoute>
-            } />
             <Route path="/admin" element={
               <ProtectedRoute adminOnly>
                 <Admin />
