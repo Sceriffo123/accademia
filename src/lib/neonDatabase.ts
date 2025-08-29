@@ -25,6 +25,37 @@ export interface Normative {
   updated_at: string;
 }
 
+// Interfacce per Database Tables
+export interface DatabaseTable {
+  name: string;
+  schema: string;
+  recordCount: number;
+  estimatedSize: string;
+  lastModified: string;
+  tableType: 'BASE TABLE' | 'VIEW';
+  comment?: string;
+}
+
+export interface TableColumn {
+  name: string;
+  type: string;
+  nullable: boolean;
+  defaultValue: string | null;
+  isPrimaryKey: boolean;
+  isForeignKey: boolean;
+  referencedTable?: string;
+  maxLength?: number;
+}
+
+export interface TableStructure {
+  tableName: string;
+  schema: string;
+  columns: TableColumn[];
+  indexes: string[];
+  constraints: string[];
+  recordCount: number;
+}
+
 // Inizializza le tabelle se non esistono
 export async function initializeTables() {
   try {
