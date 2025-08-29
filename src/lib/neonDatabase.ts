@@ -835,4 +835,33 @@ export async function getTableStructure(tableName: string): Promise<TableStructu
       schema: 'public',
       columns,
       indexes,
-      constraints
+      constraints: [], // Implementabile in futuro se necessario
+      recordCount
+    };
+
+    console.log(`🎓 ACCADEMIA: Struttura ${tableName} analizzata - ${columns.length} colonne, ${indexes.length} indici`);
+    return structure;
+
+  } catch (error) {
+    console.error(`🚨 ACCADEMIA: Errore analisi struttura ${tableName}:`, error?.message);
+    return null;
+  }
+}
+
+export async function getRolePermissionsMatrix(): Promise<Map<string, any>> {
+  try {
+    const roles = ['superadmin', 'admin', 'operator', 'user', 'guest'];
+    const matrix = new Map();
+    
+    for (const role of roles) {
+      const permissions = await getUserPermissions(role);
+      const sections = await getUserSections(role);
+      matrix.set(role, { permissions, sections });
+    }
+    
+    return matrix;
+  } catch (error) {
+    console.error('Errore caricamento matrice permessi:', error);
+    return new Map();
+  }
+}
