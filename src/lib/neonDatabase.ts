@@ -468,7 +468,7 @@ async function insertDefaultPermissions() {
       
       // Report
       { id: 'reports.view', name: 'Visualizza Report', description: 'Può vedere i report', category: 'reports', level: 3 },
-      { id: 'reports.export', name: 'Esporta Report', description: 'Può esportare i report', category: 'reports', level: 2 }
+      { id: 'reports.export', name: 'Esporta Report', description: 'Può esportare i report', category: 'reports', level: 2 },
       
       // Documents
       { id: 'documents.view', name: 'Visualizza Documenti', description: 'Può vedere i documenti', category: 'documents', level: 4 },
