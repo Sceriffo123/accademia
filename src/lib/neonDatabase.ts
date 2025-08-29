@@ -499,17 +499,17 @@ async function insertDefaultRoleConfiguration() {
         role: 'admin',
         permissions: ['users.view', 'users.create', 'users.edit', 'normatives.view', 'normatives.create', 
                      'normatives.edit', 'normatives.delete', 'normatives.publish', 'system.logs', 'reports.view', 'reports.export'],
-        sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'reports']
+        sections: ['dashboard', 'users', 'normatives', 'education', 'banca_dati', 'admin', 'reports']
       },
       {
         role: 'operator',
         permissions: ['normatives.view', 'normatives.create', 'reports.view'],
-        sections: ['dashboard', 'normatives', 'education', 'reports']
+        sections: ['dashboard', 'normatives', 'education', 'banca_dati', 'reports']
       },
       {
         role: 'user',
         permissions: ['normatives.view'],
-        sections: ['dashboard', 'normatives', 'education']
+        sections: ['dashboard', 'normatives', 'education', 'banca_dati']
       },
       {
         role: 'guest',
