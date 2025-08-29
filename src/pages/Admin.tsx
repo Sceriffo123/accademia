@@ -661,13 +661,25 @@ export default function Admin() {
                       </div>
                       
                       <div className="flex items-center space-x-2">
-                        <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
+                        <button 
+                          onClick={() => {/* TODO: Implement view modal */}}
+                          className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Visualizza"
+                        >
                           <Eye className="h-4 w-4" />
                         </button>
-                        <button className="p-2 text-gray-400 hover:text-green-600 transition-colors">
+                        <button 
+                          onClick={() => handleEditNormative(normative)}
+                          className="p-2 text-gray-400 hover:text-green-600 transition-colors"
+                          title="Modifica"
+                        >
                           <Edit3 className="h-4 w-4" />
                         </button>
-                        <button className="p-2 text-gray-400 hover:text-red-600 transition-colors">
+                        <button 
+                          onClick={() => handleDeleteNormative(normative.id, normative.title)}
+                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                          title="Elimina"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
