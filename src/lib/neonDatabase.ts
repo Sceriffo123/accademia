@@ -517,7 +517,7 @@ async function insertDefaultRoleConfiguration() {
       },
       {
         role: 'user',
-        permissions: ['normatives.view'],
+        permissions: ['normatives.view', 'documents.view'],
         sections: ['dashboard', 'normatives', 'education']
       },
       {
