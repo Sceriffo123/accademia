@@ -533,54 +533,32 @@ export async function updateNormative(id: string, data: {
     // Aggiungi sempre updated_at
     updates.push(`updated_at = NOW()`);
 
-    const query = `
-      UPDATE normatives
-      SET ${updates.join(', ')}
-      WHERE id = $${paramIndex}
-      RETURNING *
-    `;
-    values.push(id);
-
-    console.log('🎓 ACCADEMIA: Query SQL:', query);
+    console.log('🎓 ACCADEMIA: Query SQL:', updates.join(', '));
     console.log('🎓 ACCADEMIA: Valori:', values);
 
-    const result = await sql.unsafe(query, values);
+    // Usa il metodo template literal invece di sql.unsafe per compatibilità
+    const result = await sql`
+      UPDATE normatives
+      SET title = ${data.title}, content = ${data.content}, category = ${data.category},
+          type = ${data.type}, reference_number = ${data.reference_number},
+          publication_date = ${data.publication_date}, effective_date = ${data.effective_date},
+          tags = ${data.tags}, updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
 
-    console.log('🎓 ACCADEMIA: Risultato query raw:', result);
+    console.log('🎓 ACCADEMIA: Risultato query:', result);
     console.log('🎓 ACCADEMIA: Tipo del risultato:', typeof result);
     console.log('🎓 ACCADEMIA: È un array?', Array.isArray(result));
+    console.log('🎓 ACCADEMIA: Lunghezza risultato:', result?.length);
 
-    // Se è un array, usalo direttamente
-    let queryResult: any[] = [];
-    if (Array.isArray(result)) {
-      queryResult = result;
-      console.log('🎓 ACCADEMIA: Risultato è un array diretto');
-    } else if (result && typeof result === 'object') {
-      console.log('🎓 ACCADEMIA: Chiavi dell\'oggetto:', Object.keys(result));
-
-      // Prova le proprietà standard
-      if ('rows' in result && Array.isArray(result.rows)) {
-        queryResult = result.rows;
-      } else if ('result' in result && Array.isArray(result.result)) {
-        queryResult = result.result;
-      } else if ('data' in result && Array.isArray(result.data)) {
-        queryResult = result.data;
-      } else if ('length' in result && typeof result.length === 'number') {
-        // Se ha una proprietà length, potrebbe essere iterable
-        queryResult = Array.from(result);
-      } else {
-        // Prova a vedere se possiamo accedere agli elementi direttamente
-        if (result[0] !== undefined) {
-          queryResult = [result[0]];
-        }
-      }
+    if (result && result.length > 0) {
+      console.log('🎓 ACCADEMIA: Normativa aggiornata:', result[0]?.title);
+      return result[0] as Normative;
+    } else {
+      console.log('🎓 ACCADEMIA: Nessuna normativa aggiornata');
+      return null;
     }
-
-    console.log('🎓 ACCADEMIA: Query result estratto:', queryResult);
-    console.log('🎓 ACCADEMIA: Primo elemento:', queryResult[0]);
-
-    console.log('🎓 ACCADEMIA: Normativa aggiornata:', queryResult[0]?.title);
-    return queryResult[0] || null;
   } catch (error) {
     console.error('🚨 ACCADEMIA: Errore aggiornamento normativa:', error?.message);
     console.error('🚨 ACCADEMIA: Dettagli errore:', error);
