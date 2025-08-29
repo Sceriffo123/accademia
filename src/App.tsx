@@ -10,9 +10,6 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Normatives from './pages/Normatives';
 import NormativeDetail from './pages/NormativeDetail';
-import NormativeNazionale from './pages/NormativeNazionale';
-import NormativeRegionale from './pages/NormativeRegionale';
-import NormativeLocale from './pages/NormativeLocale';
 import Education from './pages/Education';
 import Admin from './pages/Admin';
 import SuperAdmin from './pages/SuperAdmin';
@@ -35,21 +32,6 @@ function App() {
             <Route path="/normative" element={
               <ProtectedRoute>
                 <Normatives />
-              </ProtectedRoute>
-            } />
-            <Route path="/normative/nazionale" element={
-              <ProtectedRoute>
-                <NormativeNazionale />
-              </ProtectedRoute>
-            } />
-            <Route path="/normative/regionale" element={
-              <ProtectedRoute>
-                <NormativeRegionale />
-              </ProtectedRoute>
-            } />
-            <Route path="/normative/locale" element={
-              <ProtectedRoute>
-                <NormativeLocale />
               </ProtectedRoute>
             } />
             <Route path="/normative/:id" element={
