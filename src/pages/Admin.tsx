@@ -663,34 +663,23 @@ export default function Admin() {
                       
                       <div className="flex items-center space-x-2">
                         <button 
-<<<<<<< HEAD
                           onClick={() => console.log('View normative:', normative.id)}
                           className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
-=======
-                          onClick={() => {/* TODO: Implement view modal */}}
-                          className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
                           title="Visualizza"
->>>>>>> 174427f43b666e834c11e490ddd0d3e96c94dd01
                         >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button 
                           onClick={() => handleEditNormative(normative)}
                           className="p-2 text-gray-400 hover:text-green-600 transition-colors"
-<<<<<<< HEAD
-=======
                           title="Modifica"
->>>>>>> 174427f43b666e834c11e490ddd0d3e96c94dd01
                         >
                           <Edit3 className="h-4 w-4" />
                         </button>
                         <button 
                           onClick={() => handleDeleteNormative(normative.id, normative.title)}
                           className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-<<<<<<< HEAD
-=======
                           title="Elimina"
->>>>>>> 174427f43b666e834c11e490ddd0d3e96c94dd01
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -700,15 +689,6 @@ export default function Admin() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Modal Aggiungi Utente */}
-        {showAddUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Aggiungi Nuovo Utente</h3>
                 <button
                   onClick={() => setShowAddUser(false)}
                   className="text-gray-400 hover:text-gray-600"
