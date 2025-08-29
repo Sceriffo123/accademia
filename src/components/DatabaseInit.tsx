@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { initializeTables } from '../lib/neonDatabase';
+import { initializeTables, getAllNormatives } from '../lib/neonDatabase';
 import { GraduationCap, CheckCircle, AlertCircle, Loader, RefreshCw } from 'lucide-react';
 
 export default function DatabaseInit() {
@@ -12,10 +12,27 @@ export default function DatabaseInit() {
 
   async function handleInitialization() {
     setStatus('loading');
-    setMessage('Inizializzazione sistema Accademia in corso...');
+    setMessage('Verifica stato sistema Accademia...');
 
     try {
-      console.log('🎓 ACCADEMIA: Inizializzazione sistema in corso...');
+      console.log('🎓 ACCADEMIA: Verifica stato database...');
+      
+      // Verifica se il database è già inizializzato controllando le normative esistenti
+      const existingNormatives = await getAllNormatives();
+      
+      if (existingNormatives.length > 0) {
+        console.log('🎓 ACCADEMIA: Database già inizializzato, normative esistenti:', existingNormatives.length);
+        setStatus('success');
+        setMessage('Sistema Accademia già pronto per l\'utilizzo');
+        
+        // Nascondi il messaggio dopo 2 secondi
+        setTimeout(() => {
+          setStatus('idle');
+        }, 2000);
+        return;
+      }
+
+      console.log('🎓 ACCADEMIA: Database non inizializzato, avvio procedura...');
       setMessage('Configurazione archivio normativo e utenti...');
       
       const result = await initializeTables();
