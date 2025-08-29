@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserSections, getUserPermissions } from '../lib/neonDatabase';
@@ -33,7 +33,7 @@ export default function Navigation() {
 
   const { user, profile, signOut } = authData;
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (profile?.role) {
       loadVisibleSections();
       loadUserPermissions();
@@ -155,6 +155,8 @@ export default function Navigation() {
                 <button
                   onClick={handleSignOut}
                   className="flex items-center space-x-1 text-gray-600 hover:text-red-600 transition-colors"
+                  aria-label="Esci"
+                  title="Esci"
                 >
                   <LogOut className="h-5 w-5" />
                   <span className="text-sm">Esci</span>
@@ -177,6 +179,8 @@ export default function Navigation() {
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label={isMenuOpen ? "Chiudi menu" : "Apri menu"}
+              title={isMenuOpen ? "Chiudi menu" : "Apri menu"}
             >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
@@ -213,6 +217,8 @@ export default function Navigation() {
                   <button
                     onClick={handleSignOut}
                     className="flex items-center space-x-3 px-3 py-3 rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors w-full"
+                    aria-label="Esci"
+                    title="Esci"
                   >
                     <LogOut className="h-5 w-5" />
                     <span className="font-medium">Esci</span>

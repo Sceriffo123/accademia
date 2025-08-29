@@ -411,6 +411,8 @@ export default function Admin() {
                   <button
                     onClick={() => removeNotification(notification.id)}
                     className={`${iconColor} hover:opacity-70 transition-opacity`}
+                    aria-label="Chiudi notifica"
+                    title="Chiudi notifica"
                   >
                     <X className="h-4 w-4" />
                   </button>
