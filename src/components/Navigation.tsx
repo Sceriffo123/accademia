@@ -11,7 +11,8 @@ import {
   Menu, 
   X,
   User,
-  Crown
+  Crown,
+  Database
 } from 'lucide-react';
 
 export default function Navigation() {
@@ -48,6 +49,7 @@ export default function Navigation() {
     { to: '/dashboard', icon: Home, label: 'Dashboard', section: 'dashboard' },
     { to: '/normative', icon: FileText, label: 'Normative', section: 'normatives' },
     { to: '/education', icon: GraduationCap, label: 'Formazione', section: 'education' },
+    { to: '/banca-dati', icon: Database, label: 'Banca Dati', section: 'banca_dati' },
   ].filter(item => visibleSections.includes(item.section));
 
   // Aggiungi sezioni amministrative se visibili
