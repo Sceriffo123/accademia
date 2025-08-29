@@ -18,8 +18,8 @@ import Docx from './pages/Docx';
 function App() {
   return (
     <AuthProvider>
-      <DatabaseInit />
       <Router>
+        <DatabaseInit />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
