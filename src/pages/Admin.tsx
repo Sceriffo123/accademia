@@ -689,6 +689,13 @@ export default function Admin() {
                 </div>
               </div>
             )}
+
+        {/* Modal Aggiungi Utente */}
+        {showAddUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Aggiungi Nuovo Utente</h3>
                 <button
                   onClick={() => setShowAddUser(false)}
                   className="text-gray-400 hover:text-gray-600"
