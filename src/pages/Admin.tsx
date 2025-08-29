@@ -773,6 +773,293 @@ export default function Admin() {
           </div>
         )}
 
+        {/* Modal Aggiungi Normativa */}
+        {showAddNormative && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Aggiungi Nuova Normativa</h3>
+                <button
+                  onClick={() => setShowAddNormative(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Titolo *</label>
+                  <input
+                    type="text"
+                    value={normativeForm.title}
+                    onChange={(e) => setNormativeForm({...normativeForm, title: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Titolo della normativa"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Numero di Riferimento *</label>
+                  <input
+                    type="text"
+                    value={normativeForm.reference_number}
+                    onChange={(e) => setNormativeForm({...normativeForm, reference_number: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Es: D.Lgs. 285/1992"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
+                    <select
+                      value={normativeForm.type}
+                      onChange={(e) => setNormativeForm({...normativeForm, type: e.target.value as 'law' | 'regulation' | 'ruling'})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="law">Legge</option>
+                      <option value="regulation">Regolamento</option>
+                      <option value="ruling">Sentenza</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                    <input
+                      type="text"
+                      value={normativeForm.category}
+                      onChange={(e) => setNormativeForm({...normativeForm, category: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Es: Trasporto Pubblico"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Data Pubblicazione *</label>
+                    <input
+                      type="date"
+                      value={normativeForm.publication_date}
+                      onChange={(e) => setNormativeForm({...normativeForm, publication_date: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Data Efficacia *</label>
+                    <input
+                      type="date"
+                      value={normativeForm.effective_date}
+                      onChange={(e) => setNormativeForm({...normativeForm, effective_date: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contenuto *</label>
+                  <textarea
+                    value={normativeForm.content}
+                    onChange={(e) => setNormativeForm({...normativeForm, content: e.target.value})}
+                    rows={6}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Testo completo della normativa..."
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Aggiungi tag..."
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddTag}
+                      className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Aggiungi
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {normativeForm.tags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag(tag)}
+                          className="ml-2 text-blue-600 hover:text-blue-800"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowAddNormative(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleCreateNormative}
+                  className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                >
+                  Crea Normativa
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Modifica Normativa */}
+        {showEditNormative && editingNormative && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Modifica Normativa</h3>
+                <button
+                  onClick={() => setShowEditNormative(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Titolo *</label>
+                  <input
+                    type="text"
+                    value={editingNormative.title}
+                    onChange={(e) => setEditingNormative({...editingNormative, title: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Numero di Riferimento *</label>
+                  <input
+                    type="text"
+                    value={editingNormative.reference_number}
+                    onChange={(e) => setEditingNormative({...editingNormative, reference_number: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
+                    <select
+                      value={editingNormative.type}
+                      onChange={(e) => setEditingNormative({...editingNormative, type: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="law">Legge</option>
+                      <option value="regulation">Regolamento</option>
+                      <option value="ruling">Sentenza</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                    <input
+                      type="text"
+                      value={editingNormative.category}
+                      onChange={(e) => setEditingNormative({...editingNormative, category: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Data Pubblicazione *</label>
+                    <input
+                      type="date"
+                      value={editingNormative.publication_date}
+                      onChange={(e) => setEditingNormative({...editingNormative, publication_date: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Data Efficacia *</label>
+                    <input
+                      type="date"
+                      value={editingNormative.effective_date}
+                      onChange={(e) => setEditingNormative({...editingNormative, effective_date: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contenuto *</label>
+                  <textarea
+                    value={editingNormative.content}
+                    onChange={(e) => setEditingNormative({...editingNormative, content: e.target.value})}
+                    rows={6}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                  <div className="flex flex-wrap gap-2">
+                    {editingNormative.tags && editingNormative.tags.map((tag: string, index: number) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newTags = editingNormative.tags.filter((_: string, i: number) => i !== index);
+                            setEditingNormative({...editingNormative, tags: newTags});
+                          }}
+                          className="ml-2 text-blue-600 hover:text-blue-800"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowEditNormative(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleUpdateNormative}
+                  className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                >
+                  Salva Modifiche
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Modal Cambia Password */}
         {showPasswordModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
