@@ -469,6 +469,13 @@ async function insertDefaultPermissions() {
       // Report
       { id: 'reports.view', name: 'Visualizza Report', description: 'Può vedere i report', category: 'reports', level: 3 },
       { id: 'reports.export', name: 'Esporta Report', description: 'Può esportare i report', category: 'reports', level: 2 }
+      
+      // Documents
+      { id: 'documents.view', name: 'Visualizza Documenti', description: 'Può vedere i documenti', category: 'documents', level: 4 },
+      { id: 'documents.create', name: 'Crea Documenti', description: 'Può creare nuovi documenti', category: 'documents', level: 3 },
+      { id: 'documents.edit', name: 'Modifica Documenti', description: 'Può modificare documenti', category: 'documents', level: 2 },
+      { id: 'documents.delete', name: 'Elimina Documenti', description: 'Può eliminare documenti', category: 'documents', level: 2 },
+      { id: 'documents.upload', name: 'Carica Documenti', description: 'Può caricare nuovi documenti', category: 'documents', level: 3 }
     ];
 
     for (const perm of permissions) {
@@ -492,13 +499,15 @@ async function insertDefaultRoleConfiguration() {
         role: 'superadmin',
         permissions: ['users.view', 'users.create', 'users.edit', 'users.delete', 'users.manage_roles', 
                      'normatives.view', 'normatives.create', 'normatives.edit', 'normatives.delete', 'normatives.publish',
-                     'system.settings', 'system.permissions', 'system.logs', 'reports.view', 'reports.export'],
+                     'system.settings', 'system.permissions', 'system.logs', 'reports.view', 'reports.export',
+                     'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.upload'],
         sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'superadmin', 'reports', 'settings']
       },
       {
         role: 'admin',
         permissions: ['users.view', 'users.create', 'users.edit', 'normatives.view', 'normatives.create', 
-                     'normatives.edit', 'normatives.delete', 'normatives.publish', 'system.logs', 'reports.view', 'reports.export'],
+                     'normatives.edit', 'normatives.delete', 'normatives.publish', 'system.logs', 'reports.view', 'reports.export',
+                     'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.upload'],
         sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'reports']
       },
       {
