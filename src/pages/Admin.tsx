@@ -663,20 +663,34 @@ export default function Admin() {
                       
                       <div className="flex items-center space-x-2">
                         <button 
+<<<<<<< HEAD
                           onClick={() => console.log('View normative:', normative.id)}
                           className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+=======
+                          onClick={() => {/* TODO: Implement view modal */}}
+                          className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Visualizza"
+>>>>>>> 174427f43b666e834c11e490ddd0d3e96c94dd01
                         >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button 
                           onClick={() => handleEditNormative(normative)}
                           className="p-2 text-gray-400 hover:text-green-600 transition-colors"
+<<<<<<< HEAD
+=======
+                          title="Modifica"
+>>>>>>> 174427f43b666e834c11e490ddd0d3e96c94dd01
                         >
                           <Edit3 className="h-4 w-4" />
                         </button>
                         <button 
                           onClick={() => handleDeleteNormative(normative.id, normative.title)}
                           className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+<<<<<<< HEAD
+=======
+                          title="Elimina"
+>>>>>>> 174427f43b666e834c11e490ddd0d3e96c94dd01
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
