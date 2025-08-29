@@ -652,6 +652,86 @@ export async function getAllPermissions(): Promise<any[]> {
   }
 }
 
+// === METODI PER DATABASE TABLES ===
+export async function getAllTables(): Promise<DatabaseTable[]> {
+  try {
+    console.log('🎓 ACCADEMIA: Recupero metadati tabelle database...');
+    
+    // Query per ottenere tutte le tabelle del database pubblico
+    const tablesResult = await sql`
+      SELECT 
+        t.table_name as name,
+        t.table_schema as schema,
+        t.table_type as table_type,
+        obj_description(c.oid) as comment
+      FROM information_schema.tables t
+      LEFT JOIN pg_class c ON c.relname = t.table_name
+      WHERE t.table_schema = 'public' 
+        AND t.table_type = 'BASE TABLE'
+      ORDER BY t.table_name
+    `;
+
+    const tables: DatabaseTable[] = [];
+
+    // Per ogni tabella, ottieni il conteggio record e altre info
+    for (const table of tablesResult) {
+      try {
+        // Conteggio record sicuro
+        const countResult = await sql.unsafe(`SELECT COUNT(*) as count FROM ${table.name}`);
+        const recordCount = parseInt(countResult[0]?.count || '0');
+
+        // Dimensione stimata della tabella
+        const sizeResult = await sql`
+          SELECT pg_size_pretty(pg_total_relation_size(quote_ident(${table.name}))) as size
+        `;
+        const estimatedSize = sizeResult[0]?.size || 'N/A';
+
+        // Data ultima modifica (approssimativa)
+        const modifiedResult = await sql`
+          SELECT 
+            COALESCE(
+              (SELECT MAX(created_at) FROM ${sql(table.name)} WHERE created_at IS NOT NULL),
+              (SELECT MAX(updated_at) FROM ${sql(table.name)} WHERE updated_at IS NOT NULL),
+              NOW()
+            ) as last_modified
+        `;
+        const lastModified = modifiedResult[0]?.last_modified || new Date().toISOString();
+
+        tables.push({
+          name: table.name,
+          schema: table.schema,
+          recordCount,
+          estimatedSize,
+          lastModified,
+          tableType: table.table_type,
+          comment: table.comment
+        });
+
+        console.log(`🎓 ACCADEMIA: Tabella ${table.name} - ${recordCount} record, ${estimatedSize}`);
+      } catch (tableError) {
+        console.warn(`🎓 ACCADEMIA: Errore lettura tabella ${table.name}:`, tableError);
+        
+        // Aggiungi comunque la tabella con dati di fallback
+        tables.push({
+          name: table.name,
+          schema: table.schema,
+          recordCount: 0,
+          estimatedSize: 'N/A',
+          lastModified: new Date().toISOString(),
+          tableType: table.table_type,
+          comment: table.comment
+        });
+      }
+    }
+
+    console.log(`🎓 ACCADEMIA: Trovate ${tables.length} tabelle nel database`);
+    return tables;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore recupero tabelle database:', error?.message);
+    return [];
+  }
+}
+
 export async function getRolePermissionsMatrix(): Promise<Map<string, any>> {
   try {
     const roles = ['superadmin', 'admin', 'operator', 'user', 'guest'];
