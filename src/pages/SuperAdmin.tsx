@@ -5,7 +5,9 @@ import {
   getAllPermissions, 
   getRolePermissionsMatrix, 
   updateRolePermission, 
-  updateRoleSection 
+  updateRoleSection,
+  getAllTables,
+  type DatabaseTable
 } from '../lib/neonDatabase';
 import { 
   Shield, 
@@ -23,7 +25,8 @@ import {
   CheckCircle,
   AlertCircle,
   Info,
-  X
+  X,
+  Database
 } from 'lucide-react';
 
 interface Notification {
@@ -35,9 +38,10 @@ interface Notification {
 
 export default function SuperAdmin() {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'permissions' | 'roles' | 'system'>('permissions');
+  const [activeTab, setActiveTab] = useState<'permissions' | 'roles' | 'system' | 'database'>('permissions');
   const [permissions, setPermissions] = useState<any[]>([]);
   const [roleMatrix, setRoleMatrix] = useState<Map<string, any>>(new Map());
+  const [databaseTables, setDatabaseTables] = useState<DatabaseTable[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['users']));
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -65,6 +69,7 @@ export default function SuperAdmin() {
 
   useEffect(() => {
     loadPermissionsData();
+    loadDatabaseData();
   }, []);
 
   async function loadPermissionsData() {
@@ -81,6 +86,18 @@ export default function SuperAdmin() {
       console.error('Errore caricamento permessi:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadDatabaseData() {
+    try {
+      console.log('🎓 ACCADEMIA: Caricamento metadati database...');
+      const tables = await getAllTables();
+      setDatabaseTables(tables);
+      console.log(`🎓 ACCADEMIA: Caricate ${tables.length} tabelle`);
+    } catch (error) {
+      console.error('🚨 ACCADEMIA: Errore caricamento tabelle database:', error);
+      addNotification('error', 'Errore Database', 'Impossibile caricare le informazioni delle tabelle');
     }
   }
 
@@ -271,7 +288,8 @@ export default function SuperAdmin() {
               {[
                 { id: 'permissions', label: 'Gestione Permessi', icon: Shield },
                 { id: 'roles', label: 'Visibilità Sezioni', icon: Eye },
-                { id: 'system', label: 'Impostazioni Sistema', icon: Settings }
+                { id: 'system', label: 'Impostazioni Sistema', icon: Settings },
+                { id: 'database', label: 'Database Tables', icon: Database }
               ].map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -514,6 +532,84 @@ export default function SuperAdmin() {
                 ) : (
                   <div className="text-center py-12 text-gray-500">
                     <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p className="text-lg">Nessuna tabella trovata</p>
+                    <p className="text-sm">Verificare la connessione al database</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'database' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Tabelle Database ({databaseTables.length})
+                  </h3>
+                  <button
+                    onClick={loadDatabaseData}
+                    className="flex items-center space-x-2 border border-gray-300 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    <span>Aggiorna</span>
+                  </button>
+                </div>
+                
+                {databaseTables.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {databaseTables.map((table) => (
+                      <div
+                        key={table.name}
+                        className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center space-x-2">
+                            <div className="p-2 bg-blue-100 rounded-lg">
+                              <Database className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-900">{table.name}</h4>
+                              <p className="text-xs text-gray-500">{table.schema}</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Record:</span>
+                            <span className="font-medium text-gray-900">{table.recordCount.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Dimensione:</span>
+                            <span className="font-medium text-gray-900">{table.estimatedSize}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Modificata:</span>
+                            <span className="font-medium text-gray-900">
+                              {new Date(table.lastModified).toLocaleDateString('it-IT')}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {table.comment && (
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <p className="text-xs text-gray-600">{table.comment}</p>
+                          </div>
+                        )}
+                        
+                        <div className="mt-4 flex items-center space-x-2">
+                          <button className="flex-1 bg-blue-50 text-blue-700 px-3 py-2 rounded text-xs font-medium hover:bg-blue-100 transition-colors">
+                            Esplora
+                          </button>
+                          <button className="flex-1 bg-gray-50 text-gray-700 px-3 py-2 rounded text-xs font-medium hover:bg-gray-100 transition-colors">
+                            Schema
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-gray-500">
+                    <Database className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p className="text-lg">Nessuna tabella trovata</p>
                     <p className="text-sm">Verificare la connessione al database</p>
                   </div>
