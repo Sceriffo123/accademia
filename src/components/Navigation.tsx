@@ -49,6 +49,7 @@ export default function Navigation() {
 
   const navItems = [
     { to: '/dashboard', icon: Home, label: 'Dashboard', section: 'dashboard' },
+    { to: '/normative', icon: FileText, label: 'Normative', section: 'normatives' },
     { to: '/education', icon: GraduationCap, label: 'Formazione', section: 'education' },
   ].filter(item => visibleSections.includes(item.section));
 
@@ -121,21 +122,6 @@ export default function Navigation() {
                 );
               })}
               
-              {/* Normative Menu with Dropdown */}
-              {visibleSections.includes('normatives') && (
-                <Link
-                  to="/normative"
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
-                    location.pathname.startsWith('/normative')
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'text-gray-600 hover:text-blue-800 hover:bg-gray-100'
-                  }`}
-                >
-                  <FileText className="h-5 w-5" />
-                  <span className="font-medium">Normative</span>
-                </Link>
-              )}
-              
               <div className="flex items-center space-x-3 pl-6 border-l border-gray-200">
                 <div className="flex items-center space-x-2">
                   <User className="h-5 w-5 text-gray-500" />
@@ -193,22 +179,6 @@ export default function Navigation() {
                     </Link>
                   );
                 })}
-                
-                {/* Normative Menu for Mobile */}
-                {visibleSections.includes('normatives') && (
-                  <Link
-                    to="/normative"
-                    onClick={() => setIsMenuOpen(false)}
-                    className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${
-                      location.pathname.startsWith('/normative')
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'text-gray-600 hover:text-blue-800 hover:bg-gray-100'
-                    }`}
-                  >
-                    <FileText className="h-5 w-5" />
-                    <span className="font-medium">Normative</span>
-                  </Link>
-                )}
                 
                 <div className="border-t border-gray-200 pt-4 mt-4">
                   <div className="flex items-center space-x-3 px-3 py-2">
