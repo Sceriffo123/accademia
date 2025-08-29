@@ -87,7 +87,7 @@ export default function Normatives() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-            Normative
+            Consultazione Normative
           </h1>
           <p className="text-gray-600">
             Accesso completo alle normative del trasporto pubblico locale non di linea

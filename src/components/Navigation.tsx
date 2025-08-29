@@ -11,9 +11,7 @@ import {
   Menu, 
   X,
   User,
-  Crown,
-  ChevronDown,
-  ChevronRight
+  Crown
 } from 'lucide-react';
 
 export default function Navigation() {
@@ -21,7 +19,6 @@ export default function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showNormativeSubmenu, setShowNormativeSubmenu] = useState(false);
   const [visibleSections, setVisibleSections] = useState<string[]>([]);
 
   React.useEffect(() => {
