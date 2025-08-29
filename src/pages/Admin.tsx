@@ -50,9 +50,8 @@ export default function Admin() {
   const [showPasswordModal, setShowPasswordModal] = useState<any>(null);
   const [newPassword, setNewPassword] = useState('');
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  
-  // Stati per gestione normative
-  const [showAddNormative, setShowAddNormative] = useState(false);
+
+  // Stati per gestione normative (aggiunti correttamente)
   const [showEditNormative, setShowEditNormative] = useState(false);
   const [editingNormative, setEditingNormative] = useState<any>(null);
   const [normativeForm, setNormativeForm] = useState({
@@ -66,7 +65,7 @@ export default function Admin() {
     tags: [] as string[]
   });
   const [tagInput, setTagInput] = useState('');
-  
+
   const [userForm, setUserForm] = useState({
     email: '',
     full_name: '',
