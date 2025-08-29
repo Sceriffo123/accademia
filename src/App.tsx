@@ -13,7 +13,6 @@ import NormativeDetail from './pages/NormativeDetail';
 import Education from './pages/Education';
 import Admin from './pages/Admin';
 import SuperAdmin from './pages/SuperAdmin';
-import BancaDati from './pages/BancaDati';
 
 function App() {
   return (
@@ -43,11 +42,6 @@ function App() {
             <Route path="/education" element={
               <ProtectedRoute>
                 <Education />
-              </ProtectedRoute>
-            } />
-            <Route path="/banca-dati" element={
-              <ProtectedRoute>
-                <BancaDati />
               </ProtectedRoute>
             } />
             <Route path="/admin" element={
