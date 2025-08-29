@@ -581,53 +581,53 @@ export async function updateNormative(id: string, data: {
     console.log('🎓 ACCADEMIA: Query SQL:', query);
     console.log('🎓 ACCADEMIA: Valori:', values);
 
-    const result = await sql.unsafe(query, values);
+    // Prova prima con sql invece di sql.unsafe
+    console.log('🎓 ACCADEMIA: Tentativo con sql invece di sql.unsafe...');
+
+    let result;
+    try {
+      result = await sql`
+        UPDATE normatives
+        SET title = ${data.title}, content = ${data.content}, category = ${data.category},
+            type = ${data.type}, reference_number = ${data.reference_number},
+            publication_date = ${data.publication_date}, effective_date = ${data.effective_date},
+            tags = ${data.tags}, updated_at = NOW()
+        WHERE id = ${id}
+        RETURNING *
+      `;
+
+      console.log('🎓 ACCADEMIA: Query con sql riuscita:', result);
+    } catch (sqlError) {
+      console.error('🎓 ACCADEMIA: Errore con sql, provo con sql.unsafe:', sqlError);
+      result = await sql.unsafe(query, values);
+    }
+
     console.log('🎓 ACCADEMIA: Risultato query raw:', result);
     console.log('🎓 ACCADEMIA: Tipo del risultato:', typeof result);
-    console.log('🎓 ACCADEMIA: Chiavi dell\'oggetto:', Object.keys(result));
-    console.log('🎓 ACCADEMIA: Contenuto completo:', JSON.stringify(result, null, 2));
+    console.log('🎓 ACCADEMIA: È un array?', Array.isArray(result));
 
-    // Estrai correttamente il risultato dalla query
+    // Se è un array, usalo direttamente
     let queryResult: any[] = [];
     if (Array.isArray(result)) {
       queryResult = result;
-      console.log('🎓 ACCADEMIA: Risultato è un array');
+      console.log('🎓 ACCADEMIA: Risultato è un array diretto');
     } else if (result && typeof result === 'object') {
-      console.log('🎓 ACCADEMIA: Risultato è un oggetto, controllo proprietà...');
+      console.log('🎓 ACCADEMIA: Chiavi dell\'oggetto:', Object.keys(result));
 
-      // Estrai il risultato dall'oggetto complesso di Neon
-      if ('rows' in result) {
+      // Prova le proprietà standard
+      if ('rows' in result && Array.isArray(result.rows)) {
         queryResult = result.rows;
-        console.log('🎓 ACCADEMIA: Estratto da result.rows');
       } else if ('result' in result && Array.isArray(result.result)) {
         queryResult = result.result;
-        console.log('🎓 ACCADEMIA: Estratto da result.result');
-      } else if ('_rows' in result) {
-        queryResult = result._rows;
-        console.log('🎓 ACCADEMIA: Estratto da result._rows');
-      } else if ('data' in result) {
+      } else if ('data' in result && Array.isArray(result.data)) {
         queryResult = result.data;
-        console.log('🎓 ACCADEMIA: Estratto da result.data');
+      } else if ('length' in result && typeof result.length === 'number') {
+        // Se ha una proprietà length, potrebbe essere iterable
+        queryResult = Array.from(result);
       } else {
-        // Prova a iterare sulle proprietà per trovare array
-        console.log('🎓 ACCADEMIA: Nessuna proprietà standard trovata, controllo tutte le proprietà...');
-        for (const [key, value] of Object.entries(result)) {
-          if (Array.isArray(value) && value.length > 0) {
-            queryResult = value;
-            console.log(`🎓 ACCADEMIA: Estratto da result.${key}:`, value);
-            break;
-          }
-        }
-
-        // Se ancora vuoto, prova con il primo valore che è un oggetto
-        if (queryResult.length === 0) {
-          for (const [key, value] of Object.entries(result)) {
-            if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-              queryResult = [value];
-              console.log(`🎓 ACCADEMIA: Estratto come singolo oggetto da result.${key}:`, value);
-              break;
-            }
-          }
+        // Prova a vedere se possiamo accedere agli elementi direttamente
+        if (result[0] !== undefined) {
+          queryResult = [result[0]];
         }
       }
     }
