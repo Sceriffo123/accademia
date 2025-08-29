@@ -393,11 +393,17 @@ export async function getAllUsers(excludeSuperAdmin: boolean = false, currentUse
     
     if (excludeSuperAdmin) {
       return result.filter(user => {
-        // Se è un SuperAdmin che sta guardando, può vedere se stesso
-        if (currentUserId &&
-        )
-      }
-      )
+        // Escludi SuperAdmin, ma se è il SuperAdmin corrente può vedere se stesso
+        if (user.role === 'superadmin') {
+          return currentUserId === user.id;
+        }
+        return true;
+      });
     }
+    
+    return result;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore recupero utenti:', error);
+    return [];
   }
 }
