@@ -477,6 +477,139 @@ export async function getRecentNormativesCount(days: number = 30): Promise<numbe
   }
 }
 
+// === METODI CRUD PER NORMATIVE ===
+export async function createNormative(data: {
+  title: string;
+  content: string;
+  category: string;
+  type: 'law' | 'regulation' | 'ruling';
+  reference_number: string;
+  publication_date: string;
+  effective_date: string;
+  tags?: string[];
+}): Promise<Normative | null> {
+  try {
+    console.log('🎓 ACCADEMIA: Creazione nuova normativa...');
+    
+    const result = await sql`
+      INSERT INTO normatives (
+        title, content, category, type, reference_number, 
+        publication_date, effective_date, tags, updated_at
+      )
+      VALUES (
+        ${data.title}, ${data.content}, ${data.category}, ${data.type}, 
+        ${data.reference_number}, ${data.publication_date}, ${data.effective_date}, 
+        ${data.tags || []}, NOW()
+      )
+      RETURNING *
+    `;
+    
+    console.log('🎓 ACCADEMIA: Normativa creata con successo:', result[0]?.title);
+    return result[0] || null;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore creazione normativa:', error?.message);
+    throw error;
+  }
+}
+
+export async function updateNormative(id: string, data: {
+  title?: string;
+  content?: string;
+  category?: string;
+  type?: 'law' | 'regulation' | 'ruling';
+  reference_number?: string;
+  publication_date?: string;
+  effective_date?: string;
+  tags?: string[];
+}): Promise<Normative | null> {
+  try {
+    console.log('🎓 ACCADEMIA: Aggiornamento normativa:', id);
+    
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (data.title !== undefined) {
+      updates.push(`title = $${paramIndex++}`);
+      values.push(data.title);
+    }
+    if (data.content !== undefined) {
+      updates.push(`content = $${paramIndex++}`);
+      values.push(data.content);
+    }
+    if (data.category !== undefined) {
+      updates.push(`category = $${paramIndex++}`);
+      values.push(data.category);
+    }
+    if (data.type !== undefined) {
+      updates.push(`type = $${paramIndex++}`);
+      values.push(data.type);
+    }
+    if (data.reference_number !== undefined) {
+      updates.push(`reference_number = $${paramIndex++}`);
+      values.push(data.reference_number);
+    }
+    if (data.publication_date !== undefined) {
+      updates.push(`publication_date = $${paramIndex++}`);
+      values.push(data.publication_date);
+    }
+    if (data.effective_date !== undefined) {
+      updates.push(`effective_date = $${paramIndex++}`);
+      values.push(data.effective_date);
+    }
+    if (data.tags !== undefined) {
+      updates.push(`tags = $${paramIndex++}`);
+      values.push(data.tags);
+    }
+
+    if (updates.length === 0) {
+      console.log('🎓 ACCADEMIA: Nessun campo da aggiornare');
+      return null;
+    }
+
+    // Aggiungi sempre updated_at
+    updates.push(`updated_at = NOW()`);
+
+    const query = `
+      UPDATE normatives 
+      SET ${updates.join(', ')} 
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
+    values.push(id);
+
+    const result = await sql.unsafe(query, values);
+    console.log('🎓 ACCADEMIA: Normativa aggiornata:', result[0]?.title);
+    return result[0] || null;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore aggiornamento normativa:', error?.message);
+    throw error;
+  }
+}
+
+export async function deleteNormative(id: string): Promise<boolean> {
+  try {
+    console.log('🎓 ACCADEMIA: Eliminazione normativa:', id);
+    
+    const result = await sql`
+      DELETE FROM normatives 
+      WHERE id = ${id}
+      RETURNING id, title
+    `;
+    
+    if (result.length > 0) {
+      console.log('🎓 ACCADEMIA: Normativa eliminata:', result[0].title);
+      return true;
+    } else {
+      console.log('🎓 ACCADEMIA: Normativa non trovata per eliminazione');
+      return false;
+    }
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore eliminazione normativa:', error?.message);
+    throw error;
+  }
+}
+
 // === METODI PER PERMESSI ===
 async function insertDefaultPermissions() {
   try {
