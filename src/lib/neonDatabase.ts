@@ -44,7 +44,9 @@ export interface TableColumn {
   isPrimaryKey: boolean;
   isForeignKey: boolean;
   referencedTable?: string;
+  referencedColumn?: string;
   maxLength?: number;
+  position: number;
 }
 
 export interface TableStructure {
@@ -729,6 +731,108 @@ export async function getAllTables(): Promise<DatabaseTable[]> {
   } catch (error) {
     console.error('🚨 ACCADEMIA: Errore recupero tabelle database:', error?.message);
     return [];
+  }
+}
+
+// === METODI PER STRUTTURA TABELLE ===
+export async function getTableStructure(tableName: string): Promise<TableStructure | null> {
+  try {
+    console.log(`🎓 ACCADEMIA: Analisi struttura tabella ${tableName}...`);
+    
+    // 1. Query per le colonne
+    const columnsResult = await sql`
+      SELECT 
+        column_name, 
+        data_type, 
+        is_nullable, 
+        column_default, 
+        character_maximum_length,
+        ordinal_position
+      FROM information_schema.columns 
+      WHERE table_name = ${tableName} AND table_schema = 'public'
+      ORDER BY ordinal_position
+    `;
+
+    if (columnsResult.length === 0) {
+      console.log(`🎓 ACCADEMIA: Tabella ${tableName} non trovata`);
+      return null;
+    }
+
+    // 2. Query per le chiavi primarie
+    const primaryKeysResult = await sql`
+      SELECT kc.column_name
+      FROM information_schema.key_column_usage kc
+      JOIN information_schema.table_constraints tc ON kc.constraint_name = tc.constraint_name
+      WHERE tc.table_name = ${tableName} AND tc.constraint_type = 'PRIMARY KEY'
+    `;
+    const primaryKeys = new Set(primaryKeysResult.map(pk => pk.column_name));
+
+    // 3. Query per le chiavi esterne
+    const foreignKeysResult = await sql`
+      SELECT 
+        kc.column_name,
+        ccu.table_name AS referenced_table,
+        ccu.column_name AS referenced_column
+      FROM information_schema.key_column_usage kc
+      JOIN information_schema.table_constraints tc ON kc.constraint_name = tc.constraint_name
+      JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
+      WHERE tc.table_name = ${tableName} AND tc.constraint_type = 'FOREIGN KEY'
+    `;
+    const foreignKeysMap = new Map();
+    foreignKeysResult.forEach(fk => {
+      foreignKeysMap.set(fk.column_name, {
+        referencedTable: fk.referenced_table,
+        referencedColumn: fk.referenced_column
+      });
+    });
+
+    // 4. Query per gli indici
+    const indexesResult = await sql`
+      SELECT indexname, indexdef
+      FROM pg_indexes 
+      WHERE tablename = ${tableName} AND schemaname = 'public'
+    `;
+    const indexes = indexesResult.map(idx => `${idx.indexname}: ${idx.indexdef}`);
+
+    // 5. Conteggio record
+    const countResult = await sql.unsafe(`SELECT COUNT(*) as count FROM ${tableName}`);
+    const recordCount = parseInt(countResult[0]?.count || '0');
+
+    // 6. Costruisci le colonne con tutte le informazioni
+    const columns: TableColumn[] = columnsResult.map(col => {
+      const isPrimaryKey = primaryKeys.has(col.column_name);
+      const foreignKeyInfo = foreignKeysMap.get(col.column_name);
+      const isForeignKey = !!foreignKeyInfo;
+
+      return {
+        name: col.column_name,
+        type: col.data_type.toUpperCase(),
+        nullable: col.is_nullable === 'YES',
+        defaultValue: col.column_default,
+        isPrimaryKey,
+        isForeignKey,
+        referencedTable: foreignKeyInfo?.referencedTable,
+        referencedColumn: foreignKeyInfo?.referencedColumn,
+        maxLength: col.character_maximum_length,
+        position: col.ordinal_position
+      };
+    });
+
+    const structure: TableStructure = {
+      tableName,
+      schema: 'public',
+      columns,
+      indexes,
+      constraints: [], // Implementabile in futuro se necessario
+      recordCount
+    };
+
+    console.log(`🎓 ACCADEMIA: Struttura ${tableName} analizzata - ${columns.length} colonne, ${indexes.length} indici`);
+    return structure;
+
+  } catch (error) {
+    console.error(`🚨 ACCADEMIA: Errore analisi struttura ${tableName}:`, error?.message);
+    return null;
   }
 }
 

@@ -7,6 +7,7 @@ import {
   updateRolePermission, 
   updateRoleSection,
   getAllTables,
+  getTableStructure,
   type DatabaseTable
 } from '../lib/neonDatabase';
 import { 
@@ -46,6 +47,9 @@ export default function SuperAdmin() {
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showSchemaModal, setShowSchemaModal] = useState(false);
+  const [selectedTableStructure, setSelectedTableStructure] = useState<any>(null);
+  const [loadingSchema, setLoadingSchema] = useState(false);
 
   function addNotification(type: 'success' | 'error' | 'info', title: string, message: string) {
     const id = Date.now().toString();
