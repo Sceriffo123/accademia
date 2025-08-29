@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getUserSections } from '../lib/neonDatabase';
+import { permissionManager } from '../lib/permissions';
 import { 
   Home, 
   FileText, 
@@ -30,7 +30,7 @@ export default function Navigation() {
 
   async function loadVisibleSections() {
     try {
-      const sections = await getUserSections(profile?.role || '');
+      const sections = permissionManager.getVisibleSections(profile?.role || '');
       setVisibleSections(sections);
     } catch (error) {
       console.error('Errore caricamento sezioni visibili:', error);
