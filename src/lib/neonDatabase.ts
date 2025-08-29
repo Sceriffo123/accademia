@@ -582,10 +582,34 @@ export async function updateNormative(id: string, data: {
     console.log('🎓 ACCADEMIA: Valori:', values);
 
     const result = await sql.unsafe(query, values);
-    console.log('🎓 ACCADEMIA: Risultato query:', result);
+    console.log('🎓 ACCADEMIA: Risultato query raw:', result);
 
-    console.log('🎓 ACCADEMIA: Normativa aggiornata:', result[0]?.title);
-    return result[0] || null;
+    // Estrai correttamente il risultato dalla query
+    let queryResult: any[] = [];
+    if (Array.isArray(result)) {
+      queryResult = result;
+    } else if (result && typeof result === 'object') {
+      // Estrai il risultato dall'oggetto complesso di Neon
+      if ('rows' in result) {
+        queryResult = result.rows;
+      } else if ('result' in result && Array.isArray(result.result)) {
+        queryResult = result.result;
+      } else if ('_rows' in result) {
+        queryResult = result._rows;
+      } else {
+        // Fallback: converti l'oggetto in array se possibile
+        const keys = Object.keys(result);
+        if (keys.length > 0 && typeof result[keys[0]] === 'object') {
+          queryResult = [result[keys[0]]];
+        }
+      }
+    }
+
+    console.log('🎓 ACCADEMIA: Query result estratto:', queryResult);
+    console.log('🎓 ACCADEMIA: Primo elemento:', queryResult[0]);
+
+    console.log('🎓 ACCADEMIA: Normativa aggiornata:', queryResult[0]?.title);
+    return queryResult[0] || null;
   } catch (error) {
     console.error('🚨 ACCADEMIA: Errore aggiornamento normativa:', error?.message);
     console.error('🚨 ACCADEMIA: Dettagli errore:', error);
