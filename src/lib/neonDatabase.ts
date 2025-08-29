@@ -1,5 +1,4 @@
 import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
 
 const sql = neon(import.meta.env.VITE_DATABASE_URL!);
 
@@ -154,7 +153,7 @@ export async function initializeTables() {
 
     // Inserisci dati di esempio
     console.log('🎓 ACCADEMIA: Popolamento archivio con dati iniziali...');
-    // await insertSampleData(); // DISATTIVATO: Non rigenerare dati di esempio
+    await insertSampleData(); // RIABILITATO: Serve per creare utenti amministrativi
     
     // Inserisci permessi e configurazioni di default
     await insertDefaultPermissions();
@@ -164,7 +163,7 @@ export async function initializeTables() {
     return true;
   } catch (error) {
     console.error('🚨 ACCADEMIA: Errore critico durante l\'inizializzazione:', error);
-    console.error('🚨 ACCADEMIA: Dettagli tecnici:', error?.message);
+    console.error('🚨 ACCADEMIA: Dettagli tecnici:', error instanceof Error ? error.message : String(error));
     return false;
   }
 }
@@ -191,9 +190,6 @@ async function insertSampleData() {
       ON CONFLICT (email) DO NOTHING
     `;
 
-    // Inserisci normative
-    console.log('🎓 ACCADEMIA: Popolamento archivio normativo...');
-    
     // NORMATIVE DI ESEMPIO DISATTIVATE
     // Non inserire più dati fittizi che creano confusione
     console.log('🎓 ACCADEMIA: Archivio normativo pronto (senza dati di esempio)');
@@ -205,16 +201,15 @@ async function insertSampleData() {
       await sql`
         INSERT INTO activity_logs (user_id, action, resource_type, resource_id, details)
         VALUES 
-          (${adminUser[0].id}, 'CREATE', 'normative', gen_random_uuid(), '{"title": "Decreto Legislativo 285/1992"}'),
-          (${adminUser[0].id}, 'LOGIN', 'user', ${adminUser[0].id}, '{"ip": "127.0.0.1"}'),
-          (${adminUser[0].id}, 'VIEW', 'normative', gen_random_uuid(), '{"title": "Legge Regionale 15/2018"}')
+          (${adminUser[0].id}, 'CREATE', 'normative', gen_random_uuid(), '{"title": "Sistema Inizializzato"}'),
+          (${adminUser[0].id}, 'LOGIN', 'user', ${adminUser[0].id}, '{"ip": "127.0.0.1"}')
       `;
     }
 
     console.log('🎓 ACCADEMIA: Archivio popolato con successo!');
   } catch (error) {
     console.error('🚨 ACCADEMIA: Errore durante il popolamento archivio:', error);
-    console.error('🚨 ACCADEMIA: Dettagli tecnici:', error?.message);
+    console.error('🚨 ACCADEMIA: Dettagli tecnici:', error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -251,7 +246,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
     
     if (result.length > 0) {
       console.log('🎓 ACCADEMIA: Profilo trovato:', result[0].full_name, `(${result[0].role})`);
-      return result[0];
+      return result[0] as User;
     }
     
     console.log('🎓 ACCADEMIA: Profilo non trovato per:', email);
@@ -269,7 +264,7 @@ export async function getUserById(id: string): Promise<User | null> {
       FROM users
       WHERE id = ${id}
     `;
-    return result[0] || null;
+    return result[0] as Normative;
   } catch (error) {
     console.error('Errore recupero utente per ID:', error);
     return null;
@@ -283,7 +278,7 @@ export async function createUser(email: string, fullName: string, passwordHash: 
       VALUES (${email}, ${fullName}, ${passwordHash}, ${role})
       RETURNING id, email, full_name, role, created_at
     `;
-    return result[0] || null;
+    return result[0] as Normative;
   } catch (error) {
     console.error('Errore creazione utente:', error);
     return null;
@@ -357,7 +352,7 @@ export async function updateUser(id: string, data: { email?: string; full_name?:
     values.push(id);
 
     const result = await sql.unsafe(query, values);
-    return result[0] || null;
+    return result[0] as Normative;
   } catch (error) {
     console.error('🚨 ACCADEMIA: Errore aggiornamento profilo:', error?.message);
     throw error;
@@ -415,7 +410,7 @@ export async function getNormativeById(id: string): Promise<Normative | null> {
       SELECT * FROM normatives
       WHERE id = ${id}
     `;
-    return result[0] || null;
+    return result[0] as Normative;
   } catch (error) {
     console.error('Errore recupero normativa per ID:', error);
     return null;
@@ -473,7 +468,7 @@ export async function createNormative(data: {
     `;
     
     console.log('🎓 ACCADEMIA: Normativa creata con successo:', result[0]?.title);
-    return result[0] || null;
+    return result[0] as Normative;
   } catch (error) {
     console.error('🚨 ACCADEMIA: Errore creazione normativa:', error?.message);
     throw error;
