@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
 
 const sql = neon(import.meta.env.VITE_DATABASE_URL!);
 
@@ -680,9 +681,24 @@ export async function getAllTables(): Promise<DatabaseTable[]> {
       try {
         console.log(`🎓 ACCADEMIA: Conteggio record per tabella ${table.name}...`);
         
-        // Conteggio record sicuro
+        // Conteggio record sicuro - CORRETTO per QueryResult
         const countResult = await sql.unsafe(`SELECT COUNT(*) as count FROM ${table.name}`);
-        const recordCount = parseInt(countResult[0]?.count || '0');
+        
+        // Estrai il dato correttamente dal QueryResult
+        let countData: any[] = [];
+        if (Array.isArray(countResult)) {
+          countData = countResult;
+        } else if (countResult && typeof countResult === 'object') {
+          if ('rows' in countResult) {
+            countData = countResult.rows;
+          } else if ('result' in countResult && Array.isArray(countResult.result)) {
+            countData = countResult.result;
+          } else {
+            countData = Object.values(countResult).filter(Array.isArray)[0] || [];
+          }
+        }
+        
+        const recordCount = parseInt(countData[0]?.count || '0');
         
         console.log(`🎓 ACCADEMIA: Tabella ${table.name} - Query result:`, countResult);
         console.log(`🎓 ACCADEMIA: Tabella ${table.name} - Parsed count:`, recordCount);
