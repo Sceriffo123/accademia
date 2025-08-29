@@ -235,7 +235,7 @@ async function insertSampleData() {
 
     // Inserisci documenti di esempio
     console.log('🎓 ACCADEMIA: Popolamento archivio documenti...');
-    const adminUser = await sql`SELECT id FROM users WHERE email = 'admin@accademia.it'`;
+    adminUser = await sql`SELECT id FROM users WHERE email = 'admin@accademia.it'`;
     if (adminUser.length > 0) {
       await sql`
         INSERT INTO documents (title, description, filename, file_size, mime_type, type, category, tags, uploaded_by, approved_by)
