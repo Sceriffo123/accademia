@@ -77,6 +77,125 @@ export default function Admin() {
     fetchAdminData();
   }, []);
 
+  // Handler per creazione normativa
+  async function handleCreateNormative() {
+    try {
+      if (!normativeForm.title || !normativeForm.content || !normativeForm.reference_number) {
+        addNotification('error', 'Errore Validazione', 'Titolo, contenuto e numero di riferimento sono obbligatori');
+        return;
+      }
+      
+      if (!normativeForm.publication_date || !normativeForm.effective_date) {
+        addNotification('error', 'Errore Validazione', 'Date di pubblicazione e efficacia sono obbligatorie');
+        return;
+      }
+      
+      await createNormative({
+        title: normativeForm.title,
+        content: normativeForm.content,
+        category: normativeForm.category || 'Generale',
+        type: normativeForm.type,
+        reference_number: normativeForm.reference_number,
+        publication_date: normativeForm.publication_date,
+        effective_date: normativeForm.effective_date,
+        tags: normativeForm.tags
+      });
+      
+      setShowAddNormative(false);
+      setNormativeForm({
+        title: '',
+        content: '',
+        category: '',
+        type: 'law',
+        reference_number: '',
+        publication_date: '',
+        effective_date: '',
+        tags: []
+      });
+      setTagInput('');
+      await fetchAdminData(); // Refresh data
+      addNotification('success', 'Normativa Creata', `La normativa "${normativeForm.title}" è stata aggiunta al sistema`);
+    } catch (error) {
+      console.error('Error creating normative:', error);
+      addNotification('error', 'Errore Creazione', 'Si è verificato un errore durante la creazione della normativa');
+    }
+  }
+
+  // Handler per modifica normativa
+  async function handleUpdateNormative() {
+    try {
+      if (!editingNormative) return;
+      
+      if (!editingNormative.title || !editingNormative.content || !editingNormative.reference_number) {
+        addNotification('error', 'Errore Validazione', 'Titolo, contenuto e numero di riferimento sono obbligatori');
+        return;
+      }
+      
+      await updateNormative(editingNormative.id, {
+        title: editingNormative.title,
+        content: editingNormative.content,
+        category: editingNormative.category,
+        type: editingNormative.type,
+        reference_number: editingNormative.reference_number,
+        publication_date: editingNormative.publication_date,
+        effective_date: editingNormative.effective_date,
+        tags: editingNormative.tags
+      });
+      
+      setEditingNormative(null);
+      setShowEditNormative(false);
+      await fetchAdminData(); // Refresh data
+      addNotification('success', 'Normativa Aggiornata', `La normativa "${editingNormative.title}" è stata modificata`);
+    } catch (error) {
+      console.error('Error updating normative:', error);
+      addNotification('error', 'Errore Aggiornamento', 'Non è stato possibile aggiornare la normativa');
+    }
+  }
+
+  // Handler per eliminazione normativa
+  async function handleDeleteNormative(normativeId: string, normativeTitle: string) {
+    if (!confirm(`Sei sicuro di voler eliminare la normativa "${normativeTitle}"?`)) {
+      return;
+    }
+    
+    try {
+      const success = await deleteNormative(normativeId);
+      if (success) {
+        await fetchAdminData(); // Refresh data
+        addNotification('info', 'Normativa Eliminata', `La normativa "${normativeTitle}" è stata rimossa dal sistema`);
+      } else {
+        addNotification('error', 'Errore Eliminazione', 'La normativa non è stata trovata o non può essere eliminata');
+      }
+    } catch (error) {
+      console.error('Error deleting normative:', error);
+      addNotification('error', 'Errore Eliminazione', 'Non è stato possibile eliminare la normativa');
+    }
+  }
+
+  // Handler per aprire modal di modifica
+  function handleEditNormative(normative: any) {
+    setEditingNormative({...normative});
+    setShowEditNormative(true);
+  }
+
+  // Handler per gestire i tag
+  function handleAddTag() {
+    if (tagInput.trim() && !normativeForm.tags.includes(tagInput.trim())) {
+      setNormativeForm({
+        ...normativeForm,
+        tags: [...normativeForm.tags, tagInput.trim()]
+      });
+      setTagInput('');
+    }
+  }
+
+  function handleRemoveTag(tagToRemove: string) {
+    setNormativeForm({
+      ...normativeForm,
+      tags: normativeForm.tags.filter(tag => tag !== tagToRemove)
+    });
+  }
+
   function addNotification(type: 'success' | 'error' | 'info', title: string, message: string) {
     const id = Date.now().toString();
     const notification = { id, type, title, message };
