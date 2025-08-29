@@ -13,6 +13,7 @@ import NormativeDetail from './pages/NormativeDetail';
 import Education from './pages/Education';
 import Admin from './pages/Admin';
 import SuperAdmin from './pages/SuperAdmin';
+import Docx from './pages/Docx';
 
 function App() {
   return (
@@ -42,6 +43,11 @@ function App() {
             <Route path="/education" element={
               <ProtectedRoute>
                 <Education />
+              </ProtectedRoute>
+            } />
+            <Route path="/docx" element={
+              <ProtectedRoute>
+                <Docx />
               </ProtectedRoute>
             } />
             <Route path="/admin" element={
