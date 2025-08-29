@@ -824,33 +824,7 @@ export async function getTableStructure(tableName: string): Promise<TableStructu
 
     // 5. Conteggio record
     const countResult = await sql.unsafe(`SELECT COUNT(*) as count FROM ${tableName}`);
-    
-    // Debug: Verifica struttura risultato
-    console.log(`🎓 ACCADEMIA: getTableStructure - Raw countResult:`, countResult);
-    console.log(`🎓 ACCADEMIA: getTableStructure - countResult type:`, typeof countResult, Array.isArray(countResult));
-    
-    // Estrai correttamente il dato dal QueryResult
-    let countData: any[] = [];
-    if (Array.isArray(countResult)) {
-      countData = countResult;
-      console.log(`🎓 ACCADEMIA: getTableStructure - Estratto come array diretto`);
-    } else if (countResult && typeof countResult === 'object') {
-      if ('rows' in countResult) {
-        countData = countResult.rows;
-        console.log(`🎓 ACCADEMIA: getTableStructure - Estratto da rows`);
-      } else if ('result' in countResult && Array.isArray(countResult.result)) {
-        countData = countResult.result;
-        console.log(`🎓 ACCADEMIA: getTableStructure - Estratto da result`);
-      } else {
-        countData = Object.values(countResult).filter(Array.isArray)[0] || [];
-        console.log(`🎓 ACCADEMIA: getTableStructure - Estratto da Object.values`);
-      }
-    }
-    
-    console.log(`🎓 ACCADEMIA: getTableStructure - countData estratto:`, countData);
-    console.log(`🎓 ACCADEMIA: getTableStructure - Valore count:`, countData[0]?.count);
-    
-    const recordCount = parseInt(countData[0]?.count || '0');
+    const recordCount = parseInt(countResult[0]?.count || '0');
 
     // 6. Costruisci le colonne con tutte le informazioni
     const columns: TableColumn[] = columnsResult.map(col => {
@@ -1036,40 +1010,54 @@ export async function getTableRecords(
     console.log(`🎓 ACCADEMIA: recordsResult raw:`, recordsResult);
     console.log(`🎓 ACCADEMIA: Tipo countResult:`, typeof countResult, Array.isArray(countResult));
     console.log(`🎓 ACCADEMIA: Tipo recordsResult:`, typeof recordsResult, Array.isArray(recordsResult));
-
-    // Estrai records
-    let records: any[] = [];
+    
+    // Prova diverse modalità di estrazione
+    let countData: any[] = [];
+    let recordsData: any[] = [];
+    
+    if (Array.isArray(countResult)) {
+      countData = countResult;
+      console.log(`🎓 ACCADEMIA: countResult è array diretto`);
+    } else if (countResult && typeof countResult === 'object') {
+      if ('rows' in countResult) {
+        countData = countResult.rows;
+        console.log(`🎓 ACCADEMIA: Estratto da countResult.rows`);
+      } else if ('result' in countResult && Array.isArray(countResult.result)) {
+        countData = countResult.result;
+        console.log(`🎓 ACCADEMIA: Estratto da countResult.result`);
+      } else {
+        // Prova a iterare sull'oggetto
+        countData = Object.values(countResult).filter(Array.isArray)[0] || [];
+        console.log(`🎓 ACCADEMIA: Estratto da Object.values`);
+      }
+    }
+    
     if (Array.isArray(recordsResult)) {
-      records = recordsResult;
+      recordsData = recordsResult;
+      console.log(`🎓 ACCADEMIA: recordsResult è array diretto`);
     } else if (recordsResult && typeof recordsResult === 'object') {
       if ('rows' in recordsResult) {
-        records = recordsResult.rows;
+        recordsData = recordsResult.rows;
+        console.log(`🎓 ACCADEMIA: Estratto da recordsResult.rows`);
       } else if ('result' in recordsResult && Array.isArray(recordsResult.result)) {
-        records = recordsResult.result;
+        recordsData = recordsResult.result;
+        console.log(`🎓 ACCADEMIA: Estratto da recordsResult.result`);
       } else {
-        records = Object.values(recordsResult).find(Array.isArray) || [];
+        // Prova a iterare sull'oggetto
+        recordsData = Object.values(recordsResult).filter(Array.isArray)[0] || [];
+        console.log(`🎓 ACCADEMIA: Estratto da Object.values`);
       }
     }
+    
+    console.log(`🎓 ACCADEMIA: countData estratto:`, countData);
+    console.log(`🎓 ACCADEMIA: recordsData estratto:`, recordsData);
+    console.log(`🎓 ACCADEMIA: === FINE DEBUG ===`);
 
-    // Estrai totalCount
-    let totalCount = 0;
-    if (Array.isArray(countResult) && countResult.length > 0) {
-      totalCount = parseInt(countResult[0]?.count || '0');
-    } else if (countResult && typeof countResult === 'object') {
-      if ('rows' in countResult && countResult.rows.length > 0) {
-        totalCount = parseInt(countResult.rows[0]?.count || '0');
-      } else if ('result' in countResult && Array.isArray(countResult.result) && countResult.result.length > 0) {
-        totalCount = parseInt(countResult.result[0]?.count || '0');
-      }
-    }
+    const totalCount = parseInt(countData[0]?.count || '0');
+    const records = recordsData || [];
+    const hasMore = (offset + safeLimit) < totalCount;
 
-    // Calcola hasMore
-    const hasMore = records.length === safeLimit && (safePage * safeLimit) < totalCount;
-
-    console.log(`🎓 ACCADEMIA: Records estratti: ${records.length}`);
-    console.log(`🎓 ACCADEMIA: Total count: ${totalCount}`);
-    console.log(`🎓 ACCADEMIA: Has more: ${hasMore}`);
-
+    console.log(`🎓 ACCADEMIA: Trovati ${records.length} record di ${totalCount} totali`);
     if (hiddenColumns.length > 0) {
       console.log(`🎓 ACCADEMIA: Colonne nascoste per sicurezza: ${hiddenColumns.join(', ')}`);
     }
@@ -1082,101 +1070,9 @@ export async function getTableRecords(
       hasMore,
       hiddenColumns
     };
-  } catch (error) {
-    console.error(`🎓 ACCADEMIA: Errore in getTableRecords:`, error);
-    throw error;
-  }
-}
-
-// ===== TEST FUNCTIONS - FASE 2 =====
-
-// Funzione di test per connessione database
-export async function testDatabaseConnection() {
-  console.log('🔍 FASE 2 - TEST CONNESSIONE DATABASE');
-  console.log('📊 Verifico connessione al database...');
-
-  try {
-    const result = await sql`SELECT 1 as test`;
-    console.log('✅ CONNESSIONE OK - Database raggiungibile');
-    console.log('📋 Risultato test:', result);
-    return true;
-  } catch (error) {
-    console.log('❌ ERRORE CONNESSIONE DATABASE');
-    console.error('🚨 Errore dettagliato:', error);
-    alert('❌ ERRORE DATABASE: ' + (error as Error).message);
-    return false;
-  }
-}
-
-// Funzione di test per tabella normatives
-export async function testNormativesTable() {
-  console.log('📋 FASE 2 - TEST TABELLA NORMATIVES');
-  console.log('📖 Verifico esistenza tabella normatives...');
-
-  try {
-    const countResult = await sql`SELECT COUNT(*) as count FROM normatives`;
-    const count = Array.isArray(countResult) ? countResult[0]?.count : countResult?.count;
-
-    console.log('✅ TABELLA TROVATA - Record totali:', count);
-
-    if (count > 0) {
-      console.log('📊 LEGGO PRIMI RECORD...');
-      const recordsResult = await sql`SELECT id, title, type, category, reference_number FROM normatives LIMIT 3`;
-
-      let records = [];
-      if (Array.isArray(recordsResult)) {
-        records = recordsResult;
-      } else if (recordsResult && typeof recordsResult === 'object') {
-        records = recordsResult.rows || [];
-      }
-
-      console.log('📋 RECORD LETTI:', records.length);
-      records.forEach((record: any, index: number) => {
-        console.log(`${index + 1}. ${record.title}`);
-        console.log(`   Tipo: ${record.type}`);
-        console.log(`   Categoria: ${record.category}`);
-        console.log(`   Riferimento: ${record.reference_number}`);
-        console.log('---');
-      });
-
-      alert(`✅ SUCCESSO! Trovati ${count} record nella tabella normatives`);
-      return records;
-    } else {
-      console.log('⚠️ TABELLA VUOTA - Nessun record trovato');
-      alert('⚠️ ATTENZIONE: Tabella normatives vuota');
-      return [];
-    }
 
   } catch (error) {
-    console.log('❌ ERRORE LETTURA TABELLA NORMATIVES');
-    console.error('🚨 Errore dettagliato:', error);
-    alert('❌ ERRORE LETTURA: ' + (error as Error).message);
-    return [];
+    console.error(`🚨 ACCADEMIA: Errore esplorazione ${tableName}:`, error?.message);
+    return null;
   }
-}
-
-// Funzione principale per test completo FASE 2
-export async function runPhase2Tests() {
-  console.log('🚀 FASE 2 - INIZIO TEST COMPLETO');
-  console.log('='.repeat(50));
-
-  // Test 1: Connessione database
-  const connectionOk = await testDatabaseConnection();
-  if (!connectionOk) {
-    console.log('❌ FASE 2 FALLITA - Connessione database non riuscita');
-    return false;
-  }
-
-  // Test 2: Tabella normatives
-  const records = await testNormativesTable();
-  if (records.length === 0) {
-    console.log('❌ FASE 2 FALLITA - Tabella normatives vuota o errore lettura');
-    return false;
-  }
-
-  console.log('✅ FASE 2 COMPLETATA CON SUCCESSO');
-  console.log(`📊 Risultato: ${records.length} record letti correttamente`);
-  console.log('='.repeat(50));
-
-  return true;
 }

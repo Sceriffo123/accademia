@@ -8,7 +8,7 @@ import {
   updateRoleSection,
   getAllTables,
   getTableStructure,
-  // getTableRecords, // Rimosso perché importato dinamicamente
+  getTableRecords,
   type DatabaseTable
 } from '../lib/neonDatabase';
 import { 
@@ -61,17 +61,17 @@ export default function SuperAdmin() {
 
   function addNotification(type: 'success' | 'error' | 'info', title: string, message: string) {
     const id = Date.now().toString();
-    const notification: Notification = { id, type, title, message };
-    setNotifications((prev: Notification[]) => [...prev, notification]);
+    const notification = { id, type, title, message };
+    setNotifications(prev => [...prev, notification]);
     
     // Rimuovi automaticamente dopo 4 secondi
     setTimeout(() => {
-      setNotifications((prev: Notification[]) => prev.filter((n: Notification) => n.id !== id));
+      setNotifications(prev => prev.filter(n => n.id !== id));
     }, 4000);
   }
 
   function removeNotification(id: string) {
-    setNotifications((prev: Notification[]) => prev.filter((n: Notification) => n.id !== id));
+    setNotifications(prev => prev.filter(n => n.id !== id));
   }
 
   // Solo SuperAdmin può accedere
@@ -114,15 +114,9 @@ export default function SuperAdmin() {
   }
 
   async function loadTableRecords(tableName: string, page: number = 1, search: string = '') {
-    console.log(`🎓 ACCADEMIA: === LOAD TABLE RECORDS DEBUG ===`);
-    console.log(`🎓 ACCADEMIA: Tabella: ${tableName}, Pagina: ${page}, Ricerca: "${search}"`);
-    
     try {
       setLoadingRecords(true);
       console.log(`🎓 ACCADEMIA: Caricamento record tabella ${tableName}...`);
-      
-      const { getTableRecords } = await import('../lib/neonDatabase');
-      console.log(`🎓 ACCADEMIA: Funzione getTableRecords importata`);
       
       const result = await getTableRecords(tableName, {
         page,
@@ -132,23 +126,7 @@ export default function SuperAdmin() {
         orderDirection: 'DESC'
       });
       
-      console.log(`🎓 ACCADEMIA: Risultato ricevuto da getTableRecords:`, result);
-      console.log(`🎓 ACCADEMIA: Tipo del risultato:`, typeof result);
-      console.log(`🎓 ACCADEMIA: Result è null?`, result === null);
-      console.log(`🎓 ACCADEMIA: Result è undefined?`, result === undefined);
-      
       if (result) {
-        console.log(`🎓 ACCADEMIA: Record trovati: ${result.records?.length || 0}`);
-        console.log(`🎓 ACCADEMIA: Record totali: ${result.totalCount || 0}`);
-        console.log(`🎓 ACCADEMIA: Pagina corrente: ${result.page || 0}`);
-        console.log(`🎓 ACCADEMIA: Ha più pagine: ${result.hasMore || false}`);
-        console.log(`🎓 ACCADEMIA: Colonne nascoste: ${result.hiddenColumns?.join(', ') || 'nessuna'}`);
-        
-        if (result.records && result.records.length > 0) {
-          console.log(`🎓 ACCADEMIA: Primo record:`, result.records[0]);
-          console.log(`🎓 ACCADEMIA: Campi del primo record:`, Object.keys(result.records[0]));
-        }
-        
         setSelectedTableRecords(result);
         setSelectedTableName(tableName);
         setCurrentPage(page);
@@ -160,19 +138,15 @@ export default function SuperAdmin() {
             `Per sicurezza, ${result.hiddenColumns.length} colonne sensibili sono state nascoste`);
         }
         
-        console.log(`🎓 ACCADEMIA: Modale aperta con successo`);
-        console.log(`🎓 ACCADEMIA: === FINE LOAD TABLE RECORDS DEBUG ===`);
+        console.log(`🎓 ACCADEMIA: Caricati ${result.records.length} record di ${result.totalCount}`);
       } else {
-        console.log(`🎓 ACCADEMIA: ERRORE - Result è null/undefined, modale non aperta`);
         addNotification('error', 'Errore Caricamento', 'Impossibile caricare i record della tabella');
       }
     } catch (error) {
-      console.error('🚨 ACCADEMIA: Errore caricamento record:', (error as Error)?.message);
-      console.error('🚨 ACCADEMIA: Stack trace:', (error as Error)?.stack);
+      console.error('🚨 ACCADEMIA: Errore caricamento record:', error);
       addNotification('error', 'Errore Sistema', 'Si è verificato un errore durante il caricamento');
     } finally {
       setLoadingRecords(false);
-      console.log(`🎓 ACCADEMIA: Loading records completato`);
     }
   }
 
