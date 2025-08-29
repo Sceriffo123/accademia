@@ -581,26 +581,7 @@ export async function updateNormative(id: string, data: {
     console.log('🎓 ACCADEMIA: Query SQL:', query);
     console.log('🎓 ACCADEMIA: Valori:', values);
 
-    // Prova prima con sql invece di sql.unsafe
-    console.log('🎓 ACCADEMIA: Tentativo con sql invece di sql.unsafe...');
-
-    let result;
-    try {
-      result = await sql`
-        UPDATE normatives
-        SET title = ${data.title}, content = ${data.content}, category = ${data.category},
-            type = ${data.type}, reference_number = ${data.reference_number},
-            publication_date = ${data.publication_date}, effective_date = ${data.effective_date},
-            tags = ${data.tags}, updated_at = NOW()
-        WHERE id = ${id}
-        RETURNING *
-      `;
-
-      console.log('🎓 ACCADEMIA: Query con sql riuscita:', result);
-    } catch (sqlError) {
-      console.error('🎓 ACCADEMIA: Errore con sql, provo con sql.unsafe:', sqlError);
-      result = await sql.unsafe(query, values);
-    }
+    const result = await sql.unsafe(query, values);
 
     console.log('🎓 ACCADEMIA: Risultato query raw:', result);
     console.log('🎓 ACCADEMIA: Tipo del risultato:', typeof result);
