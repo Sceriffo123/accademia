@@ -5,7 +5,7 @@ import {
   createUser, 
   verifyPassword,
   type User 
-} from '../lib/neonDatabase';
+} from '../lib/localDatabase';
 
 interface AuthContextType {
   user: User | null;

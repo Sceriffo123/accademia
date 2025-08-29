@@ -1,14 +1,13 @@
 import { 
   getAllNormatives, 
-  getNormativeById as getNormativeByIdFromDB, 
-  getNormativesCount as getNormativesCountFromDB, 
-  getRecentNormativesCount as getRecentNormativesCountFromDB,
+  getNormativeById, 
+  getNormativesCount, 
+  getRecentNormativesCount,
   getAllUsers,
-  getUsersCount as getUsersCountFromDB,
+  getUsersCount,
   type Normative 
-} from './neonDatabase';
+} from './localDatabase';
 
-export type { Normative } from './neonDatabase';
 
 export async function getNormatives(filters?: {
   searchTerm?: string;
@@ -44,7 +43,7 @@ export async function getNormatives(filters?: {
 
 export async function getNormativeById(id: string): Promise<Normative | null> {
   try {
-    return await getNormativeByIdFromDB(id);
+    return await getNormativeById(id);
   } catch (error) {
     console.error('Error fetching normative:', error);
     return null;
@@ -53,7 +52,7 @@ export async function getNormativeById(id: string): Promise<Normative | null> {
 
 export async function getNormativesCount(): Promise<number> {
   try {
-    return await getNormativesCountFromDB();
+    return await getNormativesCount();
   } catch (error) {
     console.error('Error counting normatives:', error);
     return 0;
@@ -62,7 +61,7 @@ export async function getNormativesCount(): Promise<number> {
 
 export async function getRecentNormativesCount(days: number = 30): Promise<number> {
   try {
-    return await getRecentNormativesCountFromDB(days);
+    return await getRecentNormativesCount(days);
   } catch (error) {
     console.error('Error counting recent normatives:', error);
     return 0;
@@ -71,9 +70,12 @@ export async function getRecentNormativesCount(days: number = 30): Promise<numbe
 
 export async function getUsers(excludeSuperAdmin: boolean = false, currentUserId?: string): Promise<any[]> {
   try {
-    const users = await getAllUsers(excludeSuperAdmin, currentUserId);
+    const users = await getAllUsers();
     if (excludeSuperAdmin) {
-      return users; // Il filtro è già applicato in getAllUsers
+      return users.filter(user => {
+        if (user.role !== 'superadmin') return true;
+        return currentUserId && user.id === currentUserId;
+      });
     }
     return users;
   } catch (error) {
@@ -84,7 +86,7 @@ export async function getUsers(excludeSuperAdmin: boolean = false, currentUserId
 
 export async function getUsersCount(): Promise<number> {
   try {
-    return await getUsersCountFromDB();
+    return await getUsersCount();
   } catch (error) {
     console.error('Error counting users:', error);
     return 0;
@@ -102,8 +104,7 @@ export async function deleteUser(id: string): Promise<boolean> {
 }
 
 export async function createNewUser(email: string, fullName: string, password: string, role: 'user' | 'admin' | 'superadmin' | 'operator' = 'user'): Promise<any> {
-  const { createUser } = await import('./neonDatabase');
-  const { hashPassword } = await import('./neonDatabase');
+  const { createUser } = await import('./localDatabase');
   
   // Hash password usando la stessa funzione del database
   const encoder = new TextEncoder();
@@ -116,6 +117,6 @@ export async function createNewUser(email: string, fullName: string, password: s
 }
 
 export async function updateUserPassword(id: string, newPassword: string): Promise<boolean> {
-  const { updateUserPassword } = await import('./neonDatabase');
+  const { updateUserPassword } = await import('./localDatabase');
   return await updateUserPassword(id, newPassword);
 }

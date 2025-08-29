@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { initializeTables } from '../lib/neonDatabase';
+import { localDB } from '../lib/localDatabase';
 import { GraduationCap, CheckCircle, AlertCircle, Loader, RefreshCw } from 'lucide-react';
 
 export default function DatabaseInit() {
@@ -18,19 +18,15 @@ export default function DatabaseInit() {
       console.log('🎓 ACCADEMIA: Inizializzazione sistema in corso...');
       setMessage('Configurazione archivio normativo e utenti...');
       
-      const result = await initializeTables();
+      await localDB.initializeData();
 
-      if (result) {
-        setStatus('success');
-        setMessage('Sistema Accademia pronto per l\'utilizzo');
-        
-        // Nascondi il messaggio dopo 3 secondi
-        setTimeout(() => {
-          setStatus('idle');
-        }, 3000);
-      } else {
-        throw new Error('Errore durante l\'inizializzazione del sistema');
-      }
+      setStatus('success');
+      setMessage('Sistema Accademia pronto per l\'utilizzo');
+      
+      // Nascondi il messaggio dopo 3 secondi
+      setTimeout(() => {
+        setStatus('idle');
+      }, 3000);
     } catch (error) {
       console.error('🚨 ACCADEMIA: Errore inizializzazione sistema:', error);
       setStatus('error');

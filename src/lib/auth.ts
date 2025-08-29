@@ -4,7 +4,7 @@ import {
   createUser, 
   verifyPassword,
   type User 
-} from './neonDatabase';
+} from './localDatabase';
 
 export interface AuthResponse {
   user?: User;
