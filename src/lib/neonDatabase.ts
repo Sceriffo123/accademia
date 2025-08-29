@@ -824,7 +824,33 @@ export async function getTableStructure(tableName: string): Promise<TableStructu
 
     // 5. Conteggio record
     const countResult = await sql.unsafe(`SELECT COUNT(*) as count FROM ${tableName}`);
-    const recordCount = parseInt(countResult[0]?.count || '0');
+    
+    // Debug: Verifica struttura risultato
+    console.log(`🎓 ACCADEMIA: getTableStructure - Raw countResult:`, countResult);
+    console.log(`🎓 ACCADEMIA: getTableStructure - countResult type:`, typeof countResult, Array.isArray(countResult));
+    
+    // Estrai correttamente il dato dal QueryResult
+    let countData: any[] = [];
+    if (Array.isArray(countResult)) {
+      countData = countResult;
+      console.log(`🎓 ACCADEMIA: getTableStructure - Estratto come array diretto`);
+    } else if (countResult && typeof countResult === 'object') {
+      if ('rows' in countResult) {
+        countData = countResult.rows;
+        console.log(`🎓 ACCADEMIA: getTableStructure - Estratto da rows`);
+      } else if ('result' in countResult && Array.isArray(countResult.result)) {
+        countData = countResult.result;
+        console.log(`🎓 ACCADEMIA: getTableStructure - Estratto da result`);
+      } else {
+        countData = Object.values(countResult).filter(Array.isArray)[0] || [];
+        console.log(`🎓 ACCADEMIA: getTableStructure - Estratto da Object.values`);
+      }
+    }
+    
+    console.log(`🎓 ACCADEMIA: getTableStructure - countData estratto:`, countData);
+    console.log(`🎓 ACCADEMIA: getTableStructure - Valore count:`, countData[0]?.count);
+    
+    const recordCount = parseInt(countData[0]?.count || '0');
 
     // 6. Costruisci le colonne con tutte le informazioni
     const columns: TableColumn[] = columnsResult.map(col => {
