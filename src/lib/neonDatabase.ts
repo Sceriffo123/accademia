@@ -678,9 +678,14 @@ export async function getAllTables(): Promise<DatabaseTable[]> {
     // Per ogni tabella, ottieni il conteggio record e altre info
     for (const table of tablesResult) {
       try {
+        console.log(`🎓 ACCADEMIA: Conteggio record per tabella ${table.name}...`);
+        
         // Conteggio record sicuro
         const countResult = await sql.unsafe(`SELECT COUNT(*) as count FROM ${table.name}`);
         const recordCount = parseInt(countResult[0]?.count || '0');
+        
+        console.log(`🎓 ACCADEMIA: Tabella ${table.name} - Query result:`, countResult);
+        console.log(`🎓 ACCADEMIA: Tabella ${table.name} - Parsed count:`, recordCount);
 
         // Dimensione stimata della tabella
         const sizeResult = await sql`
@@ -689,14 +694,21 @@ export async function getAllTables(): Promise<DatabaseTable[]> {
         const estimatedSize = sizeResult[0]?.size || 'N/A';
 
         // Data ultima modifica (approssimativa)
-        const modifiedResult = await sql`
-          SELECT 
-            COALESCE(
-              (SELECT MAX(created_at) FROM ${sql(table.name)} WHERE created_at IS NOT NULL),
-              (SELECT MAX(updated_at) FROM ${sql(table.name)} WHERE updated_at IS NOT NULL),
-              NOW()
-            ) as last_modified
-        `;
+        let lastModified = new Date().toISOString();
+        try {
+          // Prova a ottenere la data di modifica, ma non bloccare se fallisce
+          const modifiedResult = await sql.unsafe(`
+            SELECT 
+              COALESCE(
+                (SELECT MAX(created_at) FROM ${table.name} WHERE created_at IS NOT NULL),
+                (SELECT MAX(updated_at) FROM ${table.name} WHERE updated_at IS NOT NULL),
+                NOW()
+              ) as last_modified
+          `);
+          lastModified = modifiedResult[0]?.last_modified || new Date().toISOString();
+        } catch (dateError) {
+          console.warn(`🎓 ACCADEMIA: Impossibile ottenere data modifica per ${table.name}, uso data corrente`);
+        }
         const lastModified = modifiedResult[0]?.last_modified || new Date().toISOString();
 
         tables.push({
@@ -704,14 +716,15 @@ export async function getAllTables(): Promise<DatabaseTable[]> {
           schema: table.schema,
           recordCount,
           estimatedSize,
-          lastModified,
+          lastModified: lastModified,
           tableType: table.table_type,
           comment: table.comment
         });
 
         console.log(`🎓 ACCADEMIA: Tabella ${table.name} - ${recordCount} record, ${estimatedSize}`);
       } catch (tableError) {
-        console.warn(`🎓 ACCADEMIA: Errore lettura tabella ${table.name}:`, tableError);
+        console.error(`🚨 ACCADEMIA: Errore lettura tabella ${table.name}:`, tableError);
+        console.error(`🚨 ACCADEMIA: Dettagli errore:`, tableError?.message);
         
         // Aggiungi comunque la tabella con dati di fallback
         tables.push({
