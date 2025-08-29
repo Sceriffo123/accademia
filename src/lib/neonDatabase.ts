@@ -395,3 +395,9 @@ export async function getAllUsers(excludeSuperAdmin: boolean = false, currentUse
       return result.filter(user => {
         // Se è un SuperAdmin che sta guardando, può vedere se stesso
         if (currentUserId &&
+        )
+      }
+      )
+    }
+  }
+}
