@@ -865,3 +865,149 @@ export async function getRolePermissionsMatrix(): Promise<Map<string, any>> {
     return new Map();
   }
 }
+
+// === INTERFACCE PER ESPLORAZIONE TABELLE ===
+export interface TableRecordsOptions {
+  page?: number;
+  limit?: number;
+  search?: string;
+  orderBy?: string;
+  orderDirection?: 'ASC' | 'DESC';
+}
+
+export interface TableRecordsResult {
+  records: any[];
+  totalCount: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+  hiddenColumns: string[];
+}
+
+// === METODI PER ESPLORAZIONE RECORD TABELLE ===
+export async function getTableRecords(
+  tableName: string, 
+  options: TableRecordsOptions = {}
+): Promise<TableRecordsResult | null> {
+  try {
+    console.log(`🎓 ACCADEMIA: Esplorazione tabella ${tableName}...`);
+    
+    const {
+      page = 1,
+      limit = 50,
+      search = '',
+      orderBy = 'created_at',
+      orderDirection = 'DESC'
+    } = options;
+
+    // Sicurezza: Limiti massimi
+    const safeLimit = Math.min(limit, 50); // Max 50 record per pagina
+    const safePage = Math.max(page, 1);
+    const offset = (safePage - 1) * safeLimit;
+
+    // 1. Ottieni struttura tabella per identificare colonne
+    const tableStructure = await getTableStructure(tableName);
+    if (!tableStructure) {
+      console.error(`🚨 ACCADEMIA: Tabella ${tableName} non trovata`);
+      return null;
+    }
+
+    // 2. Filtro colonne sensibili
+    const SENSITIVE_COLUMNS = ['password_hash', 'token', 'secret', 'api_key', 'private_key'];
+    const safeColumns = tableStructure.columns
+      .filter(col => !SENSITIVE_COLUMNS.some(sensitive => 
+        col.name.toLowerCase().includes(sensitive.toLowerCase())
+      ))
+      .map(col => col.name);
+    
+    const hiddenColumns = tableStructure.columns
+      .filter(col => SENSITIVE_COLUMNS.some(sensitive => 
+        col.name.toLowerCase().includes(sensitive.toLowerCase())
+      ))
+      .map(col => col.name);
+
+    if (safeColumns.length === 0) {
+      console.error(`🚨 ACCADEMIA: Nessuna colonna sicura in ${tableName}`);
+      return null;
+    }
+
+    // 3. Costruisci query SELECT sicura
+    const selectColumns = safeColumns.join(', ');
+    
+    // 4. Validazione colonna ordinamento
+    const validOrderBy = safeColumns.includes(orderBy) ? orderBy : safeColumns[0];
+    const validDirection = ['ASC', 'DESC'].includes(orderDirection) ? orderDirection : 'DESC';
+
+    // 5. Query conteggio totale
+    let countQuery = `SELECT COUNT(*) as count FROM ${tableName}`;
+    let countParams: any[] = [];
+
+    // 6. Query record con filtri
+    let recordsQuery = `SELECT ${selectColumns} FROM ${tableName}`;
+    let recordsParams: any[] = [];
+
+    // 7. Aggiungi ricerca se presente
+    if (search.trim()) {
+      // Trova colonne text/varchar per ricerca sicura
+      const searchableColumns = tableStructure.columns
+        .filter(col => 
+          safeColumns.includes(col.name) &&
+          (col.type.toLowerCase().includes('text') || 
+           col.type.toLowerCase().includes('varchar') ||
+           col.type.toLowerCase().includes('char'))
+        )
+        .map(col => col.name);
+
+      if (searchableColumns.length > 0) {
+        const searchConditions = searchableColumns
+          .map((col, index) => `${col}::text ILIKE $${index + 1}`)
+          .join(' OR ');
+        
+        const searchValue = `%${search.trim()}%`;
+        const searchParams = searchableColumns.map(() => searchValue);
+        
+        countQuery += ` WHERE (${searchConditions})`;
+        recordsQuery += ` WHERE (${searchConditions})`;
+        
+        countParams = searchParams;
+        recordsParams = [...searchParams];
+      }
+    }
+
+    // 8. Aggiungi ordinamento e paginazione
+    recordsQuery += ` ORDER BY ${validOrderBy} ${validDirection}`;
+    recordsQuery += ` LIMIT $${recordsParams.length + 1} OFFSET $${recordsParams.length + 2}`;
+    recordsParams.push(safeLimit, offset);
+
+    // 9. Esegui query
+    console.log(`🎓 ACCADEMIA: Query conteggio: ${countQuery}`);
+    console.log(`🎓 ACCADEMIA: Query record: ${recordsQuery}`);
+    
+    const [countResult, recordsResult] = await Promise.all([
+      sql.unsafe(countQuery, countParams),
+      sql.unsafe(recordsQuery, recordsParams)
+    ]);
+
+    const totalCount = parseInt(countResult[0]?.count || '0');
+    const records = recordsResult || [];
+    const hasMore = (offset + safeLimit) < totalCount;
+
+    console.log(`🎓 ACCADEMIA: Trovati ${records.length} record di ${totalCount} totali`);
+    if (hiddenColumns.length > 0) {
+      console.log(`🎓 ACCADEMIA: Colonne nascoste per sicurezza: ${hiddenColumns.join(', ')}`);
+    }
+
+    return {
+      records,
+      totalCount,
+      page: safePage,
+      limit: safeLimit,
+      hasMore,
+      hiddenColumns
+    };
+
+  } catch (error) {
+    console.error(`🚨 ACCADEMIA: Errore esplorazione ${tableName}:`, error?.message);
+    return null;
+  }
+}
