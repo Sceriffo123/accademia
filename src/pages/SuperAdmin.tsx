@@ -601,12 +601,16 @@ export default function SuperAdmin() {
                         )}
                         
                         <div className="mt-4 flex items-center space-x-2">
-                          <button className="flex-1 bg-blue-50 text-blue-700 px-3 py-2 rounded text-xs font-medium hover:bg-blue-100 transition-colors">
+                          <button 
+                            className="flex-1 bg-blue-50 text-blue-700 px-3 py-2 rounded text-xs font-medium hover:bg-blue-100 transition-colors"
                             onClick={() => loadTableRecords(table.name)}
+                          >
                             Esplora
                           </button>
-                          <button className="flex-1 bg-gray-50 text-gray-700 px-3 py-2 rounded text-xs font-medium hover:bg-gray-100 transition-colors">
+                          <button 
+                            className="flex-1 bg-gray-50 text-gray-700 px-3 py-2 rounded text-xs font-medium hover:bg-gray-100 transition-colors"
                             onClick={() => loadTableSchema(table.name)}
+                          >
                             Schema
                           </button>
                         </div>
