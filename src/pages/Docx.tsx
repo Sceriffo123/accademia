@@ -353,13 +353,28 @@ export default function Docx() {
                   
                   <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                     <div className="flex items-center space-x-2">
-                      <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
+                      <button 
+                        disabled={!canView}
+                        className={`p-2 transition-colors ${
+                          canView ? 'text-gray-400 hover:text-blue-600' : 'text-gray-300 cursor-not-allowed'
+                        }`}
+                      >
                         <Eye className="h-4 w-4" />
                       </button>
-                      <button className="p-2 text-gray-400 hover:text-green-600 transition-colors">
+                      <button 
+                        disabled={!canView}
+                        className={`p-2 transition-colors ${
+                          canView ? 'text-gray-400 hover:text-green-600' : 'text-gray-300 cursor-not-allowed'
+                        }`}
+                      >
                         <Download className="h-4 w-4" />
                       </button>
-                      <button className="p-2 text-gray-400 hover:text-orange-600 transition-colors">
+                      <button 
+                        disabled={!canEdit}
+                        className={`p-2 transition-colors ${
+                          canEdit ? 'text-gray-400 hover:text-orange-600' : 'text-gray-300 cursor-not-allowed'
+                        }`}
+                      >
                         <Edit3 className="h-4 w-4" />
                       </button>
                     </div>
