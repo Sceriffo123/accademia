@@ -8,6 +8,7 @@ import {
   updateRoleSection,
   getAllTables,
   getTableStructure,
+  getTableRecords,
   type DatabaseTable
 } from '../lib/neonDatabase';
 import { 
@@ -117,7 +118,6 @@ export default function SuperAdmin() {
       setLoadingRecords(true);
       console.log(`🎓 ACCADEMIA: Caricamento record tabella ${tableName}...`);
       
-      const { getTableRecords } = await import('../lib/neonDatabase');
       const result = await getTableRecords(tableName, {
         page,
         limit: 20, // Limite più basso per UI migliore
