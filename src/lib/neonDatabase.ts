@@ -583,24 +583,51 @@ export async function updateNormative(id: string, data: {
 
     const result = await sql.unsafe(query, values);
     console.log('🎓 ACCADEMIA: Risultato query raw:', result);
+    console.log('🎓 ACCADEMIA: Tipo del risultato:', typeof result);
+    console.log('🎓 ACCADEMIA: Chiavi dell\'oggetto:', Object.keys(result));
+    console.log('🎓 ACCADEMIA: Contenuto completo:', JSON.stringify(result, null, 2));
 
     // Estrai correttamente il risultato dalla query
     let queryResult: any[] = [];
     if (Array.isArray(result)) {
       queryResult = result;
+      console.log('🎓 ACCADEMIA: Risultato è un array');
     } else if (result && typeof result === 'object') {
+      console.log('🎓 ACCADEMIA: Risultato è un oggetto, controllo proprietà...');
+
       // Estrai il risultato dall'oggetto complesso di Neon
       if ('rows' in result) {
         queryResult = result.rows;
+        console.log('🎓 ACCADEMIA: Estratto da result.rows');
       } else if ('result' in result && Array.isArray(result.result)) {
         queryResult = result.result;
+        console.log('🎓 ACCADEMIA: Estratto da result.result');
       } else if ('_rows' in result) {
         queryResult = result._rows;
+        console.log('🎓 ACCADEMIA: Estratto da result._rows');
+      } else if ('data' in result) {
+        queryResult = result.data;
+        console.log('🎓 ACCADEMIA: Estratto da result.data');
       } else {
-        // Fallback: converti l'oggetto in array se possibile
-        const keys = Object.keys(result);
-        if (keys.length > 0 && typeof result[keys[0]] === 'object') {
-          queryResult = [result[keys[0]]];
+        // Prova a iterare sulle proprietà per trovare array
+        console.log('🎓 ACCADEMIA: Nessuna proprietà standard trovata, controllo tutte le proprietà...');
+        for (const [key, value] of Object.entries(result)) {
+          if (Array.isArray(value) && value.length > 0) {
+            queryResult = value;
+            console.log(`🎓 ACCADEMIA: Estratto da result.${key}:`, value);
+            break;
+          }
+        }
+
+        // Se ancora vuoto, prova con il primo valore che è un oggetto
+        if (queryResult.length === 0) {
+          for (const [key, value] of Object.entries(result)) {
+            if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+              queryResult = [value];
+              console.log(`🎓 ACCADEMIA: Estratto come singolo oggetto da result.${key}:`, value);
+              break;
+            }
+          }
         }
       }
     }
