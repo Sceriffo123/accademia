@@ -1852,22 +1852,20 @@ export default function Admin() {
                 <div className="flex items-center space-x-3">
                   <button
                     onClick={() => handleDownloadDocumentPDF(viewingDocument)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    className="flex items-center space-x-1 px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                    title="Scarica PDF"
                   >
-                    <Download className="h-4 w-4" />
-                    <span>Scarica PDF</span>
+                    <Download className="h-3 w-3" />
+                    <span>PDF</span>
                   </button>
                   {viewingDocument.file_path && (
                     <button
                       onClick={() => handleDownloadOriginalFile(viewingDocument)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                        isGoogleDriveUrl(viewingDocument.file_path)
-                          ? 'bg-green-600 hover:bg-green-700 text-white'
-                          : 'bg-blue-600 hover:bg-blue-700 text-white'
-                      }`}
+                      className="flex items-center space-x-1 px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                      title={isGoogleDriveUrl(viewingDocument.file_path) ? "Scarica da Google Drive" : "Scarica file originale"}
                     >
                       {isGoogleDriveUrl(viewingDocument.file_path) ? (
-                        <svg className="h-4 w-4" viewBox="0 0 87.3 78" fill="none">
+                        <svg className="h-3 w-3" viewBox="0 0 87.3 78" fill="none">
                           <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
                           <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
                           <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
@@ -1876,13 +1874,9 @@ export default function Admin() {
                           <path d="m73.4 26.5-12.9-22.3c-1.4-.8-2.95-1.2-4.5-1.2h18.5c1.6 0 3.15.45 4.5 1.2z" fill="#ffba00"/>
                         </svg>
                       ) : (
-                        <FileText className="h-4 w-4" />
+                        <FileText className="h-3 w-3" />
                       )}
-                      <span>
-                        {isGoogleDriveUrl(viewingDocument.file_path) 
-                          ? 'Scarica da Drive' 
-                          : 'Scarica Originale'}
-                      </span>
+                      <span>File</span>
                     </button>
                   )}
                 </div>
