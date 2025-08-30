@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Plus,
   FileIcon,
-  X
+  X,
+  Info
 } from 'lucide-react';
 
 // Interfaccia Document che corrisponde al database
