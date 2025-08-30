@@ -269,6 +269,142 @@ export default function Admin() {
     });
   }
 
+  // Handler per documenti
+  async function handleCreateDocument() {
+    try {
+      if (!documentForm.title || !documentForm.filename || !documentForm.type || !documentForm.category) {
+        addNotification('error', 'Errore Validazione', 'Titolo, filename, tipo e categoria sono obbligatori');
+        return;
+      }
+
+      await createDocument({
+        title: documentForm.title,
+        description: documentForm.description,
+        filename: documentForm.filename,
+        file_path: documentForm.file_path,
+        file_size: documentForm.file_size ? parseInt(documentForm.file_size) : undefined,
+        mime_type: documentForm.mime_type,
+        type: documentForm.type,
+        category: documentForm.category,
+        tags: documentForm.tags,
+        version: documentForm.version,
+        status: documentForm.status,
+        uploaded_by: profile?.id
+      });
+
+      setShowAddDocument(false);
+      setDocumentForm({
+        title: '',
+        description: '',
+        filename: '',
+        file_path: '',
+        file_size: '',
+        mime_type: '',
+        type: 'template',
+        category: '',
+        tags: [],
+        version: '1.0',
+        status: 'active'
+      });
+      setDocumentTagInput('');
+      await fetchAdminData(); // Refresh data
+      addNotification('success', 'Documento Creato', `Il documento "${documentForm.title}" è stato aggiunto al sistema`);
+    } catch (error) {
+      console.error('Error creating document:', error);
+      addNotification('error', 'Errore Creazione', 'Si è verificato un errore durante la creazione del documento');
+    }
+  }
+
+  async function handleUpdateDocument() {
+    console.log('🔄 handleUpdateDocument chiamato');
+
+    try {
+      if (!editingDocument) {
+        console.error('❌ Nessun documento da modificare');
+        return;
+      }
+
+      if (!editingDocument.title || !editingDocument.filename || !editingDocument.type || !editingDocument.category) {
+        console.error('❌ Campi obbligatori mancanti');
+        addNotification('error', 'Errore Validazione', 'Titolo, filename, tipo e categoria sono obbligatori');
+        return;
+      }
+
+      console.log('📤 Chiamando updateDocument con dati:', {
+        id: editingDocument.id,
+        title: editingDocument.title
+      });
+
+      await updateDocument(editingDocument.id, {
+        title: editingDocument.title,
+        description: editingDocument.description,
+        filename: editingDocument.filename,
+        file_path: editingDocument.file_path,
+        file_size: editingDocument.file_size,
+        mime_type: editingDocument.mime_type,
+        type: editingDocument.type,
+        category: editingDocument.category,
+        tags: editingDocument.tags,
+        version: editingDocument.version,
+        status: editingDocument.status
+      });
+
+      console.log('✅ updateDocument completato');
+
+      setEditingDocument(null);
+      setShowEditDocument(false);
+      await fetchAdminData(); // Refresh data
+      addNotification('success', 'Documento Aggiornato', `Il documento "${editingDocument.title}" è stato modificato`);
+    } catch (error) {
+      console.error('🚨 Errore in handleUpdateDocument:', error);
+      console.error('🚨 Dettagli errore:', error instanceof Error ? error.message : String(error));
+      addNotification('error', 'Errore Aggiornamento', 'Non è stato possibile aggiornare il documento');
+    }
+  }
+
+  async function handleDeleteDocument(documentId: string, documentTitle: string) {
+    if (!confirm(`Sei sicuro di voler eliminare il documento "${documentTitle}"?`)) {
+      return;
+    }
+
+    try {
+      const success = await deleteDocument(documentId);
+      if (success) {
+        await fetchAdminData(); // Refresh data
+        addNotification('info', 'Documento Eliminato', `Il documento "${documentTitle}" è stato rimosso dal sistema`);
+      } else {
+        addNotification('error', 'Errore Eliminazione', 'Il documento non è stato trovato o non può essere eliminato');
+      }
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      addNotification('error', 'Errore Eliminazione', 'Non è stato possibile eliminare il documento');
+    }
+  }
+
+  // Handler per aprire modal di modifica documento
+  function handleEditDocument(document: any) {
+    setEditingDocument(document);
+    setShowEditDocument(true);
+  }
+
+  // Handler per tag documenti
+  function handleAddDocumentTag() {
+    if (documentTagInput.trim() && !documentForm.tags.includes(documentTagInput.trim())) {
+      setDocumentForm({
+        ...documentForm,
+        tags: [...documentForm.tags, documentTagInput.trim()]
+      });
+      setDocumentTagInput('');
+    }
+  }
+
+  function handleRemoveDocumentTag(tagToRemove: string) {
+    setDocumentForm({
+      ...documentForm,
+      tags: documentForm.tags.filter(tag => tag !== tagToRemove)
+    });
+  }
+
   function addNotification(type: 'success' | 'error' | 'info', title: string, message: string) {
     const id = Date.now().toString();
     const notification = { id, type, title, message };
@@ -761,6 +897,88 @@ export default function Admin() {
                         </button>
                         <button 
                           onClick={() => handleDeleteNormative(normative.id, normative.title)}
+                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                          title="Elimina"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'documents' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Gestione Documenti ({documents.length})
+                  </h3>
+                  <button
+                    onClick={() => setShowAddDocument(true)}
+                    className="flex items-center space-x-2 bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors"
+                  >
+                    <Plus className="h-5 w-5" />
+                    <span>Aggiungi Documento</span>
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {documents.map((document) => (
+                    <div
+                      key={document.id}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900 mb-1">
+                          {document.filename}
+                        </h4>
+                        <p className="text-sm text-gray-600 mb-2">
+                          {document.title}
+                        </p>
+                        <div className="flex items-center space-x-4 text-sm text-gray-600">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            document.type === 'template' ? 'bg-blue-100 text-blue-800' :
+                            document.type === 'form' ? 'bg-green-100 text-green-800' :
+                            document.type === 'guide' ? 'bg-purple-100 text-purple-800' :
+                            'bg-orange-100 text-orange-800'
+                          }`}>
+                            {document.type === 'template' ? 'Template' :
+                             document.type === 'form' ? 'Modulo' :
+                             document.type === 'guide' ? 'Guida' : 'Report'}
+                          </span>
+                          <span>{document.category}</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            document.status === 'active' ? 'bg-green-100 text-green-800' :
+                            document.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {document.status === 'active' ? 'Attivo' :
+                             document.status === 'pending' ? 'In Attesa' : 'Rifiutato'}
+                          </span>
+                          <span>📊 {document.download_count} download</span>
+                          {document.file_size && <span>💾 {document.file_size} KB</span>}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => console.log('View document:', document.id)}
+                          className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Visualizza"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleEditDocument(document)}
+                          className="p-2 text-gray-400 hover:text-green-600 transition-colors"
+                          title="Modifica"
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteDocument(document.id, document.title)}
                           className="p-2 text-gray-400 hover:text-red-600 transition-colors"
                           title="Elimina"
                         >

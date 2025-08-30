@@ -589,6 +589,246 @@ export async function deleteNormative(id: string): Promise<boolean> {
   }
 }
 
+// === METODI PER DOCUMENTI ===
+export async function getAllDocuments(): Promise<Document[]> {
+  try {
+    const result = await sql`
+      SELECT * FROM documents
+      ORDER BY created_at DESC
+    `;
+    return result;
+  } catch (error) {
+    console.error('Errore recupero documenti:', error);
+    return [];
+  }
+}
+
+export async function getDocumentById(id: string): Promise<Document | null> {
+  try {
+    const result = await sql`
+      SELECT * FROM documents
+      WHERE id = ${id}
+    `;
+    return result[0] as Document;
+  } catch (error) {
+    console.error('Errore recupero documento per ID:', error);
+    return null;
+  }
+}
+
+export async function getDocumentsCount(): Promise<number> {
+  try {
+    const result = await sql`SELECT COUNT(*) as count FROM documents`;
+    return parseInt(result[0].count);
+  } catch (error) {
+    console.error('Errore conteggio documenti:', error);
+    return 0;
+  }
+}
+
+export async function getRecentDocumentsCount(days: number = 30): Promise<number> {
+  try {
+    const result = await sql`
+      SELECT COUNT(*) as count FROM documents
+      WHERE created_at >= NOW() - INTERVAL '1 day' * ${days}
+    `;
+    return parseInt(result[0].count);
+  } catch (error) {
+    console.error('Errore conteggio documenti recenti:', error);
+    return 0;
+  }
+}
+
+// === METODI CRUD PER DOCUMENTI ===
+export async function createDocument(data: {
+  title: string;
+  description?: string;
+  filename: string;
+  file_path?: string;
+  file_size?: number;
+  mime_type?: string;
+  type: 'template' | 'form' | 'guide' | 'report';
+  category: string;
+  tags?: string[];
+  version?: string;
+  status?: 'active' | 'pending' | 'rejected';
+  uploaded_by?: string;
+}): Promise<Document | null> {
+  try {
+    console.log('🎓 ACCADEMIA: Creazione nuovo documento...');
+
+    const result = await sql`
+      INSERT INTO documents (
+        title, description, filename, file_path, file_size, mime_type,
+        type, category, tags, version, status, uploaded_by, updated_at
+      )
+      VALUES (
+        ${data.title}, ${data.description}, ${data.filename}, ${data.file_path},
+        ${data.file_size}, ${data.mime_type}, ${data.type}, ${data.category},
+        ${data.tags || []}, ${data.version || '1.0'}, ${data.status || 'active'},
+        ${data.uploaded_by}, NOW()
+      )
+      RETURNING *
+    `;
+
+    console.log('🎓 ACCADEMIA: Documento creato con successo:', result[0]?.title);
+    return result[0] as Document;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore creazione documento:', error?.message);
+    throw error;
+  }
+}
+
+export async function updateDocument(id: string, data: {
+  title?: string;
+  description?: string;
+  filename?: string;
+  file_path?: string;
+  file_size?: number;
+  mime_type?: string;
+  type?: 'template' | 'form' | 'guide' | 'report';
+  category?: string;
+  tags?: string[];
+  version?: string;
+  status?: 'active' | 'pending' | 'rejected';
+  approved_by?: string;
+}): Promise<Document | null> {
+  try {
+    console.log('🎓 ACCADEMIA: updateDocument chiamata con:', { id, data });
+
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (data.title !== undefined) {
+      updates.push(`title = $${paramIndex++}`);
+      values.push(data.title);
+    }
+    if (data.description !== undefined) {
+      updates.push(`description = $${paramIndex++}`);
+      values.push(data.description);
+    }
+    if (data.filename !== undefined) {
+      updates.push(`filename = $${paramIndex++}`);
+      values.push(data.filename);
+    }
+    if (data.file_path !== undefined) {
+      updates.push(`file_path = $${paramIndex++}`);
+      values.push(data.file_path);
+    }
+    if (data.file_size !== undefined) {
+      updates.push(`file_size = $${paramIndex++}`);
+      values.push(data.file_size);
+    }
+    if (data.mime_type !== undefined) {
+      updates.push(`mime_type = $${paramIndex++}`);
+      values.push(data.mime_type);
+    }
+    if (data.type !== undefined) {
+      updates.push(`type = $${paramIndex++}`);
+      values.push(data.type);
+    }
+    if (data.category !== undefined) {
+      updates.push(`category = $${paramIndex++}`);
+      values.push(data.category);
+    }
+    if (data.tags !== undefined) {
+      updates.push(`tags = $${paramIndex++}`);
+      values.push(data.tags);
+    }
+    if (data.version !== undefined) {
+      updates.push(`version = $${paramIndex++}`);
+      values.push(data.version);
+    }
+    if (data.status !== undefined) {
+      updates.push(`status = $${paramIndex++}`);
+      values.push(data.status);
+    }
+    if (data.approved_by !== undefined) {
+      updates.push(`approved_by = $${paramIndex++}`);
+      values.push(data.approved_by);
+    }
+
+    if (updates.length === 0) {
+      console.log('🎓 ACCADEMIA: Nessun campo da aggiornare');
+      return null;
+    }
+
+    // Aggiungi sempre updated_at
+    updates.push(`updated_at = NOW()`);
+
+    console.log('🎓 ACCADEMIA: Query SQL:', updates.join(', '));
+    console.log('🎓 ACCADEMIA: Valori:', values);
+
+    // Usa il metodo template literal invece di sql.unsafe per compatibilità
+    const result = await sql`
+      UPDATE documents
+      SET title = ${data.title}, description = ${data.description}, filename = ${data.filename},
+          file_path = ${data.file_path}, file_size = ${data.file_size}, mime_type = ${data.mime_type},
+          type = ${data.type}, category = ${data.category}, tags = ${data.tags},
+          version = ${data.version}, status = ${data.status}, approved_by = ${data.approved_by},
+          updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    console.log('🎓 ACCADEMIA: Risultato query:', result);
+    console.log('🎓 ACCADEMIA: Tipo del risultato:', typeof result);
+    console.log('🎓 ACCADEMIA: È un array?', Array.isArray(result));
+    console.log('🎓 ACCADEMIA: Lunghezza risultato:', result?.length);
+
+    if (result && result.length > 0) {
+      console.log('🎓 ACCADEMIA: Documento aggiornato:', result[0]?.title);
+      return result[0] as Document;
+    } else {
+      console.log('🎓 ACCADEMIA: Nessun documento aggiornato');
+      return null;
+    }
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore aggiornamento documento:', error?.message);
+    console.error('🚨 ACCADEMIA: Dettagli errore:', error);
+    throw error;
+  }
+}
+
+export async function deleteDocument(id: string): Promise<boolean> {
+  try {
+    console.log('🎓 ACCADEMIA: Eliminazione documento:', id);
+
+    const result = await sql`
+      DELETE FROM documents
+      WHERE id = ${id}
+      RETURNING id, title
+    `;
+
+    if (result.length > 0) {
+      console.log('🎓 ACCADEMIA: Documento eliminato:', result[0].title);
+      return true;
+    } else {
+      console.log('🎓 ACCADEMIA: Documento non trovato per eliminazione');
+      return false;
+    }
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore eliminazione documento:', error?.message);
+    throw error;
+  }
+}
+
+export async function incrementDocumentDownloads(id: string): Promise<boolean> {
+  try {
+    const result = await sql`
+      UPDATE documents
+      SET download_count = download_count + 1
+      WHERE id = ${id}
+      RETURNING id
+    `;
+    return result.length > 0;
+  } catch (error) {
+    console.error('Errore incremento download documento:', error);
+    return false;
+  }
+}
+
 // === METODI PER PERMESSI ===
 async function insertDefaultPermissions() {
   try {
