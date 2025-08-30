@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getNormativesCount, getUsersCount, getUsers, getNormatives, updateUser, deleteUser, createNewUser, updateUserPassword } from '../lib/api';
-import { createNormative, updateNormative, deleteNormative } from '../lib/neonDatabase';
+import { createNormative, updateNormative, deleteNormative, getAllDocuments, getDocumentsCount, createDocument, updateDocument, deleteDocument } from '../lib/neonDatabase';
 import { 
   Users, 
   FileText, 
@@ -16,7 +16,8 @@ import {
   Key,
   CheckCircle,
   AlertCircle,
-  Info
+  Info,
+  FolderOpen
 } from 'lucide-react';
 
 interface AdminStats {
@@ -35,7 +36,7 @@ interface Notification {
 
 export default function Admin() {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'normatives'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'normatives' | 'documents'>('overview');
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
     totalNormatives: 0,
@@ -44,9 +45,11 @@ export default function Admin() {
   });
   const [users, setUsers] = useState<any[]>([]);
   const [normatives, setNormatives] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddNormative, setShowAddNormative] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
+  const [showAddDocument, setShowAddDocument] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showPasswordModal, setShowPasswordModal] = useState<any>(null);
   const [newPassword, setNewPassword] = useState('');
@@ -66,6 +69,23 @@ export default function Admin() {
     tags: [] as string[]
   });
   const [tagInput, setTagInput] = useState('');
+
+  // Stati per gestione documenti
+  const [showEditDocument, setShowEditDocument] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<any>(null);
+  const [documentForm, setDocumentForm] = useState({
+    title: '',
+    description: '',
+    type: 'template' as 'template' | 'form' | 'guide' | 'report',
+    category: '',
+    size: '',
+    author: '',
+    tags: [] as string[],
+    file_path: '',
+    file_url: '',
+    mime_type: ''
+  });
+  const [documentTagInput, setDocumentTagInput] = useState('');
 
   const [userForm, setUserForm] = useState({
     email: '',
@@ -249,6 +269,139 @@ export default function Admin() {
     });
   }
 
+  // Handler per documenti
+  async function handleCreateDocument() {
+    try {
+      if (!documentForm.title || !documentForm.type || !documentForm.category || !documentForm.author) {
+        addNotification('error', 'Errore Validazione', 'Titolo, tipo, categoria e autore sono obbligatori');
+        return;
+      }
+      
+      await createDocument({
+        title: documentForm.title,
+        description: documentForm.description,
+        type: documentForm.type,
+        category: documentForm.category,
+        size: documentForm.size,
+        author: documentForm.author,
+        tags: documentForm.tags,
+        file_path: documentForm.file_path,
+        file_url: documentForm.file_url,
+        mime_type: documentForm.mime_type
+      });
+      
+      setShowAddDocument(false);
+      setDocumentForm({
+        title: '',
+        description: '',
+        type: 'template',
+        category: '',
+        size: '',
+        author: '',
+        tags: [],
+        file_path: '',
+        file_url: '',
+        mime_type: ''
+      });
+      setDocumentTagInput('');
+      await fetchAdminData(); // Refresh data
+      addNotification('success', 'Documento Creato', `Il documento "${documentForm.title}" è stato aggiunto al sistema`);
+    } catch (error) {
+      console.error('Error creating document:', error);
+      addNotification('error', 'Errore Creazione', 'Si è verificato un errore durante la creazione del documento');
+    }
+  }
+
+  async function handleUpdateDocument() {
+    console.log('🔄 handleUpdateDocument chiamato');
+    console.log('📝 editingDocument:', editingDocument);
+
+    try {
+      if (!editingDocument) {
+        console.error('❌ Nessun documento da modificare');
+        return;
+      }
+
+      if (!editingDocument.title || !editingDocument.type || !editingDocument.category || !editingDocument.author) {
+        console.error('❌ Campi obbligatori mancanti');
+        addNotification('error', 'Errore Validazione', 'Titolo, tipo, categoria e autore sono obbligatori');
+        return;
+      }
+
+      console.log('📤 Chiamando updateDocument con dati:', {
+        id: editingDocument.id,
+        title: editingDocument.title
+      });
+
+      await updateDocument(editingDocument.id, {
+        title: editingDocument.title,
+        description: editingDocument.description,
+        type: editingDocument.type,
+        category: editingDocument.category,
+        size: editingDocument.size,
+        author: editingDocument.author,
+        tags: editingDocument.tags,
+        file_path: editingDocument.file_path,
+        file_url: editingDocument.file_url,
+        mime_type: editingDocument.mime_type
+      });
+
+      console.log('✅ updateDocument completato');
+
+      setEditingDocument(null);
+      setShowEditDocument(false);
+      await fetchAdminData(); // Refresh data
+      addNotification('success', 'Documento Aggiornato', `Il documento "${editingDocument.title}" è stato modificato`);
+    } catch (error) {
+      console.error('🚨 Errore in handleUpdateDocument:', error);
+      console.error('🚨 Dettagli errore:', error instanceof Error ? error.message : String(error));
+      addNotification('error', 'Errore Aggiornamento', 'Non è stato possibile aggiornare il documento');
+    }
+  }
+
+  async function handleDeleteDocument(documentId: string, documentTitle: string) {
+    if (!confirm(`Sei sicuro di voler eliminare il documento "${documentTitle}"?`)) {
+      return;
+    }
+    
+    try {
+      const success = await deleteDocument(documentId);
+      if (success) {
+        await fetchAdminData(); // Refresh data
+        addNotification('info', 'Documento Eliminato', `Il documento "${documentTitle}" è stato rimosso dal sistema`);
+      } else {
+        addNotification('error', 'Errore Eliminazione', 'Il documento non è stato trovato o non può essere eliminato');
+      }
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      addNotification('error', 'Errore Eliminazione', 'Non è stato possibile eliminare il documento');
+    }
+  }
+
+  // Handler per aprire modal di modifica documento
+  function handleEditDocument(document: any) {
+    setEditingDocument(document);
+    setShowEditDocument(true);
+  }
+
+  // Handler per tag documenti
+  function handleAddDocumentTag() {
+    if (documentTagInput.trim() && !documentForm.tags.includes(documentTagInput.trim())) {
+      setDocumentForm({
+        ...documentForm,
+        tags: [...documentForm.tags, documentTagInput.trim()]
+      });
+      setDocumentTagInput('');
+    }
+  }
+
+  function handleRemoveDocumentTag(tagToRemove: string) {
+    setDocumentForm({
+      ...documentForm,
+      tags: documentForm.tags.filter(tag => tag !== tagToRemove)
+    });
+  }
+
   function addNotification(type: 'success' | 'error' | 'info', title: string, message: string) {
     const id = Date.now().toString();
     const notification = { id, type, title, message };
@@ -267,11 +420,13 @@ export default function Admin() {
   async function fetchAdminData() {
     try {
       // Fetch admin data
-      const [totalUsers, totalNormatives, usersData, normativesData] = await Promise.all([
+      const [totalUsers, totalNormatives, totalDocuments, usersData, normativesData, documentsData] = await Promise.all([
         getUsersCount(),
         getNormativesCount(),
+        getDocumentsCount(),
         getUsers(profile?.role !== 'superadmin', profile?.id), // Escludi SuperAdmin solo se non sei SuperAdmin
-        getNormatives()
+        getNormatives(),
+        getAllDocuments()
       ]);
 
       setStats({
@@ -283,6 +438,7 @@ export default function Admin() {
 
       setUsers(usersData);
       setNormatives(normativesData);
+      setDocuments(documentsData);
     } catch (error) {
       console.error('Error fetching admin data:', error);
     } finally {
@@ -495,7 +651,8 @@ export default function Admin() {
               {[
                 { id: 'overview', label: 'Panoramica', icon: Settings },
                 { id: 'users', label: 'Utenti', icon: Users },
-                { id: 'normatives', label: 'Normative', icon: FileText }
+                { id: 'normatives', label: 'Normative', icon: FileText },
+                { id: 'documents', label: 'Documenti', icon: FolderOpen }
               ].map((tab) => {
                 const Icon = tab.icon;
                 return (
