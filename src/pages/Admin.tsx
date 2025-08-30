@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getNormativesCount, getUsersCount, getUsers, getNormatives, updateUser, deleteUser, createNewUser, updateUserPassword } from '../lib/api';
-import { createNormative, updateNormative, deleteNormative } from '../lib/neonDatabase';
+import { createNormative, updateNormative, deleteNormative, getAllDocuments, getDocumentsCount, createDocument, updateDocument, deleteDocument } from '../lib/neonDatabase';
 import { 
   Users, 
   FileText, 
@@ -16,7 +16,8 @@ import {
   Key,
   CheckCircle,
   AlertCircle,
-  Info
+  Info,
+  FolderOpen
 } from 'lucide-react';
 
 interface AdminStats {
@@ -35,7 +36,7 @@ interface Notification {
 
 export default function Admin() {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'normatives'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'normatives' | 'documents'>('overview');
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
     totalNormatives: 0,
@@ -44,9 +45,10 @@ export default function Admin() {
   });
   const [users, setUsers] = useState<any[]>([]);
   const [normatives, setNormatives] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddNormative, setShowAddNormative] = useState(false);
-  const [showAddUser, setShowAddUser] = useState(false);
+  const [showAddDocument, setShowAddDocument] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showPasswordModal, setShowPasswordModal] = useState<any>(null);
   const [newPassword, setNewPassword] = useState('');
@@ -66,6 +68,24 @@ export default function Admin() {
     tags: [] as string[]
   });
   const [tagInput, setTagInput] = useState('');
+
+  // Stati per gestione documenti
+  const [showEditDocument, setShowEditDocument] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<any>(null);
+  const [documentForm, setDocumentForm] = useState({
+    title: '',
+    description: '',
+    filename: '',
+    file_path: '',
+    file_size: '',
+    mime_type: '',
+    type: 'template' as 'template' | 'form' | 'guide' | 'report',
+    category: '',
+    tags: [] as string[],
+    version: '1.0',
+    status: 'active' as 'active' | 'pending' | 'rejected'
+  });
+  const [documentTagInput, setDocumentTagInput] = useState('');
 
   const [userForm, setUserForm] = useState({
     email: '',
@@ -267,11 +287,13 @@ export default function Admin() {
   async function fetchAdminData() {
     try {
       // Fetch admin data
-      const [totalUsers, totalNormatives, usersData, normativesData] = await Promise.all([
+      const [totalUsers, totalNormatives, totalDocuments, usersData, normativesData, documentsData] = await Promise.all([
         getUsersCount(),
         getNormativesCount(),
+        getDocumentsCount(),
         getUsers(profile?.role !== 'superadmin', profile?.id), // Escludi SuperAdmin solo se non sei SuperAdmin
-        getNormatives()
+        getNormatives(),
+        getAllDocuments()
       ]);
 
       setStats({
@@ -283,6 +305,7 @@ export default function Admin() {
 
       setUsers(usersData);
       setNormatives(normativesData);
+      setDocuments(documentsData);
     } catch (error) {
       console.error('Error fetching admin data:', error);
     } finally {
@@ -495,7 +518,8 @@ export default function Admin() {
               {[
                 { id: 'overview', label: 'Panoramica', icon: Settings },
                 { id: 'users', label: 'Utenti', icon: Users },
-                { id: 'normatives', label: 'Normative', icon: FileText }
+                { id: 'normatives', label: 'Normative', icon: FileText },
+                { id: 'documents', label: 'Documenti', icon: FolderOpen }
               ].map((tab) => {
                 const Icon = tab.icon;
                 return (
