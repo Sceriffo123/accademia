@@ -47,6 +47,7 @@ export default function Docx() {
   const [showFilters, setShowFilters] = useState(false);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editFormData, setEditFormData] = useState({
@@ -247,6 +248,7 @@ export default function Docx() {
   const canView = userPermissions.includes('documents.view');
   const canCreate = userPermissions.includes('documents.create');
   const canEdit = userPermissions.includes('documents.edit');
+  const canUpload = userPermissions.includes('documents.upload');
   const sectionVisible = userSections.includes('documents');
 
   // Controllo visibilità sezione
