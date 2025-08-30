@@ -376,7 +376,7 @@ export default function Admin() {
       const success = await deleteDocument(documentId);
       if (success) {
         await fetchAdminData(); // Refresh data
-        addNotification('info', 'Documento Eliminato', `Il documento "${documentTitle}" è stato rimosso dal sistema`);
+        addNotification('info', 'Documento Rimosso', `Il documento "${documentTitle}" è stato eliminato dal sistema`);
       } else {
         addNotification('error', 'Errore Eliminazione', 'Il documento non è stato trovato o non può essere eliminato');
       }
