@@ -55,6 +55,7 @@ export default function Docx() {
   const [uploaderName, setUploaderName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const canUpload = userPermissions.includes('documents.upload');
 
   useEffect(() => {
     if (selectedDocument?.uploaded_by) {
@@ -151,16 +152,16 @@ export default function Docx() {
       }
 
       console.log('🔄 Inizio download documento:', doc.filename);
-      console.log('🔧 Richiesta generazione PDF dinamica in corso...');
-      // Importazione dinamica per evitare problemi di dipendenza circolare
       const { generatePDF } = await import('../lib/pdfGenerator');
       const blob = generatePDF(doc);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = doc.filename;
+      a.download = `${doc.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
+      
+      console.log('✅ Download completato con successo');
 
     } catch (error) {
       console.error('❌ Errore durante il download:', error);
