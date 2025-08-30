@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getNormativesCount, getRecentNormativesCount, getNormatives, getUsersCount } from '../lib/api';
 import { getAllDocuments, getDocumentsCount, getUserPermissions, getUserSections, getUserById } from '../lib/neonDatabase';
-import { FileText, GraduationCap, TrendingUp, Clock, BookOpen, BadgeAlert as Alert, ChevronRight, Users, Database, X, Info, Download, Edit3, User, Save } from 'lucide-react';
+import { downloadGoogleDriveFile, isGoogleDriveUrl } from '../lib/driveDownload';
+import { FileText, GraduationCap, TrendingUp, Clock, BookOpen, BadgeAlert as Alert, ChevronRight, Users, Database, X, Info, Download, Edit3, User, Save, ExternalLink } from 'lucide-react';
 
 interface DashboardStats {
   totalNormatives: number;
@@ -96,11 +97,48 @@ export default function Dashboard() {
       a.click();
       URL.revokeObjectURL(url);
       
-      console.log('✅ Download completato con successo');
+      console.log('✅ Download PDF completato con successo');
 
     } catch (error) {
-      console.error('❌ Errore durante il download:', error);
-      alert('Errore durante il download. Riprova più tardi.');
+      console.error('❌ Errore durante il download PDF:', error);
+      alert('Errore durante il download PDF. Riprova più tardi.');
+    }
+  }
+
+  async function handleDownloadOriginalFile(doc: any) {
+    try {
+      if (!canView) {
+        console.error('❌ Permessi insufficienti per scaricare il file');
+        return;
+      }
+
+      if (!doc.file_path) {
+        alert('Nessun file originale disponibile per questo documento.');
+        return;
+      }
+
+      console.log('🔄 Inizio download file originale:', doc.filename);
+      
+      // Se è un URL di Google Drive, usa la funzione specifica
+      if (isGoogleDriveUrl(doc.file_path)) {
+        await downloadGoogleDriveFile(doc.file_path, doc.filename || doc.title);
+      } else {
+        // Per altri tipi di URL, usa il metodo standard
+        const link = document.createElement('a');
+        link.href = doc.file_path;
+        link.download = doc.filename || doc.title;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
+      console.log('✅ Download file originale completato con successo');
+
+    } catch (error) {
+      console.error('❌ Errore durante il download del file originale:', error);
+      alert(`Errore durante il download: ${error.message || 'Riprova più tardi.'}`);
     }
   }
 
@@ -481,13 +519,26 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center space-x-2">
                       {canView && (
-                        <button
-                          onClick={() => handleDownloadDocument(selectedDocument)}
-                          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          <Download className="h-4 w-4" />
-                          <span>Scarica</span>
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleDownloadDocument(selectedDocument)}
+                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            title="Scarica PDF generato"
+                          >
+                            <Download className="h-4 w-4" />
+                            <span>PDF</span>
+                          </button>
+                          {selectedDocument.file_path && (
+                            <button
+                              onClick={() => handleDownloadOriginalFile(selectedDocument)}
+                              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                              title="Scarica file originale"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                              <span>File</span>
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -569,6 +620,14 @@ export default function Dashboard() {
                         <span className="text-gray-600">Download:</span>
                         <span className="font-medium text-gray-900">{selectedDocument.download_count || 0}</span>
                       </div>
+                      {selectedDocument.file_path && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">File originale:</span>
+                          <span className="font-medium text-gray-900 text-xs">
+                            {isGoogleDriveUrl(selectedDocument.file_path) ? '📁 Google Drive' : '🔗 Link esterno'}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
