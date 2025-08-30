@@ -18,7 +18,8 @@ import {
   X, 
   Info,
   Save,
-  ExternalLink
+  ExternalLink,
+  Tag
 } from 'lucide-react';
 
 // Interfaccia Document che corrisponde al database
@@ -622,7 +623,27 @@ export default function Docx() {
                           className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
                           <Download className="h-4 w-4" />
-                          <span>Scarica</span>
+                          <span>Scarica PDF</span>
+                        </button>
+                      )}
+                      {canView && selectedDocument.file_path && isGoogleDriveUrl(selectedDocument.file_path) && (
+                        <button
+                          onClick={() => handleDownloadOriginalFile(selectedDocument)}
+                          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12.01 2C6.5 2 2.01 6.5 2.01 12s4.49 10 9.99 10c5.51 0 10-4.5 10-10S17.52 2 12.01 2zM7.5 9c.83 0 1.5.67 1.5 1.5S8.33 12 7.5 12 6 11.33 6 10.5 6.67 9 7.5 9zM12 17.5c-2.33 0-4.31-1.46-5.11-3.5h10.22c-.8 2.04-2.78 3.5-5.11 3.5zM16.5 12c-.83 0-1.5-.67-1.5-1.5S15.67 9 16.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                          </svg>
+                          <span>Scarica da Drive</span>
+                        </button>
+                      )}
+                      {canView && selectedDocument.file_path && !isGoogleDriveUrl(selectedDocument.file_path) && (
+                        <button
+                          onClick={() => handleDownloadOriginalFile(selectedDocument)}
+                          className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          <span>Scarica Originale</span>
                         </button>
                       )}
                       {canEdit && (
