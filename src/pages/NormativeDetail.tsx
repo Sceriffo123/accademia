@@ -8,7 +8,14 @@ import {
   Share2, 
   Bookmark,
   Download,
-  AlertCircle
+  AlertCircle,
+  Copy,
+  Mail,
+  MessageCircle,
+  Send,
+  Linkedin,
+  Twitter,
+  CheckCircle
 } from 'lucide-react';
 
 export default function NormativeDetail() {
@@ -17,6 +24,8 @@ export default function NormativeDetail() {
   const [normative, setNormative] = useState<Normative | null>(null);
   const [loading, setLoading] = useState(true);
   const [bookmarked, setBookmarked] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -73,33 +82,104 @@ export default function NormativeDetail() {
     }
   }
 
-  function handleShare() {
+  function handleCopyLink() {
     const currentUrl = window.location.href;
-    
-    // Prova a usare l'API Web Share se disponibile (mobile/modern browsers)
-    if (navigator.share) {
-      navigator.share({
-        title: normative?.title,
-        text: `${normative?.title} - ${normative?.reference_number}`,
-        url: currentUrl
-      }).catch(() => {
-        // Fallback se Web Share API fallisce (permission denied, user cancellation, etc.)
-        navigator.clipboard.writeText(currentUrl).then(() => {
-          alert('Link copiato negli appunti!');
-        }).catch(() => {
-          // Fallback del fallback: mostra URL in un prompt
-          prompt('Copia questo link per condividere:', currentUrl);
-        });
-      });
-    } else {
-      // Fallback: copia URL negli appunti
-      navigator.clipboard.writeText(currentUrl).then(() => {
-        alert('Link copiato negli appunti!');
-      }).catch(() => {
-        // Fallback del fallback: mostra URL in un prompt
-        prompt('Copia questo link per condividere:', currentUrl);
-      });
+    navigator.clipboard.writeText(currentUrl).then(() => {
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }).catch(() => {
+      prompt('Copia questo link per condividere:', currentUrl);
+    });
+  }
+
+  function handleWhatsAppShare() {
+    const currentUrl = window.location.href;
+    const text = `📋 ${normative?.title}\n\n${normative?.reference_number}\n\nConsulta la normativa completa: ${currentUrl}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(whatsappUrl, '_blank');
+  }
+
+  function handleTelegramShare() {
+    const currentUrl = window.location.href;
+    const text = `📋 ${normative?.title} - ${normative?.reference_number}`;
+    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(text)}`;
+    window.open(telegramUrl, '_blank');
+  }
+
+  function handleEmailShare() {
+    const currentUrl = window.location.href;
+    const subject = `Normativa: ${normative?.title}`;
+    const body = `Ti condivido questa normativa del trasporto pubblico locale:\n\n${normative?.title}\nRiferimento: ${normative?.reference_number}\n\nConsulta il testo completo: ${currentUrl}\n\n---\nCondiviso da Accademia TPL`;
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+  }
+
+  function handleLinkedInShare() {
+    const currentUrl = window.location.href;
+    const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`;
+    window.open(linkedinUrl, '_blank');
+  }
+
+  function handleTwitterShare() {
+    const currentUrl = window.location.href;
+    const text = `📋 ${normative?.title} - ${normative?.reference_number} #TPL #Normative`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentUrl)}`;
+    window.open(twitterUrl, '_blank');
+  }
+
+  // Chiudi menu quando si clicca fuori
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Element;
+      if (!target.closest('.share-menu-container')) {
+        setShowShareMenu(false);
+      }
     }
+
+    if (showShareMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showShareMenu]);
+
+  const shareOptions = [
+    {
+      name: 'WhatsApp',
+      icon: MessageCircle,
+      color: 'bg-green-500 hover:bg-green-600',
+      action: handleWhatsAppShare
+    },
+    {
+      name: 'Telegram',
+      icon: Send,
+      color: 'bg-blue-500 hover:bg-blue-600',
+      action: handleTelegramShare
+    },
+    {
+      name: 'Email',
+      icon: Mail,
+      color: 'bg-gray-600 hover:bg-gray-700',
+      action: handleEmailShare
+    },
+    {
+      name: 'LinkedIn',
+      icon: Linkedin,
+      color: 'bg-blue-700 hover:bg-blue-800',
+      action: handleLinkedInShare
+    },
+    {
+      name: 'Twitter',
+      icon: Twitter,
+      color: 'bg-black hover:bg-gray-800',
+      action: handleTwitterShare
+    },
+    {
+      name: copySuccess ? 'Copiato!' : 'Copia Link',
+      icon: copySuccess ? CheckCircle : Copy,
+      color: copySuccess ? 'bg-green-500' : 'bg-gray-500 hover:bg-gray-600',
+      action: handleCopyLink
+    }
+  ];
   }
 
   if (loading) {
@@ -178,7 +258,7 @@ export default function NormativeDetail() {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2 mt-4 lg:mt-0">
+              <div className="flex items-center space-x-2 mt-4 lg:mt-0 relative share-menu-container">
                 <button
                   onClick={() => setBookmarked(!bookmarked)}
                   className={`p-3 rounded-lg border transition-colors ${
@@ -190,12 +270,51 @@ export default function NormativeDetail() {
                   <Bookmark className="h-5 w-5" />
                 </button>
                 <button 
-                  onClick={handleShare}
+                  onClick={() => setShowShareMenu(!showShareMenu)}
                   title="Condividi normativa"
-                  className="p-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors"
+                  className={`p-3 rounded-lg border transition-colors ${
+                    showShareMenu 
+                      ? 'bg-blue-50 border-blue-200 text-blue-600' 
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-100'
+                  }`}
                 >
                   <Share2 className="h-5 w-5" />
                 </button>
+                
+                {/* Share Menu */}
+                {showShareMenu && (
+                  <div className="absolute top-full right-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 p-4 z-50 min-w-[280px]">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                      Condividi questa normativa
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {shareOptions.map((option, index) => {
+                        const Icon = option.icon;
+                        return (
+                          <button
+                            key={index}
+                            onClick={() => {
+                              option.action();
+                              if (option.name !== 'Copia Link' && !copySuccess) {
+                                setShowShareMenu(false);
+                              }
+                            }}
+                            className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-white transition-colors text-sm ${option.color}`}
+                          >
+                            <Icon className="h-4 w-4" />
+                            <span>{option.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <p className="text-xs text-gray-500 text-center">
+                        Condividi con colleghi e professionisti del settore
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
                 <button 
                   onClick={handleDownload}
                   title="Scarica file allegato"
