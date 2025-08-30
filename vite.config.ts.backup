@@ -10,19 +10,6 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ['lucide-react'],
-    include: ['jspdf', 'jspdf-autotable'],
-  },
-  build: {
-    commonjsOptions: {
-      include: [/jspdf/, /node_modules/],
-    },
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'pdf-lib': ['jspdf', 'jspdf-autotable'],
-        },
-      },
-    },
   },
   resolve: {
     alias: {
