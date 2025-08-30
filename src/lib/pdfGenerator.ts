@@ -338,12 +338,232 @@ export function generatePDF(doc: Document): Blob {
   return pdf.output('blob');
 }
 
+/**
+ * Genera un PDF per una normativa con layout specifico
+ */
+export function generateNormativePDF(normative: any): Blob {
+  const pdf = new jsPDF();
+  
+  // Configurazione colori
+  const colors = {
+    primary: [37, 99, 235],
+    secondary: [99, 102, 241],
+    accent: [16, 185, 129],
+    dark: [31, 41, 55],
+    medium: [75, 85, 99],
+    light: [156, 163, 175],
+    background: [249, 250, 251],
+    white: [255, 255, 255]
+  };
+  
+  let yPosition = 0;
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 20;
+  const contentWidth = pageWidth - (margin * 2);
+  
+  // === HEADER ISTITUZIONALE ===
+  pdf.setFillColor(...colors.primary);
+  pdf.rect(0, 0, pageWidth, 50, 'F');
+  
+  // Titolo principale
+  pdf.setTextColor(...colors.white);
+  pdf.setFontSize(20);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('ACCADEMIA TPL', margin, 20);
+  
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('Trasporto Pubblico Locale - Archivio Normativo', margin, 30);
+  
+  // Numero di riferimento (allineato a destra)
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  const refText = normative.reference_number;
+  const refWidth = pdf.getTextWidth(refText);
+  pdf.text(refText, pageWidth - margin - refWidth, 25);
+  
+  yPosition = 70;
+  
+  // === BADGE TIPO NORMATIVA ===
+  const typeLabel = getTypeLabel(normative.type);
+  const badgeWidth = pdf.getTextWidth(typeLabel) + 16;
+  
+  pdf.setFillColor(...getTypeColorRGB(normative.type));
+  pdf.roundedRect(margin, yPosition - 8, badgeWidth, 16, 3, 3, 'F');
+  
+  pdf.setTextColor(...colors.white);
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(typeLabel, margin + 8, yPosition);
+  
+  yPosition += 25;
+  
+  // === TITOLO NORMATIVA ===
+  pdf.setTextColor(...colors.dark);
+  pdf.setFontSize(18);
+  pdf.setFont('helvetica', 'bold');
+  const titleLines = pdf.splitTextToSize(normative.title, contentWidth);
+  pdf.text(titleLines, margin, yPosition);
+  yPosition += titleLines.length * 8 + 10;
+  
+  // Linea decorativa
+  pdf.setDrawColor(...colors.accent);
+  pdf.setLineWidth(2);
+  pdf.line(margin, yPosition, margin + 100, yPosition);
+  yPosition += 20;
+  
+  // === INFORMAZIONI NORMATIVA ===
+  pdf.setFillColor(...colors.background);
+  pdf.setDrawColor(...colors.light);
+  pdf.roundedRect(margin, yPosition - 5, contentWidth, 45, 5, 5, 'FD');
+  
+  pdf.setTextColor(...colors.secondary);
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('INFORMAZIONI NORMATIVA', margin + 10, yPosition + 8);
+  
+  yPosition += 18;
+  
+  const normativeInfo = [
+    ['Categoria:', normative.category],
+    ['Data Pubblicazione:', new Date(normative.publication_date).toLocaleDateString('it-IT')],
+    ['Data Efficacia:', new Date(normative.effective_date).toLocaleDateString('it-IT')]
+  ];
+  
+  pdf.setTextColor(...colors.dark);
+  pdf.setFontSize(10);
+  
+  normativeInfo.forEach(([label, value], index) => {
+    const x = index < 2 ? margin + 15 : margin + (contentWidth / 2) + 10;
+    const y = index < 2 ? yPosition + (index * 12) : yPosition + ((index - 2) * 12);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(...colors.medium);
+    pdf.text(label, x, y);
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(...colors.dark);
+    pdf.text(value, x + 45, y);
+  });
+  
+  yPosition += 50;
+  
+  // === CONTENUTO NORMATIVA ===
+  pdf.setTextColor(...colors.primary);
+  pdf.setFontSize(14);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('TESTO NORMATIVA', margin, yPosition);
+  yPosition += 15;
+  
+  // Contenuto con gestione pagine multiple
+  pdf.setTextColor(...colors.dark);
+  pdf.setFontSize(11);
+  pdf.setFont('helvetica', 'normal');
+  
+  const contentLines = pdf.splitTextToSize(normative.content, contentWidth);
+  const linesPerPage = Math.floor((pageHeight - yPosition - 40) / 6);
+  
+  let currentLine = 0;
+  while (currentLine < contentLines.length) {
+    const pageLinesEnd = Math.min(currentLine + linesPerPage, contentLines.length);
+    const pageLines = contentLines.slice(currentLine, pageLinesEnd);
+    
+    pdf.text(pageLines, margin, yPosition);
+    
+    currentLine = pageLinesEnd;
+    
+    if (currentLine < contentLines.length) {
+      pdf.addPage();
+      yPosition = 30;
+    }
+  }
+  
+  // === TAGS (se presenti) ===
+  if (normative.tags && normative.tags.length > 0) {
+    // Verifica se c'è spazio nella pagina corrente
+    if (yPosition > pageHeight - 80) {
+      pdf.addPage();
+      yPosition = 30;
+    } else {
+      yPosition += 20;
+    }
+    
+    pdf.setTextColor(...colors.accent);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('TAG ASSOCIATI', margin, yPosition);
+    yPosition += 15;
+    
+    let tagX = margin;
+    let tagY = yPosition;
+    
+    normative.tags.forEach((tag: string) => {
+      const tagWidth = pdf.getTextWidth(tag) + 12;
+      
+      if (tagX + tagWidth > pageWidth - margin) {
+        tagX = margin;
+        tagY += 20;
+      }
+      
+      pdf.setFillColor(...colors.accent);
+      pdf.roundedRect(tagX, tagY - 8, tagWidth, 14, 7, 7, 'F');
+      
+      pdf.setTextColor(...colors.white);
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(tag, tagX + 6, tagY);
+      
+      tagX += tagWidth + 8;
+    });
+  }
+  
+  // === FOOTER SU OGNI PAGINA ===
+  const totalPages = pdf.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    pdf.setPage(i);
+    const footerY = pageHeight - 20;
+    
+    pdf.setDrawColor(...colors.light);
+    pdf.setLineWidth(0.5);
+    pdf.line(margin, footerY - 10, pageWidth - margin, footerY - 10);
+    
+    pdf.setTextColor(...colors.light);
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    
+    pdf.text('Accademia TPL - Sistema Gestionale Trasporto Pubblico Locale', margin, footerY);
+    
+    const pageText = `Pagina ${i} di ${totalPages}`;
+    const pageTextWidth = pdf.getTextWidth(pageText);
+    pdf.text(pageText, pageWidth - margin - pageTextWidth, footerY);
+    
+    const dateText = new Date().toLocaleDateString('it-IT');
+    const dateWidth = pdf.getTextWidth(dateText);
+    pdf.text(dateText, (pageWidth - dateWidth) / 2, footerY);
+  }
+  
+  return pdf.output('blob');
+}
+
+function getTypeColorRGB(type: string): [number, number, number] {
+  switch (type) {
+    case 'law': return [37, 99, 235]; // Blue
+    case 'regulation': return [16, 185, 129]; // Green
+    case 'ruling': return [245, 101, 101]; // Orange/Red
+    default: return [107, 114, 128]; // Gray
+  }
+}
+
 function getTypeLabel(type: string): string {
   switch (type) {
     case 'template': return 'TEMPLATE';
     case 'form': return 'MODULO';
     case 'guide': return 'GUIDA';
     case 'report': return 'REPORT';
+    case 'law': return 'LEGGE';
+    case 'regulation': return 'REGOLAMENTO';
+    case 'ruling': return 'SENTENZA';
     default: return type?.toUpperCase() || 'DOCUMENTO';
   }
 }
