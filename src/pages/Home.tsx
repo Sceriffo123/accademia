@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   GraduationCap, 
@@ -22,10 +22,6 @@ export default function Home() {
 
   const { user } = authData;
 
-  // Se l'utente è già autenticato, reindirizza alla dashboard
-  if (user) {
-    return <Navigate to="/dashboard" replace />;
-  }
   const features = [
     {
       icon: FileText,

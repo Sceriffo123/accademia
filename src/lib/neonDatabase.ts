@@ -85,39 +85,11 @@ export async function initializeTables() {
         title TEXT NOT NULL,
         content TEXT NOT NULL,
         category VARCHAR(100) NOT NULL,
-        file_url TEXT NOT NULL,
-        file_url TEXT NOT NULL,
-        file_path TEXT NOT NULL,
+        type VARCHAR(20) NOT NULL CHECK (type IN ('law', 'regulation', 'ruling')),
         reference_number VARCHAR(100) UNIQUE NOT NULL,
         publication_date DATE NOT NULL,
         effective_date DATE NOT NULL,
         tags TEXT[] DEFAULT '{}',
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'draft', 'archived', 'pending')),
-      )
-        approved_by UUID REFERENCES users(id),
-        approved_by UUID REFERENCES users(id),
-    `;
-
-    // Crea tabella documents
-    console.log('🎓 ACCADEMIA: Configurazione archivio documenti...');
-    await sql`
-      CREATE TABLE IF NOT EXISTS documents (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        title TEXT NOT NULL,
-        description TEXT,
-        filename VARCHAR(255) NOT NULL,
-        file_url TEXT NOT NULL,
-        file_path TEXT,
-        file_size INTEGER,
-        mime_type VARCHAR(100),
-        type VARCHAR(20) DEFAULT 'template' CHECK (type IN ('template', 'form', 'guide', 'report')),
-        category VARCHAR(100) NOT NULL,
-        tags TEXT[] DEFAULT '{}',
-        version VARCHAR(20) DEFAULT '1.0',
-        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'draft', 'archived')),
-        uploaded_by UUID REFERENCES users(id),
-        download_count INTEGER DEFAULT 0,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
@@ -672,7 +644,6 @@ export async function createDocument(data: {
   title: string;
   description?: string;
   filename: string;
-  file_url: string;
   file_path?: string;
   file_size?: number;
   mime_type?: string;
@@ -680,7 +651,7 @@ export async function createDocument(data: {
   category: string;
   tags?: string[];
   version?: string;
-  status?: 'active' | 'draft' | 'archived' | 'pending';
+  status?: 'active' | 'pending' | 'rejected';
   uploaded_by?: string;
 }): Promise<Document | null> {
   try {
@@ -688,11 +659,11 @@ export async function createDocument(data: {
 
     const result = await sql`
       INSERT INTO documents (
-        title, description, filename, file_url, file_path, file_size, mime_type,
+        title, description, filename, file_path, file_size, mime_type,
         type, category, tags, version, status, uploaded_by, updated_at
       )
       VALUES (
-        ${data.title}, ${data.description}, ${data.filename}, ${data.file_url}, ${data.file_path},
+        ${data.title}, ${data.description}, ${data.filename}, ${data.file_path},
         ${data.file_size}, ${data.mime_type}, ${data.type}, ${data.category},
         ${data.tags || []}, ${data.version || '1.0'}, ${data.status || 'active'},
         ${data.uploaded_by}, NOW()

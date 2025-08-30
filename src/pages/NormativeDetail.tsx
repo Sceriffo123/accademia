@@ -36,26 +36,6 @@ export default function NormativeDetail() {
     }
   }
 
-  async function handleDownloadNormative() {
-    if (!normative) return;
-    
-    try {
-      console.log('🔄 Inizio download normativa:', normative.title);
-      const { generateNormativePDF } = await import('../lib/pdfGenerator');
-      const blob = generateNormativePDF(normative);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${normative.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      
-      console.log('✅ Download normativa completato con successo');
-    } catch (error) {
-      console.error('❌ Errore durante il download:', error);
-      alert('Errore durante il download. Riprova più tardi.');
-    }
-  }
   function getTypeLabel(type: string) {
     switch (type) {
       case 'law': return 'Legge';
@@ -164,11 +144,7 @@ export default function NormativeDetail() {
                 <button className="p-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors">
                   <Share2 className="h-5 w-5" />
                 </button>
-                <button 
-                  onClick={handleDownloadNormative}
-                  className="p-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors"
-                  title="Scarica PDF"
-                >
+                <button className="p-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors">
                   <Download className="h-5 w-5" />
                 </button>
               </div>

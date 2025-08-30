@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getAllDocuments, getUserPermissions, getUserSections, getUserById, updateDocument } from '../lib/neonDatabase';
-import { checkFileExists, generateDownloadUrl } from '../lib/arubaUpload';
-import FileUpload from '../components/FileUpload';
 import { 
   FileText, 
   Download, 
@@ -57,7 +55,6 @@ export default function Docx() {
   const [uploaderName, setUploaderName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [showUploadModal, setShowUploadModal] = useState(false);
 
   useEffect(() => {
     if (selectedDocument?.uploaded_by) {
@@ -153,28 +150,48 @@ export default function Docx() {
         return;
       }
 
-      console.log('🔄 Inizio download documento da Aruba:', doc.filename);
-      console.log('🔄 URL file:', doc.file_url);
+      console.log('🔄 Inizio download documento:', doc.filename);
 
-      // Verifica se il file esiste su Aruba
-      const fileExists = await checkFileExists(doc.file_url);
-      if (!fileExists) {
-        console.error('❌ File non trovato su Aruba:', doc.file_url);
-        alert('File non disponibile. Contatta l\'amministratore.');
+      // Valida che il documento abbia un ID valido
+      if (!doc.id) {
+        console.error('❌ ID documento non valido');
         return;
       }
 
-      // Genera URL di download con tracking
-      const downloadUrl = generateDownloadUrl(doc.file_url, doc.id);
+      // Fetch del file come blob per gestire correttamente i file binari
+      const response = await fetch(`/api/documents/download/${doc.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/octet-stream',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Converti la risposta in blob per preservare i dati binari
+      const blob = await response.blob();
       
-      // Apri il file in una nuova finestra per download
+      // Crea URL temporaneo per il blob
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      // Crea link per il download
       const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.target = '_blank';
-      link.download = doc.filename;
+      link.href = blobUrl;
+      link.download = doc.filename || 'documento.pdf';
+      
+      // Aggiungi alla pagina temporaneamente
+      document.body.appendChild(link);
+      
+      // Triggera il download
       link.click();
       
-      console.log('✅ Download avviato da Aruba:', downloadUrl);
+      // Cleanup: rimuovi link e revoca URL blob
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+
+      console.log('✅ Download completato per:', doc.filename);
 
     } catch (error) {
       console.error('❌ Errore durante il download:', error);
@@ -213,13 +230,6 @@ export default function Docx() {
   function handleCancelEdit() {
     setIsEditMode(false);
     setEditingDocument(null);
-  }
-
-  // Handler per completamento upload
-  function handleUploadComplete(newDocument: any) {
-    console.log('🎓 DOCX: Upload completato:', newDocument.title);
-    setShowUploadModal(false);
-    loadDocuments(); // Ricarica la lista documenti
   }
 
   // Controllo permessi e visibilità
@@ -404,7 +414,6 @@ export default function Docx() {
 
                 <div className="flex items-end">
                   <button 
-                    onClick={() => setShowUploadModal(true)}
                     disabled={!canUpload}
                     className={`w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                       canUpload 
@@ -428,7 +437,6 @@ export default function Docx() {
               Documenti ({filteredDocuments.length})
             </h2>
             <button 
-              onClick={() => setShowUploadModal(true)}
               disabled={!canCreate}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                 canCreate 
@@ -506,10 +514,6 @@ export default function Docx() {
                         className={`p-2 transition-colors ${
                           canView ? 'text-gray-400 hover:text-green-600' : 'text-gray-300 cursor-not-allowed'
                         }`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownloadDocument(doc);
-                        }}
                       >
                         <Download className="h-4 w-4" />
                       </button>
@@ -743,7 +747,10 @@ export default function Docx() {
                   </div>
 
                   <div className="bg-white border border-gray-200 rounded-xl p-6">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Informazioni Upload</h4>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <User className="h-5 w-5 text-green-600 mr-2" />
+                      Informazioni Upload
+                    </h4>
                     <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Caricato da:</span>
@@ -824,16 +831,6 @@ export default function Docx() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Upload Modal */}
-      {showUploadModal && (
-        <FileUpload
-          onUploadComplete={handleUploadComplete}
-          onClose={() => setShowUploadModal(false)}
-          category="generale"
-          type="template"
-        />
       )}
     </div>
   );
