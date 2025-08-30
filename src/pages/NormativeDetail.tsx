@@ -73,6 +73,27 @@ export default function NormativeDetail() {
     }
   }
 
+  function handleShare() {
+    const currentUrl = window.location.href;
+    
+    // Prova a usare l'API Web Share se disponibile (mobile/modern browsers)
+    if (navigator.share) {
+      navigator.share({
+        title: normative?.title,
+        text: `${normative?.title} - ${normative?.reference_number}`,
+        url: currentUrl
+      }).catch(console.error);
+    } else {
+      // Fallback: copia URL negli appunti
+      navigator.clipboard.writeText(currentUrl).then(() => {
+        alert('Link copiato negli appunti!');
+      }).catch(() => {
+        // Fallback del fallback: mostra URL in un prompt
+        prompt('Copia questo link per condividere:', currentUrl);
+      });
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -160,7 +181,11 @@ export default function NormativeDetail() {
                 >
                   <Bookmark className="h-5 w-5" />
                 </button>
-                <button className="p-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors">
+                <button 
+                  onClick={handleShare}
+                  title="Condividi normativa"
+                  className="p-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors"
+                >
                   <Share2 className="h-5 w-5" />
                 </button>
                 <button 
