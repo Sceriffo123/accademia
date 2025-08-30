@@ -5,8 +5,6 @@ import {
   getRecentNormativesCount as getRecentNormativesCountFromDB,
   getAllUsers,
   getUsersCount as getUsersCountFromDB,
-  getAllDocuments as getAllDocumentsFromDB,
-  getDocumentsCount as getDocumentsCountFromDB,
   type Normative 
 } from './neonDatabase';
 
@@ -120,37 +118,4 @@ export async function createNewUser(email: string, fullName: string, password: s
 export async function updateUserPassword(id: string, newPassword: string): Promise<boolean> {
   const { updateUserPassword } = await import('./neonDatabase');
   return await updateUserPassword(id, newPassword);
-}
-
-export async function createDocument(data: any): Promise<any> {
-  const { createDocument } = await import('./neonDatabase');
-  return await createDocument(data);
-}
-
-export async function updateDocument(id: string, data: any): Promise<any> {
-  const { updateDocument } = await import('./neonDatabase');
-  return await updateDocument(id, data);
-}
-
-export async function deleteDocument(id: string): Promise<boolean> {
-  const { deleteDocument } = await import('./neonDatabase');
-  return await deleteDocument(id);
-}
-
-export async function getAllDocuments(): Promise<any[]> {
-  try {
-    return await getAllDocumentsFromDB();
-  } catch (error) {
-    console.error('Error fetching documents:', error);
-    return [];
-  }
-}
-
-export async function getDocumentsCount(): Promise<number> {
-  try {
-    return await getDocumentsCountFromDB();
-  } catch (error) {
-    console.error('Error counting documents:', error);
-    return 0;
-  }
 }
