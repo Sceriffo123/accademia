@@ -124,16 +124,17 @@ export function generatePDF(doc: Document): Blob {
     
     pdf.roundedRect(margin, yPosition - 5, contentWidth, boxHeight, 5, 5, 'FD');
     
-    // Icona descrizione
+    // Titolo descrizione
     pdf.setTextColor(...colors.secondary);
-    pdf.setFontSize(8);
-    pdf.text('📄', margin + 10, yPosition + 5);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('DESCRIZIONE', margin + 10, yPosition + 5);
     
     // Testo descrizione
     pdf.setTextColor(...colors.dark);
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(descLines, margin + 20, yPosition + 8);
+    pdf.text(descLines, margin + 10, yPosition + 15);
     yPosition += boxHeight + 15;
   }
   
@@ -148,18 +149,18 @@ export function generatePDF(doc: Document): Blob {
   pdf.setTextColor(...colors.primary);
   pdf.setFontSize(14);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('📋 Dettagli Tecnici', margin + 15, yPosition + 18);
+  pdf.text('DETTAGLI TECNICI', margin + 15, yPosition + 18);
   
   yPosition += 30;
   
-  // Griglia dettagli con icone
+  // Griglia dettagli senza icone problematiche
   const details = [
-    ['📁', 'Nome File', doc.filename || 'N/A'],
-    ['💾', 'Dimensione', doc.file_size ? `${doc.file_size} KB` : 'N/A'],
-    ['🔧', 'Tipo MIME', doc.mime_type || 'application/octet-stream'],
-    ['🏷️', 'Versione', doc.version || '1.0'],
-    ['⚡', 'Stato', getStatusLabel(doc.status)],
-    ['📊', 'Download', (doc.download_count || 0).toString()]
+    ['Nome File:', doc.filename || 'N/A'],
+    ['Dimensione:', doc.file_size ? `${doc.file_size} KB` : 'N/A'],
+    ['Tipo MIME:', doc.mime_type || 'application/octet-stream'],
+    ['Versione:', doc.version || '1.0'],
+    ['Stato:', getStatusLabel(doc.status)],
+    ['Download:', (doc.download_count || 0).toString()]
   ];
   
   pdf.setTextColor(...colors.dark);
@@ -171,26 +172,22 @@ export function generatePDF(doc: Document): Blob {
   let leftY = yPosition;
   let rightY = yPosition;
   
-  details.forEach(([icon, label, value], index) => {
+  details.forEach(([label, value], index) => {
     const isLeftColumn = index % 2 === 0;
     const x = isLeftColumn ? leftColumn : rightColumn;
     const y = isLeftColumn ? leftY : rightY;
-    
-    // Icona
-    pdf.setFontSize(12);
-    pdf.text(icon, x, y);
     
     // Label in grassetto
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(9);
     pdf.setTextColor(...colors.medium);
-    pdf.text(label + ':', x + 15, y);
+    pdf.text(label, x, y);
     
     // Valore
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(...colors.dark);
-    const truncatedValue = value.length > 25 ? value.substring(0, 25) + '...' : value;
-    pdf.text(truncatedValue, x + 15, y + 8);
+    const truncatedValue = value.length > 30 ? value.substring(0, 30) + '...' : value;
+    pdf.text(truncatedValue, x, y + 8);
     
     if (isLeftColumn) {
       leftY += 20;
@@ -211,43 +208,39 @@ export function generatePDF(doc: Document): Blob {
   pdf.setTextColor(...colors.secondary);
   pdf.setFontSize(14);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('📤 Informazioni Upload', margin + 15, yPosition + 18);
+  pdf.text('INFORMAZIONI UPLOAD', margin + 15, yPosition + 18);
   
   yPosition += 30;
   
   const uploadInfo = [
-    ['📅', 'Data Upload', new Date(doc.created_at).toLocaleDateString('it-IT', {
+    ['Data Upload:', new Date(doc.created_at).toLocaleDateString('it-IT', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     })],
-    ['🔄', 'Ultima Modifica', new Date(doc.updated_at).toLocaleDateString('it-IT', {
+    ['Ultima Modifica:', new Date(doc.updated_at).toLocaleDateString('it-IT', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     })],
-    ['👤', 'Caricato da', doc.uploaded_by || 'Sistema Automatico']
+    ['Caricato da:', doc.uploaded_by || 'Sistema Automatico']
   ];
   
-  uploadInfo.forEach(([icon, label, value]) => {
-    // Icona
-    pdf.setFontSize(12);
-    pdf.text(icon, leftColumn, yPosition);
-    
+  uploadInfo.forEach(([label, value]) => {
     // Label
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(9);
     pdf.setTextColor(...colors.medium);
-    pdf.text(label + ':', leftColumn + 15, yPosition);
+    pdf.text(label, leftColumn, yPosition);
     
     // Valore
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(...colors.dark);
-    pdf.text(value, leftColumn + 15, yPosition + 8);
+    pdf.text(value, leftColumn, yPosition + 8);
     
     yPosition += 18;
   });
@@ -260,7 +253,7 @@ export function generatePDF(doc: Document): Blob {
     pdf.setTextColor(...colors.accent);
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('🏷️ Tag Associati', margin, yPosition);
+    pdf.text('TAG ASSOCIATI', margin, yPosition);
     yPosition += 15;
     
     // Render tags come pillole colorate
@@ -315,8 +308,8 @@ export function generatePDF(doc: Document): Blob {
   
   // Destra: Pagina
   const pageText = 'Pagina 1 di 1';
-  const pageWidth2 = pdf.getTextWidth(pageText);
-  pdf.text(pageText, pageWidth - margin - pageWidth2, footerY);
+  const pageTextWidth = pdf.getTextWidth(pageText);
+  pdf.text(pageText, pageWidth - margin - pageTextWidth, footerY);
   
   // === WATERMARK SOTTILE ===
   pdf.setTextColor(240, 240, 240);
@@ -329,16 +322,11 @@ export function generatePDF(doc: Document): Blob {
   const watermarkX = (pageWidth - watermarkWidth) / 2;
   const watermarkY = pageHeight / 2;
   
-  // Ruota il testo per watermark diagonale
+  // Watermark diagonale
   pdf.saveGraphicsState();
-  pdf.setGState(new pdf.GState({ opacity: 0.05 }));
-  
-  // Trasforma coordinate per rotazione
-  const angle = -45 * Math.PI / 180;
   pdf.text(watermarkText, watermarkX, watermarkY, {
-    angle: angle
+    angle: -45
   });
-  
   pdf.restoreGraphicsState();
   
   // === BORDO DECORATIVO ===
