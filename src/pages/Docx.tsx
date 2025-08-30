@@ -47,8 +47,13 @@ export default function Docx() {
   const [showFilters, setShowFilters] = useState(false);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    description: '',
+    category: ''
+  });
   const [loading, setLoading] = useState(true);
   const [userSections, setUserSections] = useState<string[]>([]);
   const [uploaderName, setUploaderName] = useState<string>('');
@@ -186,24 +191,41 @@ export default function Docx() {
   }
 
   function handleEditDocument(doc: Document) {
-    // Reindirizza al pannello Admin per modificare il documento specifico
-    console.log('🔄 Reindirizzamento ad Admin per modifica documento:', doc.id);
-
-    // Salva temporaneamente il documento selezionato per la modifica in Admin
-    sessionStorage.setItem('editDocumentId', doc.id);
-
-    // Reindirizza al pannello Admin (sezione documenti)
-    window.location.href = '/admin?tab=documents&edit=' + doc.id;
+    // Abilita modalità modifica nella modale
+    setSelectedDocument(doc);
+    setEditFormData({
+      title: doc.title || '',
+      description: doc.description || '',
+      category: doc.category || ''
+    });
+    setIsEditMode(true);
+    setShowPreviewModal(true);
   }
 
   async function handleSaveEdit() {
-    if (!editDocument) return;
+    if (!selectedDocument) return;
 
     try {
-      console.log('💾 Salvataggio modifiche documento:', editDocument.id);
+      console.log('💾 Salvataggio modifiche documento:', selectedDocument.id);
 
-      // Qui dovresti chiamare l'API per aggiornare il documento
-      // await updateDocument(editDocument.id, editFormData);
+      // TODO: Implementare chiamata API per aggiornare documento
+      // await updateDocument(selectedDocument.id, editFormData);
+
+      // Per ora simuliamo il salvataggio
+      console.log('✅ Modifiche salvate per documento:', selectedDocument.id);
+
+      // Ricarica i documenti
+      await loadDocuments();
+
+      // Esci dalla modalità modifica
+      setIsEditMode(false);
+      setShowPreviewModal(false);
+
+    } catch (error) {
+      console.error('❌ Errore salvataggio modifiche:', error);
+      // TODO: Mostrare notifica errore all'utente
+    }
+  }
 
       // Per ora simuliamo il salvataggio
       console.log('✅ Modifiche salvate per documento:', editDocument.id);
