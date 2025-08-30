@@ -42,8 +42,12 @@ export default function Navigation() {
 
   async function loadVisibleSections() {
     try {
+      console.log('🎓 NAVIGATION: Caricamento sezioni per ruolo:', profile?.role);
       const sections = await getUserSections(profile?.role || '');
+      console.log('🎓 NAVIGATION: Sezioni caricate dal database:', sections);
+      console.log('🎓 NAVIGATION: Numero sezioni:', sections.length);
       setVisibleSections(sections);
+      console.log('🎓 NAVIGATION: Sezioni salvate nello stato');
     } catch (error) {
       console.error('Errore caricamento sezioni visibili:', error);
       // Fallback ai default se il database non è disponibile
