@@ -74,6 +74,7 @@ export default function Admin() {
   const [showEditDocument, setShowEditDocument] = useState(false);
   const [editingDocument, setEditingDocument] = useState<any>(null);
   const [viewingDocument, setViewingDocument] = useState<any>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; document: any }>({ show: false, document: null });
   const [documentForm, setDocumentForm] = useState({
     title: '',
     description: '',
@@ -368,21 +369,25 @@ export default function Admin() {
   }
 
   async function handleDeleteDocument(documentId: string, documentTitle: string) {
-    if (!confirm(`Sei sicuro di voler eliminare il documento "${documentTitle}"?`)) {
-      return;
-    }
+    setDeleteConfirm({ show: true, document: { id: documentId, title: documentTitle } });
+  }
+
+  async function confirmDeleteDocument() {
+    if (!deleteConfirm.document) return;
 
     try {
-      const success = await deleteDocument(documentId);
+      const success = await deleteDocument(deleteConfirm.document.id);
       if (success) {
         await fetchAdminData(); // Refresh data
-        addNotification('info', 'Documento Rimosso', `Il documento "${documentTitle}" è stato eliminato dal sistema`);
+        addNotification('info', 'Documento Rimosso', `Il documento "${deleteConfirm.document.title}" è stato eliminato dal sistema`);
       } else {
         addNotification('error', 'Errore Eliminazione', 'Il documento non è stato trovato o non può essere eliminato');
       }
     } catch (error) {
       console.error('Error deleting document:', error);
       addNotification('error', 'Errore Eliminazione', 'Non è stato possibile eliminare il documento');
+    } finally {
+      setDeleteConfirm({ show: false, document: null });
     }
   }
 
@@ -1985,6 +1990,53 @@ export default function Admin() {
                   className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
                 >
                   Salva Modifiche
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Modal Conferma Eliminazione Documento */}
+        {deleteConfirm.show && deleteConfirm.document && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Conferma Eliminazione</h3>
+                <button
+                  onClick={() => setDeleteConfirm({ show: false, document: null })}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <AlertTriangle className="h-6 w-6 text-red-500" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-700">
+                      Sei sicuro di voler eliminare il documento <strong>"{deleteConfirm.document.title}"</strong>?
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Questa azione non può essere annullata.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setDeleteConfirm({ show: false, document: null })}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={confirmDeleteDocument}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Elimina Documento
                 </button>
               </div>
             </div>
