@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getNormativesCount, getUsersCount, getUsers, getNormatives, updateUser, deleteUser, createNewUser, updateUserPassword } from '../lib/api';
 import { createNormative, updateNormative, deleteNormative, getAllDocuments, getDocumentsCount, createDocument, updateDocument, deleteDocument } from '../lib/neonDatabase';
+import { downloadGoogleDriveFile, isGoogleDriveUrl } from '../lib/driveDownload';
+import { generatePDF } from '../lib/pdfGenerator';
 import { 
   Users, 
   FileText, 
@@ -18,7 +20,8 @@ import {
   AlertCircle,
   AlertTriangle,
   Info,
-  FolderOpen
+  FolderOpen,
+  Download
 } from 'lucide-react';
 
 interface AdminStats {
@@ -273,6 +276,62 @@ export default function Admin() {
     });
   }
 
+  // Handler per download PDF documento (Admin)
+  async function handleDownloadDocumentPDF(doc: any) {
+    try {
+      console.log('🔄 Generando PDF per documento:', doc.title);
+      
+      const pdfBlob = await generatePDF(doc, 'document');
+      
+      // Crea un link per il download
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${doc.title || 'documento'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      console.log('✅ Download PDF completato con successo');
+      addNotification('success', 'PDF Generato', `Il PDF del documento "${doc.title}" è stato scaricato`);
+    } catch (error) {
+      console.error('❌ Errore durante il download PDF:', error);
+      addNotification('error', 'Errore Download', 'Si è verificato un errore durante la generazione del PDF');
+    }
+  }
+
+  // Handler per download file originale (Admin)
+  async function handleDownloadOriginalFile(doc: any) {
+    try {
+      if (!doc.file_path) {
+        addNotification('error', 'File Non Disponibile', 'Nessun file originale disponibile per questo documento');
+        return;
+      }
+
+      if (isGoogleDriveUrl(doc.file_path)) {
+        await downloadGoogleDriveFile(doc.file_path, doc.filename || doc.title);
+        addNotification('success', 'Download Completato', `Il file "${doc.filename || doc.title}" è stato scaricato da Google Drive`);
+      } else {
+        // Download standard per altri tipi di link
+        const link = document.createElement('a');
+        link.href = doc.file_path;
+        link.download = doc.filename || doc.title || 'documento';
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        addNotification('success', 'Download Avviato', `Il download del file "${doc.filename || doc.title}" è stato avviato`);
+      }
+      
+      console.log('✅ Download file originale completato con successo');
+    } catch (error) {
+      console.error('❌ Errore durante il download del file originale:', error);
+      addNotification('error', 'Errore Download', 'Si è verificato un errore durante il download del file');
+    }
+  }
+
   // Handler per documenti
   async function handleCreateDocument() {
     try {
@@ -407,6 +466,13 @@ export default function Admin() {
       });
       setDocumentTagInput('');
     }
+  }
+
+  function handleRemoveDocumentTag(tagToRemove: string) {
+    setDocumentForm({
+      ...documentForm,
+      tags: documentForm.tags.filter(tag => tag !== tagToRemove)
+    });
   }
 
   function handleAddDocumentTagToEditing() {
@@ -982,6 +1048,26 @@ export default function Admin() {
                         >
                           <Eye className="h-4 w-4" />
                         </button>
+                        <button
+                          onClick={() => handleDownloadDocumentPDF(document)}
+                          className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
+                          title="Scarica PDF"
+                        >
+                          <Download className="h-4 w-4" />
+                        </button>
+                        {document.file_path && (
+                          <button
+                            onClick={() => handleDownloadOriginalFile(document)}
+                            className={`p-2 transition-colors ${
+                              isGoogleDriveUrl(document.file_path) 
+                                ? 'text-gray-400 hover:text-green-600' 
+                                : 'text-gray-400 hover:text-blue-600'
+                            }`}
+                            title={isGoogleDriveUrl(document.file_path) ? "Scarica da Google Drive" : "Scarica File Originale"}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleEditDocument(document)}
                           className="p-2 text-gray-400 hover:text-green-600 transition-colors"
@@ -1762,10 +1848,36 @@ export default function Admin() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end space-x-3 mt-6">
+              <div className="flex items-center justify-between space-x-3 mt-6">
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => handleDownloadDocumentPDF(viewingDocument)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Scarica PDF</span>
+                  </button>
+                  {viewingDocument.file_path && (
+                    <button
+                      onClick={() => handleDownloadOriginalFile(viewingDocument)}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                        isGoogleDriveUrl(viewingDocument.file_path)
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      }`}
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>
+                        {isGoogleDriveUrl(viewingDocument.file_path) 
+                          ? 'Scarica da Drive' 
+                          : 'Scarica Originale'}
+                      </span>
+                    </button>
+                  )}
+                </div>
                 <button
                   onClick={() => setViewingDocument(null)}
-                  className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
                 >
                   Chiudi
                 </button>

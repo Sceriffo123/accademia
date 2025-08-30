@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getAllDocuments, getUserPermissions, getUserSections, getUserById, updateDocument } from '../lib/neonDatabase';
+import { downloadGoogleDriveFile, isGoogleDriveUrl } from '../lib/driveDownload';
 import { 
   FileText, 
   Download, 
@@ -16,7 +17,8 @@ import {
   FolderOpen, 
   X, 
   Info,
-  Save
+  Save,
+  ExternalLink
 } from 'lucide-react';
 
 // Interfaccia Document che corrisponde al database
@@ -171,31 +173,49 @@ export default function Docx() {
       }
 
       // Converti la risposta in blob per preservare i dati binari
-      const blob = await response.blob();
       
-      // Crea URL temporaneo per il blob
-      const blobUrl = window.URL.createObjectURL(blob);
-
-      // Crea link per il download
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = doc.filename || 'documento.pdf';
-      
-      // Aggiungi alla pagina temporaneamente
-      document.body.appendChild(link);
-      
-      // Triggera il download
-      link.click();
-      
-      // Cleanup: rimuovi link e revoca URL blob
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
-
-      console.log('✅ Download completato per:', doc.filename);
+      console.log('✅ Download PDF completato con successo');
 
     } catch (error) {
-      console.error('❌ Errore durante il download:', error);
-      alert('Errore durante il download. Riprova più tardi.');
+      console.error('❌ Errore durante il download PDF:', error);
+      alert('Errore durante il download PDF. Riprova più tardi.');
+    }
+  }
+
+  async function handleDownloadOriginalFile(doc: Document) {
+    try {
+      if (!canView) {
+        console.error('❌ Permessi insufficienti per scaricare il file');
+        return;
+      }
+
+      if (!doc.file_path) {
+        alert('Nessun file originale disponibile per questo documento.');
+        return;
+      }
+
+      console.log('🔄 Inizio download file originale:', doc.filename);
+      
+      // Se è un URL di Google Drive, usa la funzione specifica
+      if (isGoogleDriveUrl(doc.file_path)) {
+        await downloadGoogleDriveFile(doc.file_path, doc.filename || doc.title);
+      } else {
+        // Per altri tipi di URL, usa il metodo standard
+        const link = document.createElement('a');
+        link.href = doc.file_path;
+        link.download = doc.filename || doc.title;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
+      console.log('✅ Download file originale completato con successo');
+
+    } catch (error) {
+      console.error('❌ Errore durante il download del file originale:', error);
+      alert(`Errore durante il download: ${error.message || 'Riprova più tardi.'}`);
     }
   }
 
