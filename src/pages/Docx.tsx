@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getUserPermissions } from '../lib/neonDatabase';
+import { getUserPermissions, getAllDocuments } from '../lib/neonDatabase';
 import { 
   FolderOpen, 
   Search, 
@@ -17,16 +17,24 @@ import {
   FileIcon
 } from 'lucide-react';
 
+// Interfaccia Document che corrisponde al database
 interface Document {
   id: string;
   title: string;
-  description: string;
+  description?: string;
+  filename: string;
+  file_path?: string;
+  file_size?: number;
+  mime_type?: string;
   type: 'template' | 'form' | 'guide' | 'report';
   category: string;
-  size: string;
-  lastModified: string;
-  author: string;
-  downloads: number;
+  tags?: string[];
+  version?: string;
+  status?: 'active' | 'draft' | 'archived';
+  uploaded_by?: string;
+  created_at: string;
+  updated_at: string;
+  download_count?: number;
 }
 
 export default function Docx() {
@@ -36,10 +44,13 @@ export default function Docx() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (profile?.role) {
       loadUserPermissions();
+      loadDocuments();
     }
   }, [profile?.role]);
 
@@ -50,6 +61,19 @@ export default function Docx() {
     } catch (error) {
       console.error('Errore caricamento permessi:', error);
       setUserPermissions([]);
+    }
+  }
+
+  async function loadDocuments() {
+    try {
+      setLoading(true);
+      const docs = await getAllDocuments();
+      setDocuments(docs);
+    } catch (error) {
+      console.error('Errore caricamento documenti:', error);
+      setDocuments([]);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -75,68 +99,10 @@ export default function Docx() {
     );
   }
 
-  const documents: Document[] = [
-    {
-      id: '1',
-      title: 'Modulo Richiesta Licenza Taxi',
-      description: 'Template per la richiesta di nuova licenza taxi comunale',
-      type: 'template',
-      category: 'Licenze',
-      size: '245 KB',
-      lastModified: '2024-01-15',
-      author: 'Ufficio Trasporti',
-      downloads: 156
-    },
-    {
-      id: '2',
-      title: 'Guida Compilazione Domanda NCC',
-      description: 'Istruzioni dettagliate per la compilazione della domanda di autorizzazione NCC',
-      type: 'guide',
-      category: 'Guide',
-      size: '1.2 MB',
-      lastModified: '2024-01-12',
-      author: 'Settore Mobilità',
-      downloads: 89
-    },
-    {
-      id: '3',
-      title: 'Report Controlli 2023',
-      description: 'Relazione annuale sui controlli effettuati nel settore TPL',
-      type: 'report',
-      category: 'Report',
-      size: '3.4 MB',
-      lastModified: '2024-01-08',
-      author: 'Comando Polizia Locale',
-      downloads: 234
-    },
-    {
-      id: '4',
-      title: 'Modulo Comunicazione Variazioni',
-      description: 'Form per comunicare variazioni ai dati dell\'autorizzazione',
-      type: 'form',
-      category: 'Modulistica',
-      size: '180 KB',
-      lastModified: '2024-01-05',
-      author: 'Ufficio Trasporti',
-      downloads: 67
-    },
-    {
-      id: '5',
-      title: 'Checklist Requisiti Veicoli',
-      description: 'Lista di controllo per la verifica dei requisiti tecnici dei veicoli',
-      type: 'template',
-      category: 'Controlli',
-      size: '320 KB',
-      lastModified: '2024-01-03',
-      author: 'Motorizzazione',
-      downloads: 123
-    }
-  ];
-
   const filteredDocuments = documents.filter(doc => {
     const matchesSearch = searchTerm === '' || 
       doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.description.toLowerCase().includes(searchTerm.toLowerCase());
+      (doc.description && doc.description.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesType = selectedType === 'all' || doc.type === selectedType;
     const matchesCategory = selectedCategory === 'all' || doc.category === selectedCategory;
@@ -168,7 +134,7 @@ export default function Docx() {
 
   const stats = [
     { label: 'Documenti Totali', value: documents.length.toString(), icon: FileIcon, color: 'bg-blue-500' },
-    { label: 'Download Totali', value: documents.reduce((sum, doc) => sum + doc.downloads, 0).toString(), icon: Download, color: 'bg-green-500' },
+    { label: 'Download Totali', value: documents.reduce((sum, doc) => sum + (doc.download_count || 0), 0).toString(), icon: Download, color: 'bg-green-500' },
     { label: 'Template Disponibili', value: documents.filter(d => d.type === 'template').length.toString(), icon: FolderOpen, color: 'bg-purple-500' },
     { label: 'Guide Operative', value: documents.filter(d => d.type === 'guide').length.toString(), icon: Eye, color: 'bg-orange-500' }
   ];
@@ -338,16 +304,16 @@ export default function Docx() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-1">
                         <User className="h-3 w-3" />
-                        <span>{doc.author}</span>
+                        <span>{doc.uploaded_by || 'Sistema'}</span>
                       </div>
-                      <span>{doc.size}</span>
+                      <span>{doc.file_size ? `${doc.file_size} KB` : 'N/A'}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-1">
                         <Calendar className="h-3 w-3" />
-                        <span>{new Date(doc.lastModified).toLocaleDateString('it-IT')}</span>
+                        <span>{new Date(doc.created_at).toLocaleDateString('it-IT')}</span>
                       </div>
-                      <span>{doc.downloads} download</span>
+                      <span>{doc.download_count || 0} download</span>
                     </div>
                   </div>
                   
