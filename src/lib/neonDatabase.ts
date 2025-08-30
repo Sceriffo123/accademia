@@ -887,14 +887,14 @@ async function insertDefaultRoleConfiguration() {
                      'normatives.view', 'normatives.create', 'normatives.edit', 'normatives.delete', 'normatives.publish',
                      'system.settings', 'system.permissions', 'system.logs', 'reports.view', 'reports.export',
                      'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.upload'],
-        sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'superadmin', 'reports', 'settings']
+        sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'superadmin', 'reports', 'settings', 'documents']
       },
       {
         role: 'admin',
         permissions: ['users.view', 'users.create', 'users.edit', 'normatives.view', 'normatives.create', 
                      'normatives.edit', 'normatives.delete', 'normatives.publish', 'system.logs', 'reports.view', 'reports.export',
                      'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.upload'],
-        sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'reports']
+        sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'reports', 'documents']
       },
       {
         role: 'operator',
@@ -904,7 +904,7 @@ async function insertDefaultRoleConfiguration() {
       {
         role: 'user',
         permissions: ['normatives.view', 'documents.view'],
-        sections: ['dashboard', 'normatives', 'education']
+        sections: ['dashboard', 'normatives', 'education', 'documents']
       },
       {
         role: 'guest',

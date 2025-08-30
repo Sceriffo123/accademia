@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getUserPermissions, getAllDocuments } from '../lib/neonDatabase';
+import { getUserPermissions, getAllDocuments, getUserSections } from '../lib/neonDatabase';
 import { 
   FolderOpen, 
   Search, 
@@ -46,10 +46,12 @@ export default function Docx() {
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userSections, setUserSections] = useState<string[]>([]);
 
   useEffect(() => {
     if (profile?.role) {
       loadUserPermissions();
+      loadUserSections();
       loadDocuments();
     }
   }, [profile?.role]);
@@ -61,6 +63,16 @@ export default function Docx() {
     } catch (error) {
       console.error('Errore caricamento permessi:', error);
       setUserPermissions([]);
+    }
+  }
+
+  async function loadUserSections() {
+    try {
+      const sections = await getUserSections(profile?.role || '');
+      setUserSections(sections);
+    } catch (error) {
+      console.error('Errore caricamento sezioni:', error);
+      setUserSections([]);
     }
   }
 
@@ -82,6 +94,24 @@ export default function Docx() {
   const canEdit = userPermissions.includes('documents.edit');
   const canDelete = userPermissions.includes('documents.delete');
   const canUpload = userPermissions.includes('documents.upload');
+  const sectionVisible = userSections.includes('documents');
+
+  // Controllo visibilità sezione
+  if (!sectionVisible) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Sezione Non Disponibile
+          </h1>
+          <p className="text-gray-600">
+            La sezione Documenti non è abilitata per il tuo ruolo attuale.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!canView) {
     return (

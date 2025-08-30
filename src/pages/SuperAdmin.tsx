@@ -266,7 +266,7 @@ export default function SuperAdmin() {
   };
 
   const categories = [...new Set(permissions.map(p => p.category))];
-  const sections = ['dashboard', 'users', 'normatives', 'education', 'admin', 'superadmin', 'reports', 'settings'];
+  const sections = ['dashboard', 'users', 'normatives', 'education', 'admin', 'superadmin', 'reports', 'settings', 'documents'];
 
   if (loading) {
     return (
@@ -512,7 +512,8 @@ export default function SuperAdmin() {
                              section === 'admin' ? 'Amministrazione' :
                              section === 'superadmin' ? 'Super Admin' :
                              section === 'reports' ? 'Report' :
-                             section === 'settings' ? 'Impostazioni' : section}
+                             section === 'settings' ? 'Impostazioni' :
+                             section === 'documents' ? 'Documenti' : section}
                           </td>
                           {Array.from(roleMatrix.keys()).map(role => {
                             const roleData = roleMatrix.get(role);
