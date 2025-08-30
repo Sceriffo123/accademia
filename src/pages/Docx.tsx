@@ -52,14 +52,31 @@ export default function Docx() {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [userSections, setUserSections] = useState<string[]>([]);
   const [uploaderName, setUploaderName] = useState<string>('');
+  const [userNamesCache, setUserNamesCache] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     if (selectedDocument?.uploaded_by) {
-      getUserName(selectedDocument.uploaded_by).then(name => {
+      getUserName(selectedDocument.uploaded_by).then((name: string) => {
         setUploaderName(name);
       });
     }
   }, [selectedDocument]);
+
+  useEffect(() => {
+    if (profile?.role) {
+      loadUserPermissions();
+      loadUserSections();
+      loadDocuments();
+    }
+  }, [profile?.role]);
+
+  useEffect(() => {
+    if (profile?.role) {
+      loadUserPermissions();
+      loadUserSections();
+      loadDocuments();
+    }
+  }, [profile?.role]);
 
   async function loadUserPermissions() {
     try {
@@ -78,6 +95,25 @@ export default function Docx() {
     } catch (error) {
       console.error('Errore caricamento sezioni:', error);
       setUserSections([]);
+    }
+  }
+
+  async function loadDocuments() {
+    try {
+      console.log('🎓 DOCX: Inizio caricamento documenti...');
+      setLoading(true);
+      const docs = await getAllDocuments();
+      console.log('🎓 DOCX: Documenti caricati dal database:', docs);
+      console.log('🎓 DOCX: Numero documenti:', docs.length);
+      // Cast per risolvere il problema dei tipi
+      setDocuments(docs as unknown as Document[]);
+      console.log('🎓 DOCX: Documenti salvati nello stato');
+    } catch (error) {
+      console.error('🚨 DOCX: Errore caricamento documenti:', error);
+      setDocuments([]);
+    } finally {
+      setLoading(false);
+      console.log('🎓 DOCX: Caricamento completato');
     }
   }
 
