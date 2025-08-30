@@ -157,13 +157,13 @@ export default function Admin() {
         reference_number: editingNormative.reference_number,
         publication_date: editingNormative.publication_date
           ? (editingNormative.publication_date instanceof Date
-            ? editingNormative.publication_date.toISOString().split('T')[0]
-            : new Date(editingNormative.publication_date).toISOString().split('T')[0])
+            ? formatDateForInput(editingNormative.publication_date)
+            : editingNormative.publication_date)
           : editingNormative.publication_date,
         effective_date: editingNormative.effective_date
           ? (editingNormative.effective_date instanceof Date
-            ? editingNormative.effective_date.toISOString().split('T')[0]
-            : new Date(editingNormative.effective_date).toISOString().split('T')[0])
+            ? formatDateForInput(editingNormative.effective_date)
+            : editingNormative.effective_date)
           : editingNormative.effective_date,
         tags: editingNormative.tags
       });
@@ -203,21 +203,35 @@ export default function Admin() {
 
   // Handler per aprire modal di modifica
   function handleEditNormative(normative: any) {
-    // Formatta correttamente le date per gli input HTML5 date
+    // Formatta correttamente le date per gli input HTML5 date SENZA cambiare timezone
     const formattedNormative = {
       ...normative,
       publication_date: normative.publication_date
-        ? new Date(normative.publication_date).toISOString().split('T')[0]
+        ? formatDateForInput(normative.publication_date)
         : '',
       effective_date: normative.effective_date
-        ? new Date(normative.effective_date).toISOString().split('T')[0]
+        ? formatDateForInput(normative.effective_date)
         : ''
     };
     setEditingNormative(formattedNormative);
     setShowEditNormative(true);
   }
 
-  // Handler per gestire i tag
+  // Funzione per formattare le date per input HTML5 SENZA problemi di timezone
+  function formatDateForInput(dateValue: any): string {
+    if (!dateValue) return '';
+    
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return '';
+    
+    // Usa il timezone locale per evitare problemi di conversione UTC
+    // Formato YYYY-MM-DD mantenendo il giorno originale
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  }
   function handleAddTag() {
     if (tagInput.trim() && !normativeForm.tags.includes(tagInput.trim())) {
       setNormativeForm({
