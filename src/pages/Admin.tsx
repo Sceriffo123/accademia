@@ -284,6 +284,14 @@ export default function Admin() {
     });
   }
 
+  function handleAddTagToEditing() {
+    if (tagInput.trim() && editingNormative && !editingNormative.tags?.includes(tagInput.trim())) {
+      const newTags = [...(editingNormative.tags || []), tagInput.trim()];
+      setEditingNormative({...editingNormative, tags: newTags});
+      setTagInput('');
+    }
+  }
+
   // Handler per download PDF documento (Admin)
   async function handleDownloadDocumentPDF(doc: any) {
     try {
@@ -1477,6 +1485,23 @@ export default function Admin() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleAddTagToEditing()}
+                      placeholder="Aggiungi tag..."
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddTagToEditing}
+                      className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                    >
+                      Aggiungi
+                    </button>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {editingNormative.tags?.map((tag: string, index: number) => (
                       <span
