@@ -29,7 +29,8 @@ import {
   Info,
   X,
   Database,
-  Search
+  Search,
+  HelpCircle
 } from 'lucide-react';
 
 interface Notification {
@@ -58,6 +59,7 @@ export default function SuperAdmin() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTableName, setSelectedTableName] = useState('');
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   function addNotification(type: 'success' | 'error' | 'info', title: string, message: string) {
     const id = Date.now().toString();
@@ -323,18 +325,27 @@ export default function SuperAdmin() {
 
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="p-3 bg-purple-100 rounded-xl">
-              <Crown className="h-8 w-8 text-purple-800" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-3 bg-purple-100 rounded-xl">
+                <Crown className="h-8 w-8 text-purple-800" />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                  Pannello Super Amministratore
+                </h1>
+                <p className="text-gray-600">
+                  Controllo completo su permessi, ruoli e visibilità del sistema
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                Pannello Super Amministratore
-              </h1>
-              <p className="text-gray-600">
-                Controllo completo su permessi, ruoli e visibilità del sistema
-              </p>
-            </div>
+            <button
+              onClick={() => setShowHelpModal(true)}
+              className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
+              title="Guida e aiuto"
+            >
+              <HelpCircle className="h-6 w-6" />
+            </button>
           </div>
           
           {hasChanges && (
@@ -658,7 +669,219 @@ export default function SuperAdmin() {
         </div>
       </div>
 
-      {/* Explore Records Modal */}
+      {/* Help Modal */}
+      {showHelpModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+              <div className="flex items-center space-x-3">
+                <div className="p-3 bg-blue-100 rounded-xl">
+                  <HelpCircle className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    Guida Pannello SuperAdmin
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Tutto quello che devi sapere per gestire il sistema
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowHelpModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
+              <div className="space-y-8">
+                {/* Sezioni del pannello */}
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Shield className="h-5 w-5 text-purple-600 mr-2" />
+                    Sezioni del Pannello
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Shield className="h-4 w-4 text-purple-600" />
+                        <span className="font-medium text-purple-900">Gestione Permessi</span>
+                      </div>
+                      <p className="text-sm text-purple-700">
+                        Controlla i permessi granulari per ogni ruolo. Clicca sui lucchetti per abilitare/disabilitare permessi specifici.
+                      </p>
+                    </div>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Eye className="h-4 w-4 text-green-600" />
+                        <span className="font-medium text-green-900">Visibilità Sezioni</span>
+                      </div>
+                      <p className="text-sm text-green-700">
+                        Gestisci quali sezioni del menu sono visibili per ogni ruolo. Clicca sugli occhi per mostrare/nascondere sezioni.
+                      </p>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Settings className="h-4 w-4 text-blue-600" />
+                        <span className="font-medium text-blue-900">Impostazioni Sistema</span>
+                      </div>
+                      <p className="text-sm text-blue-700">
+                        Configurazioni avanzate del sistema. Verrà sviluppato nei prossimi aggiornamenti.
+                      </p>
+                    </div>
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Database className="h-4 w-4 text-orange-600" />
+                        <span className="font-medium text-orange-900">Database Tables</span>
+                      </div>
+                      <p className="text-sm text-orange-700">
+                        Esplora e gestisci le tabelle del database. Visualizza schema, esplora record e monitora le performance.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Come funziona */}
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Info className="h-5 w-5 text-blue-600 mr-2" />
+                    Come Funziona
+                  </h4>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h5 className="font-medium text-blue-900 mb-2">Controlli Visivi</h5>
+                        <ul className="space-y-1 text-sm text-blue-800">
+                          <li>• <Unlock className="inline h-3 w-3" /> Verde = Permesso abilitato</li>
+                          <li>• <Lock className="inline h-3 w-3" /> Grigio = Permesso disabilitato</li>
+                          <li>• <Eye className="inline h-3 w-3" /> Verde = Sezione visibile</li>
+                          <li>• <EyeOff className="inline h-3 w-3" /> Grigio = Sezione nascosta</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <h5 className="font-medium text-blue-900 mb-2">Ruoli del Sistema</h5>
+                        <ul className="space-y-1 text-sm text-blue-800">
+                          <li>• <Crown className="inline h-3 w-3" /> SuperAdmin = Controllo totale</li>
+                          <li>• <Users className="inline h-3 w-3" /> Admin = Gestione utenti</li>
+                          <li>• <Shield className="inline h-3 w-3" /> Operator = Lettura limitata</li>
+                          <li>• <Eye className="inline h-3 w-3" /> User = Solo lettura</li>
+                          <li>• <Lock className="inline h-3 w-3" /> Guest = Accesso minimo</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Protezioni di Sicurezza */}
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+                    Protezioni di Sicurezza
+                  </h4>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-start space-x-3">
+                        <CheckCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium text-red-900">SuperAdmin Protetto</p>
+                          <p className="text-sm text-red-800">
+                            Il SuperAdmin NON può disabilitare la propria sezione "Super Admin" per evitare blocchi del sistema.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <CheckCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium text-red-900">Controlli Frontend/Backend</p>
+                          <p className="text-sm text-red-800">
+                            Le protezioni sono implementate sia nel frontend che nel database per massima sicurezza.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <CheckCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium text-red-900">Logging Sicurezza</p>
+                          <p className="text-sm text-red-800">
+                            Tutti i tentativi di modifica vengono registrati per audit trail completo.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Come salvare */}
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Save className="h-5 w-5 text-green-600 mr-2" />
+                    Salvare le Modifiche
+                  </h4>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h5 className="font-medium text-green-900 mb-2">Indicatore Modifiche</h5>
+                        <p className="text-sm text-green-800 mb-3">
+                          Quando fai modifiche, appare un banner giallo in alto con il messaggio "Hai modifiche non salvate".
+                        </p>
+                        <div className="bg-yellow-100 border border-yellow-300 rounded p-3 text-xs">
+                          <div className="flex items-center space-x-2 text-yellow-800">
+                            <Settings className="h-4 w-4" />
+                            <span>Hai modifiche non salvate</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <h5 className="font-medium text-green-900 mb-2">Pulsanti Azioni</h5>
+                        <div className="space-y-2">
+                          <button className="w-full bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 transition-colors flex items-center justify-center space-x-2">
+                            <Save className="h-4 w-4" />
+                            <span>Salva</span>
+                          </button>
+                          <button className="w-full bg-gray-600 text-white px-4 py-2 rounded text-sm hover:bg-gray-700 transition-colors flex items-center justify-center space-x-2">
+                            <RotateCcw className="h-4 w-4" />
+                            <span>Reset</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Suggerimenti */}
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Crown className="h-5 w-5 text-purple-600 mr-2" />
+                    Suggerimenti per l'Uso
+                  </h4>
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <ul className="space-y-2 text-sm text-purple-800">
+                      <li className="flex items-start space-x-2">
+                        <CheckCircle className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                        <span>Modifica i permessi con cautela - ogni ruolo ha uno scopo specifico</span>
+                      </li>
+                      <li className="flex items-start space-x-2">
+                        <CheckCircle className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                        <span>Usa la sezione Database per monitorare le performance del sistema</span>
+                      </li>
+                      <li className="flex items-start space-x-2">
+                        <CheckCircle className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                        <span>Salva regolarmente le modifiche per evitare perdite di configurazione</span>
+                      </li>
+                      <li className="flex items-start space-x-2">
+                        <CheckCircle className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                        <span>Il pulsante Reset riporta tutto alle impostazioni predefinite</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {showExploreModal && selectedTableRecords && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden">
