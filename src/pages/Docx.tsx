@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getUserPermissions, getAllDocuments, getUserSections } from '../lib/neonDatabase';
+import { getUserPermissions, getAllDocuments, getUserSections, getUserById } from '../lib/neonDatabase';
 import { 
   FolderOpen, 
   Search, 
@@ -51,14 +51,15 @@ export default function Docx() {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [userSections, setUserSections] = useState<string[]>([]);
+  const [uploaderName, setUploaderName] = useState<string>('');
 
   useEffect(() => {
-    if (profile?.role) {
-      loadUserPermissions();
-      loadUserSections();
-      loadDocuments();
+    if (selectedDocument?.uploaded_by) {
+      getUserName(selectedDocument.uploaded_by).then(name => {
+        setUploaderName(name);
+      });
     }
-  }, [profile?.role]);
+  }, [selectedDocument]);
 
   async function loadUserPermissions() {
     try {
@@ -80,21 +81,26 @@ export default function Docx() {
     }
   }
 
-  async function loadDocuments() {
+  async function getUserName(userId: string): Promise<string> {
     try {
-      console.log('🎓 DOCX: Inizio caricamento documenti...');
-      setLoading(true);
-      const docs = await getAllDocuments();
-      console.log('🎓 DOCX: Documenti caricati dal database:', docs);
-      console.log('🎓 DOCX: Numero documenti:', docs.length);
-      setDocuments(docs);
-      console.log('🎓 DOCX: Documenti salvati nello stato');
+      // Controlla prima la cache
+      if (userNamesCache.has(userId)) {
+        return userNamesCache.get(userId)!;
+      }
+
+      // Se non in cache, recupera dal database
+      const user = await getUserById(userId);
+      if (user) {
+        const fullName = user.full_name;
+        // Salva in cache per future richieste
+        setUserNamesCache(prev => new Map(prev.set(userId, fullName)));
+        return fullName;
+      }
+
+      return 'Utente Sconosciuto';
     } catch (error) {
-      console.error('🚨 DOCX: Errore caricamento documenti:', error);
-      setDocuments([]);
-    } finally {
-      setLoading(false);
-      console.log('🎓 DOCX: Caricamento completato');
+      console.error('Errore recupero nome utente:', error);
+      return 'Utente Sconosciuto';
     }
   }
 
@@ -537,7 +543,7 @@ export default function Docx() {
                     <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Caricato da:</span>
-                        <span className="font-medium text-gray-900">{selectedDocument.uploaded_by || 'Sistema'}</span>
+                        <span className="font-medium text-gray-900">{uploaderName || 'Caricamento...'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Data upload:</span>
