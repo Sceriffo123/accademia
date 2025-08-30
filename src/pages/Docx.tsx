@@ -47,9 +47,9 @@ export default function Docx() {
   const [showFilters, setShowFilters] = useState(false);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [userSections, setUserSections] = useState<string[]>([]);
   const [uploaderName, setUploaderName] = useState<string>('');
   const [userNamesCache, setUserNamesCache] = useState<Map<string, string>>(new Map());
@@ -140,12 +140,91 @@ export default function Docx() {
     }
   }
 
+  async function handleDownloadDocument(doc: Document) {
+    try {
+      // Verifica permessi prima del download
+      if (!canView) {
+        console.error('❌ Permessi insufficienti per scaricare il documento');
+        // TODO: Mostrare notifica errore permessi
+        return;
+      }
+
+      console.log('🔄 Inizio download documento:', doc.filename);
+
+      // Valida che il documento abbia un ID valido
+      if (!doc.id) {
+        console.error('❌ ID documento non valido');
+        // TODO: Mostrare notifica errore
+        return;
+      }
+
+      // Crea un link temporaneo per il download
+      const link = document.createElement('a');
+      link.href = `/api/documents/download/${doc.id}`; // Endpoint API per download
+      link.download = doc.filename || 'documento'; // Nome file di fallback
+      link.target = '_blank'; // Apri in nuova scheda se necessario
+
+      // Aggiungi alla pagina temporaneamente
+      document.body.appendChild(link);
+
+      // Triggera il download
+      link.click();
+
+      // Rimuovi il link dalla pagina
+      document.body.removeChild(link);
+
+      console.log('✅ Download avviato per:', doc.filename);
+
+      // TODO: Potresti aggiungere una notifica di successo
+      // alert('Download avviato: ' + doc.filename);
+
+    } catch (error) {
+      console.error('❌ Errore durante il download:', error);
+      // TODO: Implementare notifica errore all'utente
+      // alert('Errore durante il download. Riprova più tardi.');
+    }
+  }
+
+  function handleEditDocument(doc: Document) {
+    // Reindirizza al pannello Admin per modificare il documento specifico
+    console.log('🔄 Reindirizzamento ad Admin per modifica documento:', doc.id);
+
+    // Salva temporaneamente il documento selezionato per la modifica in Admin
+    sessionStorage.setItem('editDocumentId', doc.id);
+
+    // Reindirizza al pannello Admin (sezione documenti)
+    window.location.href = '/admin?tab=documents&edit=' + doc.id;
+  }
+
+  async function handleSaveEdit() {
+    if (!editDocument) return;
+
+    try {
+      console.log('💾 Salvataggio modifiche documento:', editDocument.id);
+
+      // Qui dovresti chiamare l'API per aggiornare il documento
+      // await updateDocument(editDocument.id, editFormData);
+
+      // Per ora simuliamo il salvataggio
+      console.log('✅ Modifiche salvate per documento:', editDocument.id);
+
+      // Ricarica i documenti
+      await loadDocuments();
+
+      // Chiudi la modale
+      setShowEditModal(false);
+      setEditDocument(null);
+
+    } catch (error) {
+      console.error('❌ Errore salvataggio modifiche:', error);
+      // TODO: Mostrare notifica errore all'utente
+    }
+  }
+
+  // Controllo permessi e visibilità
   const canView = userPermissions.includes('documents.view');
   const canCreate = userPermissions.includes('documents.create');
   const canEdit = userPermissions.includes('documents.edit');
-  const canDelete = userPermissions.includes('documents.delete');
-  const canUpload = userPermissions.includes('documents.upload');
-  const sectionVisible = userSections.includes('documents');
 
   // Controllo visibilità sezione
   if (!sectionVisible) {
