@@ -155,26 +155,12 @@ export default function Docx() {
       // Importazione dinamica per evitare problemi di dipendenza circolare
       const { generatePDF } = await import('../lib/pdfGenerator');
       const blob = generatePDF(doc);
-      
-      // Crea URL temporaneo per il blob
-      const blobUrl = window.URL.createObjectURL(blob);
-
-      // Crea link per il download
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = doc.filename || 'documento.pdf';
-      
-      // Aggiungi alla pagina temporaneamente
-      document.body.appendChild(link);
-      
-      // Triggera il download
-      link.click();
-      
-      // Cleanup: rimuovi link e revoca URL blob
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
-
-      console.log('✅ Download completato per:', doc.filename);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.filename;
+      a.click();
+      URL.revokeObjectURL(url);
 
     } catch (error) {
       console.error('❌ Errore durante il download:', error);
@@ -730,10 +716,7 @@ export default function Docx() {
                   </div>
 
                   <div className="bg-white border border-gray-200 rounded-xl p-6">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                      <User className="h-5 w-5 text-green-600 mr-2" />
-                      Informazioni Upload
-                    </h4>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Informazioni Upload</h4>
                     <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Caricato da:</span>
