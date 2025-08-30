@@ -16,6 +16,7 @@ import {
   Key,
   CheckCircle,
   AlertCircle,
+  AlertTriangle,
   Info,
   FolderOpen
 } from 'lucide-react';
