@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getAllDocuments, getUserPermissions, getUserSections, getUserById } from '../lib/neonDatabase';
+import { getAllDocuments, getUserPermissions, getUserSections, getUserById, updateDocument } from '../lib/neonDatabase';
 import { 
   FileText, 
   Download, 
@@ -15,7 +15,8 @@ import {
   Plus, 
   FolderOpen, 
   X, 
-  Info
+  Info,
+  Save
 } from 'lucide-react';
 
 // Interfaccia Document che corrisponde al database
@@ -47,17 +48,13 @@ export default function Docx() {
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editFormData, setEditFormData] = useState({
-    title: '',
-    description: '',
-    category: ''
-  });
-  const [loading, setLoading] = useState(true);
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
+  const [userNamesCache, setUserNamesCache] = useState<Map<string, string>>(new Map());
   const [userSections, setUserSections] = useState<string[]>([]);
   const [uploaderName, setUploaderName] = useState<string>('');
-  const [userNamesCache, setUserNamesCache] = useState<Map<string, string>>(new Map());
+  const [loading, setLoading] = useState(true);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   useEffect(() => {
     if (selectedDocument?.uploaded_by) {
@@ -134,7 +131,7 @@ export default function Docx() {
       if (user) {
         const fullName = user.full_name;
         // Salva in cache per future richieste
-        setUserNamesCache(prev => new Map(prev.set(userId, fullName)));
+        setUserNamesCache((prev: Map<string, string>) => new Map(prev.set(userId, fullName)));
         return fullName;
       }
 
@@ -186,45 +183,41 @@ export default function Docx() {
     } catch (error) {
       console.error('❌ Errore durante il download:', error);
       // TODO: Implementare notifica errore all'utente
-      // alert('Errore durante il download. Riprova più tardi.');
+      alert('Errore durante il download. Riprova più tardi.');
     }
   }
 
-  function handleEditDocument(doc: Document) {
-    // Abilita modalità modifica nella modale
-    setSelectedDocument(doc);
-    setEditFormData({
-      title: doc.title || '',
-      description: doc.description || '',
-      category: doc.category || ''
-    });
+  // Handler per aprire modal di modifica documento (come in Admin)
+  function handleEditDocument(document: Document) {
+    console.log('🔧 Avvio modalità modifica per documento:', document.title);
+    setEditingDocument(document);
     setIsEditMode(true);
-    setShowPreviewModal(true);
   }
 
+  // Handler per salvare modifiche documento (come in Admin)
   async function handleSaveEdit() {
-    if (!selectedDocument) return;
-
+    if (!editingDocument) {
+      console.error('❌ Nessun documento da modificare');
+      return;
+    }
+    
     try {
-      console.log('💾 Salvataggio modifiche documento:', selectedDocument.id);
-
-      // TODO: Implementare chiamata API per aggiornare documento
-      // await updateDocument(selectedDocument.id, editFormData);
-
-      // Per ora simuliamo il salvataggio
-      console.log('✅ Modifiche salvate per documento:', selectedDocument.id);
-
-      // Ricarica i documenti
+      console.log('💾 Salvataggio modifiche documento:', editingDocument.title);
+      await updateDocument(editingDocument.id, editingDocument);
       loadDocuments();
-
-      // Esci dalla modalità modifica
       setIsEditMode(false);
-      setShowPreviewModal(false);
+      setEditingDocument(null);
 
     } catch (error) {
       console.error('❌ Errore salvataggio modifiche:', error);
       // TODO: Mostrare notifica errore all'utente
     }
+  }
+
+  // Handler per annullare modifiche
+  function handleCancelEdit() {
+    setIsEditMode(false);
+    setEditingDocument(null);
   }
 
   // Controllo permessi e visibilità
@@ -513,7 +506,9 @@ export default function Docx() {
                         <Download className="h-4 w-4" />
                       </button>
                       <button 
+                        onClick={() => handleEditDocument(doc)}
                         disabled={!canEdit}
+                        title={canEdit ? "Modifica documento" : "Non hai i permessi per modificare"}
                         className={`p-2 transition-colors ${
                           canEdit ? 'text-gray-400 hover:text-orange-600' : 'text-gray-300 cursor-not-allowed'
                         }`}
@@ -591,10 +586,7 @@ export default function Docx() {
                     <div className="flex items-center space-x-2">
                       {canView && (
                         <button
-                          onClick={() => {
-                            // TODO: Implementare download
-                            console.log('Download documento:', selectedDocument.id);
-                          }}
+                          onClick={() => handleDownloadDocument(selectedDocument)}
                           className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
                           <Download className="h-4 w-4" />
@@ -603,10 +595,7 @@ export default function Docx() {
                       )}
                       {canEdit && (
                         <button
-                          onClick={() => {
-                            // TODO: Implementare modifica
-                            console.log('Modifica documento:', selectedDocument.id);
-                          }}
+                          onClick={() => handleEditDocument(selectedDocument)}
                           className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
                         >
                           <Edit3 className="h-4 w-4" />
@@ -616,6 +605,93 @@ export default function Docx() {
                     </div>
                   </div>
                 </div>
+
+                {/* Modal di modifica inline */}
+                {isEditMode && editingDocument && (
+                  <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Edit3 className="h-5 w-5 text-orange-600 mr-2" />
+                      Modifica Documento
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Titolo *</label>
+                        <input
+                          type="text"
+                          value={editingDocument.title}
+                          onChange={(e) => setEditingDocument({...editingDocument, title: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Categoria *</label>
+                        <input
+                          type="text"
+                          value={editingDocument.category}
+                          onChange={(e) => setEditingDocument({...editingDocument, category: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione</label>
+                      <textarea
+                        value={editingDocument.description || ''}
+                        onChange={(e) => setEditingDocument({...editingDocument, description: e.target.value})}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
+                        <select
+                          value={editingDocument.type}
+                          onChange={(e) => setEditingDocument({...editingDocument, type: e.target.value as 'template' | 'form' | 'guide' | 'report'})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="template">Template</option>
+                          <option value="form">Modulo</option>
+                          <option value="guide">Guida</option>
+                          <option value="report">Report</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Stato</label>
+                        <select
+                          value={editingDocument.status}
+                          onChange={(e) => setEditingDocument({...editingDocument, status: e.target.value as 'active' | 'draft' | 'archived'})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="active">Attivo</option>
+                          <option value="draft">Bozza</option>
+                          <option value="archived">Archiviato</option>
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-end space-x-3">
+                      <button
+                        onClick={handleCancelEdit}
+                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        Annulla
+                      </button>
+                      <button
+                        onClick={handleSaveEdit}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                      >
+                        <Save className="h-4 w-4" />
+                        <span>Salva Modifiche</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Document Details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
