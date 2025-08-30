@@ -5,7 +5,6 @@ import {
   ArrowLeft, 
   Calendar, 
   Tag, 
-  FileText, 
   Share2, 
   Bookmark,
   Download,
@@ -51,6 +50,26 @@ export default function NormativeDetail() {
       case 'regulation': return 'bg-green-100 text-green-800 border-green-200';
       case 'ruling': return 'bg-orange-100 text-orange-800 border-orange-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  }
+
+  function handleDownload() {
+    if (!normative?.file_path) {
+      alert('Nessun file allegato disponibile per questa normativa');
+      return;
+    }
+    
+    // Se è un URL esterno (Google Drive, etc.)
+    if (normative.file_path.startsWith('http')) {
+      window.open(normative.file_path, '_blank');
+    } else {
+      // Se è un percorso locale, crea un link di download
+      const link = document.createElement('a');
+      link.href = normative.file_path;
+      link.download = normative.filename || 'normativa.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   }
 
@@ -144,7 +163,12 @@ export default function NormativeDetail() {
                 <button className="p-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors">
                   <Share2 className="h-5 w-5" />
                 </button>
-                <button className="p-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors">
+                <button 
+                  onClick={handleDownload}
+                  title="Scarica file allegato"
+                  className="p-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!normative?.file_path}
+                >
                   <Download className="h-5 w-5" />
                 </button>
               </div>
