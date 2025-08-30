@@ -176,7 +176,7 @@ export default function Admin() {
       addNotification('success', 'Normativa Aggiornata', `La normativa "${editingNormative.title}" è stata modificata`);
     } catch (error) {
       console.error('🚨 Errore in handleUpdateNormative:', error);
-      console.error('🚨 Dettagli errore:', error?.message);
+      console.error('🚨 Dettagli errore:', error instanceof Error ? error.message : String(error));
       addNotification('error', 'Errore Aggiornamento', 'Non è stato possibile aggiornare la normativa');
     }
   }
@@ -203,7 +203,17 @@ export default function Admin() {
 
   // Handler per aprire modal di modifica
   function handleEditNormative(normative: any) {
-    setEditingNormative({...normative});
+    // Formatta correttamente le date per gli input HTML5 date
+    const formattedNormative = {
+      ...normative,
+      publication_date: normative.publication_date
+        ? new Date(normative.publication_date).toISOString().split('T')[0]
+        : '',
+      effective_date: normative.effective_date
+        ? new Date(normative.effective_date).toISOString().split('T')[0]
+        : ''
+    };
+    setEditingNormative(formattedNormative);
     setShowEditNormative(true);
   }
 
@@ -687,7 +697,12 @@ export default function Admin() {
                              normative.type === 'regulation' ? 'Regolamento' : 'Sentenza'}
                           </span>
                           <span>{normative.reference_number}</span>
-                          <span>{new Date(normative.publication_date).toLocaleDateString('it-IT')}</span>
+                          <span>
+                            {normative.publication_date 
+                              ? new Date(normative.publication_date).toLocaleDateString('it-IT')
+                              : 'N/A'
+                            }
+                          </span>
                         </div>
                       </div>
                       
