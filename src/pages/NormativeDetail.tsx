@@ -25,6 +25,7 @@ export default function NormativeDetail() {
   const [loading, setLoading] = useState(true);
   const [bookmarked, setBookmarked] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
   useEffect(() => {
@@ -62,24 +63,43 @@ export default function NormativeDetail() {
     }
   }
 
-  function handleDownload() {
+  function handleViewInPage() {
     if (!normative?.file_path) {
-      alert('Nessun file allegato disponibile per questa normativa');
+      alert('Nessun file disponibile per questa normativa');
       return;
     }
     
-    // Se è un URL esterno (Google Drive, etc.)
+    // Apri sempre in una nuova finestra per la lettura
+    window.open(normative.file_path, '_blank');
+    setShowDownloadMenu(false);
+  }
+
+  function handleDownloadFile() {
+    if (!normative?.file_path) {
+      alert('Nessun file disponibile per questa normativa');
+      return;
+    }
+    
+    // Forza il download del file
     if (normative.file_path.startsWith('http')) {
-      window.open(normative.file_path, '_blank');
-    } else {
-      // Se è un percorso locale, crea un link di download
+      // Per URL esterni, crea un link temporaneo che forza il download
       const link = document.createElement('a');
       link.href = normative.file_path;
-      link.download = normative.filename || 'normativa.pdf';
+      link.download = `${normative.reference_number.replace(/[^a-zA-Z0-9]/g, '_')}_${normative.title.substring(0, 50).replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      // Per percorsi locali
+      const link = document.createElement('a');
+      link.href = normative.file_path;
+      link.download = `${normative.reference_number.replace(/[^a-zA-Z0-9]/g, '_')}_normativa.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     }
+    setShowDownloadMenu(false);
   }
 
   function handleCopyLink() {
@@ -131,16 +151,17 @@ export default function NormativeDetail() {
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Element;
-      if (!target.closest('.share-menu-container')) {
+      if (!target.closest('.share-menu-container') && !target.closest('.download-menu-container')) {
         setShowShareMenu(false);
+        setShowDownloadMenu(false);
       }
     }
 
-    if (showShareMenu) {
+    if (showShareMenu || showDownloadMenu) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showShareMenu]);
+  }, [showShareMenu, showDownloadMenu]);
 
   const shareOptions = [
     {
@@ -314,14 +335,50 @@ export default function NormativeDetail() {
                   </div>
                 )}
                 
-                <button 
-                  onClick={handleDownload}
-                  title="Scarica file allegato"
-                  className="p-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={!normative?.file_path}
-                >
-                  <Download className="h-5 w-5" />
-                </button>
+                <div className="relative download-menu-container">
+                  <button 
+                    onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+                    title="Opzioni documento"
+                    className={`p-3 rounded-lg border transition-colors ${
+                      showDownloadMenu 
+                        ? 'bg-green-50 border-green-200 text-green-600' 
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-100'
+                    }`}
+                    disabled={!normative?.file_path}
+                  >
+                    <Download className="h-5 w-5" />
+                  </button>
+                  
+                  {/* Download Menu */}
+                  {showDownloadMenu && normative?.file_path && (
+                    <div className="absolute top-full right-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 p-3 z-50 min-w-[200px]">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                        Opzioni Documento
+                      </h4>
+                      <div className="space-y-2">
+                        <button
+                          onClick={handleViewInPage}
+                          className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors text-sm"
+                        >
+                          <AlertCircle className="h-4 w-4" />
+                          <span>Apri per Lettura</span>
+                        </button>
+                        <button
+                          onClick={handleDownloadFile}
+                          className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-green-600 hover:bg-green-50 transition-colors text-sm"
+                        >
+                          <Download className="h-4 w-4" />
+                          <span>Scarica File</span>
+                        </button>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <p className="text-xs text-gray-500 text-center">
+                          Scegli come consultare il documento
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
