@@ -267,29 +267,23 @@ export default function Dashboard() {
                       doc.type === 'form' ? 'bg-green-100 text-green-800' :
                       doc.type === 'guide' ? 'bg-purple-100 text-purple-800' :
                       'bg-orange-100 text-orange-800'
-                    </h3>
-                    <div className="flex items-center justify-between">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        normative.type === 'law' ? 'bg-blue-100 text-blue-800' :
-                        normative.type === 'regulation' ? 'bg-green-100 text-green-800' :
-                        'bg-orange-100 text-orange-800'
-                      }`}>
+                    }`}>
                       {doc.type === 'template' ? 'Template' :
                        doc.type === 'form' ? 'Modulo' :
                        doc.type === 'guide' ? 'Guida' : 'Report'}
-                      </span>
+                    </span>
                   </div>
                   <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">
                     {doc.title}
                   </h3>
                   <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500">
                       {new Date(doc.created_at).toLocaleDateString('it-IT')}
-                      </span>
-                    </div>
+                    </span>
+                  </div>
                 </div>
-                ))}
-              </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -326,7 +320,7 @@ export default function Dashboard() {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div className="bg-purple-600 h-2 rounded-full transition-all duration-300" style={{
-                  width: `${Math.min(stats.totalUsers / 50 * 100, 100)}%`
+                  width: \`${Math.min(stats.totalUsers / 50 * 100, 100)}%`
                 }}></div>
               </div>
             </div>
