@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { getAllDocuments, getUserPermissions, getUserSections, getUserById } from '../lib/neonDatabase';
 import { 
   FileText, 
   Download, 
@@ -254,7 +255,7 @@ export default function Docx() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto text-center">
-          <FileIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             Accesso Negato
           </h1>
@@ -300,7 +301,7 @@ export default function Docx() {
   };
 
   const stats = [
-    { label: 'Documenti Totali', value: documents.length.toString(), icon: FileIcon, color: 'bg-blue-500' },
+    { label: 'Documenti Totali', value: documents.length.toString(), icon: FileText, color: 'bg-blue-500' },
     { label: 'Download Totali', value: documents.reduce((sum, doc) => sum + (doc.download_count || 0), 0).toString(), icon: Download, color: 'bg-green-500' },
     { label: 'Template Disponibili', value: documents.filter(d => d.type === 'template').length.toString(), icon: FolderOpen, color: 'bg-purple-500' },
     { label: 'Guide Operative', value: documents.filter(d => d.type === 'guide').length.toString(), icon: Eye, color: 'bg-orange-500' }
@@ -527,7 +528,7 @@ export default function Docx() {
             </div>
           ) : (
             <div className="text-center py-12 text-gray-500">
-              <FileIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <p className="text-lg">Nessun documento trovato</p>
               <p className="text-sm">Prova a modificare i filtri di ricerca</p>
             </div>
@@ -714,7 +715,7 @@ export default function Docx() {
                       </div>
                     ) : (
                       <div className="text-center py-8 text-gray-500">
-                        <FileIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                         <p className="text-lg">Anteprima non disponibile</p>
                         <p className="text-sm">Scarica il documento per visualizzarne il contenuto completo</p>
                       </div>
