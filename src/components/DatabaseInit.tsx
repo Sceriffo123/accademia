@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { initializeTables, getAllNormatives } from '../lib/neonDatabase';
+import { initializeTables, getAllNormatives, insertDefaultRoleConfiguration } from '../lib/neonDatabase';
 import { GraduationCap, CheckCircle, AlertCircle, Loader, RefreshCw } from 'lucide-react';
 
 export default function DatabaseInit() {
@@ -38,6 +38,12 @@ export default function DatabaseInit() {
       const result = await initializeTables();
 
       if (result) {
+        console.log('🎓 ACCADEMIA: Tabelle create, ora configuro ruoli...');
+        setMessage('Configurazione ruoli e autorizzazioni...');
+        
+        // Configura le autorizzazioni di default per i ruoli
+        await insertDefaultRoleConfiguration();
+        
         setStatus('success');
         setMessage('Sistema Accademia pronto per l\'utilizzo');
         

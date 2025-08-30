@@ -878,7 +878,7 @@ async function insertDefaultPermissions() {
   }
 }
 
-async function insertDefaultRoleConfiguration() {
+export async function insertDefaultRoleConfiguration() {
   try {
     const roleConfigs = [
       {
