@@ -46,6 +46,7 @@ export default function Docx() {
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [userSections, setUserSections] = useState<string[]>([]);
 
   useEffect(() => {
@@ -322,6 +323,10 @@ export default function Docx() {
                 <div
                   key={doc.id}
                   className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-6 border border-gray-100 group cursor-pointer"
+                  onClick={() => {
+                    setSelectedDocument(doc);
+                    setShowPreviewModal(true);
+                  }}
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="p-3 bg-blue-100 rounded-xl">
@@ -398,6 +403,215 @@ export default function Docx() {
           )}
         </div>
       </div>
+
+      {/* Preview Modal */}
+      {showPreviewModal && selectedDocument && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+              <div className="flex items-center space-x-3">
+                <div className="p-3 bg-blue-100 rounded-xl">
+                  <FileIcon className="h-6 w-6 text-blue-800" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    Anteprima Documento
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {selectedDocument.title}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowPreviewModal(false);
+                  setSelectedDocument(null);
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
+              <div className="space-y-6">
+                {/* Document Header */}
+                <div className="bg-gray-50 rounded-xl p-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
+                    <div className="flex items-center space-x-4 mb-4 md:mb-0">
+                      <div className="p-4 bg-blue-100 rounded-xl">
+                        <FileIcon className="h-8 w-8 text-blue-800" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                          {selectedDocument.title}
+                        </h2>
+                        <div className="flex items-center space-x-3">
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getTypeColor(selectedDocument.type)}`}>
+                            {getTypeLabel(selectedDocument.type)}
+                          </span>
+                          <span className="text-sm text-gray-600">
+                            Categoria: {selectedDocument.category}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {canView && (
+                        <button
+                          onClick={() => {
+                            // TODO: Implementare download
+                            console.log('Download documento:', selectedDocument.id);
+                          }}
+                          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          <Download className="h-4 w-4" />
+                          <span>Scarica</span>
+                        </button>
+                      )}
+                      {canEdit && (
+                        <button
+                          onClick={() => {
+                            // TODO: Implementare modifica
+                            console.log('Modifica documento:', selectedDocument.id);
+                          }}
+                          className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <Edit3 className="h-4 w-4" />
+                          <span>Modifica</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Document Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white border border-gray-200 rounded-xl p-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Info className="h-5 w-5 text-blue-600 mr-2" />
+                      Dettagli Documento
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Nome file:</span>
+                        <span className="font-medium text-gray-900">{selectedDocument.filename || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Dimensione:</span>
+                        <span className="font-medium text-gray-900">
+                          {selectedDocument.file_size ? `${selectedDocument.file_size} KB` : 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Tipo MIME:</span>
+                        <span className="font-medium text-gray-900">{selectedDocument.mime_type || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Versione:</span>
+                        <span className="font-medium text-gray-900">{selectedDocument.version || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Stato:</span>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          selectedDocument.status === 'active' ? 'bg-green-100 text-green-800' :
+                          selectedDocument.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {selectedDocument.status === 'active' ? 'Attivo' :
+                           selectedDocument.status === 'draft' ? 'Bozza' :
+                           selectedDocument.status === 'archived' ? 'Archiviato' : selectedDocument.status || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-gray-200 rounded-xl p-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <User className="h-5 w-5 text-green-600 mr-2" />
+                      Informazioni Upload
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Caricato da:</span>
+                        <span className="font-medium text-gray-900">{selectedDocument.uploaded_by || 'Sistema'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Data upload:</span>
+                        <span className="font-medium text-gray-900">
+                          {new Date(selectedDocument.created_at).toLocaleDateString('it-IT', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Ultima modifica:</span>
+                        <span className="font-medium text-gray-900">
+                          {new Date(selectedDocument.updated_at).toLocaleDateString('it-IT', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Download:</span>
+                        <span className="font-medium text-gray-900">{selectedDocument.download_count || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Document Content Preview */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Eye className="h-5 w-5 text-purple-600 mr-2" />
+                    Contenuto Documento
+                  </h4>
+                  <div className="bg-gray-50 rounded-lg p-4 min-h-[200px]">
+                    {selectedDocument.description ? (
+                      <div className="prose prose-gray max-w-none">
+                        <p className="text-gray-700 leading-relaxed">
+                          {selectedDocument.description}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <FileIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p className="text-lg">Anteprima non disponibile</p>
+                        <p className="text-sm">Scarica il documento per visualizzarne il contenuto completo</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tags */}
+                {selectedDocument.tags && selectedDocument.tags.length > 0 && (
+                  <div className="bg-white border border-gray-200 rounded-xl p-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Tag</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedDocument.tags.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
