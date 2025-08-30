@@ -82,7 +82,15 @@ export default function NormativeDetail() {
         title: normative?.title,
         text: `${normative?.title} - ${normative?.reference_number}`,
         url: currentUrl
-      }).catch(console.error);
+      }).catch(() => {
+        // Fallback se Web Share API fallisce (permission denied, user cancellation, etc.)
+        navigator.clipboard.writeText(currentUrl).then(() => {
+          alert('Link copiato negli appunti!');
+        }).catch(() => {
+          // Fallback del fallback: mostra URL in un prompt
+          prompt('Copia questo link per condividere:', currentUrl);
+        });
+      });
     } else {
       // Fallback: copia URL negli appunti
       navigator.clipboard.writeText(currentUrl).then(() => {
