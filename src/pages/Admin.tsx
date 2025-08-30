@@ -348,7 +348,10 @@ export default function Admin() {
         category: editingDocument.category,
         tags: editingDocument.tags,
         version: editingDocument.version,
-        status: editingDocument.status
+        status: editingDocument.status,
+        download_count: editingDocument.download_count,
+        created_at: editingDocument.created_at,
+        updated_at: editingDocument.updated_at
       });
 
       console.log('✅ updateDocument completato');
@@ -400,11 +403,12 @@ export default function Admin() {
     }
   }
 
-  function handleRemoveDocumentTag(tagToRemove: string) {
-    setDocumentForm({
-      ...documentForm,
-      tags: documentForm.tags.filter(tag => tag !== tagToRemove)
-    });
+  function handleAddDocumentTagToEditing() {
+    if (documentTagInput.trim() && editingDocument && !editingDocument.tags?.includes(documentTagInput.trim())) {
+      const newTags = [...(editingDocument.tags || []), documentTagInput.trim()];
+      setEditingDocument({...editingDocument, tags: newTags});
+      setDocumentTagInput('');
+    }
   }
 
   function addNotification(type: 'success' | 'error' | 'info', title: string, message: string) {
@@ -1894,9 +1898,59 @@ export default function Admin() {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Conteggio Download</label>
+                    <input
+                      type="number"
+                      value={editingDocument.download_count || 0}
+                      onChange={(e) => setEditingDocument({...editingDocument, download_count: parseInt(e.target.value) || 0})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      min="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Data Creazione</label>
+                    <input
+                      type="datetime-local"
+                      value={editingDocument.created_at ? new Date(editingDocument.created_at).toISOString().slice(0, 16) : ''}
+                      onChange={(e) => setEditingDocument({...editingDocument, created_at: e.target.value ? new Date(e.target.value).toISOString() : null})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Data Modifica</label>
+                    <input
+                      type="datetime-local"
+                      value={editingDocument.updated_at ? new Date(editingDocument.updated_at).toISOString().slice(0, 16) : ''}
+                      onChange={(e) => setEditingDocument({...editingDocument, updated_at: e.target.value ? new Date(e.target.value).toISOString() : null})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
-                  <div className="flex flex-wrap gap-2 mb-2">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <input
+                      type="text"
+                      value={documentTagInput}
+                      onChange={(e) => setDocumentTagInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddDocumentTagToEditing())}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Aggiungi tag..."
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddDocumentTagToEditing}
+                      className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Aggiungi
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
                     {editingDocument.tags?.map((tag: string, index: number) => (
                       <span
                         key={index}
