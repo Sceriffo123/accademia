@@ -5,6 +5,8 @@ import {
   getRecentNormativesCount as getRecentNormativesCountFromDB,
   getAllUsers,
   getUsersCount as getUsersCountFromDB,
+  getAllDocuments as getAllDocumentsFromDB,
+  getDocumentsCount as getDocumentsCountFromDB,
   type Normative 
 } from './neonDatabase';
 
@@ -133,4 +135,22 @@ export async function updateDocument(id: string, data: any): Promise<any> {
 export async function deleteDocument(id: string): Promise<boolean> {
   const { deleteDocument } = await import('./neonDatabase');
   return await deleteDocument(id);
+}
+
+export async function getAllDocuments(): Promise<any[]> {
+  try {
+    return await getAllDocumentsFromDB();
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    return [];
+  }
+}
+
+export async function getDocumentsCount(): Promise<number> {
+  try {
+    return await getDocumentsCountFromDB();
+  } catch (error) {
+    console.error('Error counting documents:', error);
+    return 0;
+  }
 }
