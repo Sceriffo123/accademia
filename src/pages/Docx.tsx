@@ -1,21 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getUserPermissions, getAllDocuments, getUserSections, getUserById } from '../lib/neonDatabase';
 import { 
-  FolderOpen, 
+  FileText, 
+  Download, 
   Search, 
   Filter, 
   Upload, 
-  Download, 
-  Eye,
-  Edit3,
-  Trash2,
-  Calendar,
-  User,
-  ChevronRight,
-  Plus,
-  FileIcon,
-  X,
+  Eye, 
+  Edit3, 
+  Calendar, 
+  User, 
+  ChevronRight, 
+  Plus, 
+  FolderOpen, 
+  X, 
   Info
 } from 'lucide-react';
 
@@ -216,27 +214,11 @@ export default function Docx() {
       console.log('✅ Modifiche salvate per documento:', selectedDocument.id);
 
       // Ricarica i documenti
-      await loadDocuments();
+      loadDocuments();
 
       // Esci dalla modalità modifica
       setIsEditMode(false);
       setShowPreviewModal(false);
-
-    } catch (error) {
-      console.error('❌ Errore salvataggio modifiche:', error);
-      // TODO: Mostrare notifica errore all'utente
-    }
-  }
-
-      // Per ora simuliamo il salvataggio
-      console.log('✅ Modifiche salvate per documento:', editDocument.id);
-
-      // Ricarica i documenti
-      await loadDocuments();
-
-      // Chiudi la modale
-      setShowEditModal(false);
-      setEditDocument(null);
 
     } catch (error) {
       console.error('❌ Errore salvataggio modifiche:', error);
@@ -479,7 +461,7 @@ export default function Docx() {
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="p-3 bg-blue-100 rounded-xl">
-                      <FileIcon className="h-6 w-6 text-blue-800" />
+                      <FileText className="h-4 w-4 text-blue-600" />
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${getTypeColor(doc.type)}`}>
                       {getTypeLabel(doc.type)}
@@ -560,7 +542,7 @@ export default function Docx() {
             <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
               <div className="flex items-center space-x-3">
                 <div className="p-3 bg-blue-100 rounded-xl">
-                  <FileIcon className="h-6 w-6 text-blue-800" />
+                  <FileText className="h-4 w-4 text-blue-600" />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">
@@ -589,7 +571,7 @@ export default function Docx() {
                   <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
                     <div className="flex items-center space-x-4 mb-4 md:mb-0">
                       <div className="p-4 bg-blue-100 rounded-xl">
-                        <FileIcon className="h-8 w-8 text-blue-800" />
+                        <FileText className="h-6 w-6 text-blue-600" />
                       </div>
                       <div>
                         <h2 className="text-2xl font-bold text-gray-900 mb-1">
