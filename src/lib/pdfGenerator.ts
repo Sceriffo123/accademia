@@ -20,160 +20,331 @@ interface Document {
 }
 
 /**
- * Genera un PDF completo con tutti i dati del documento
+ * Genera un PDF elegante e professionale con design moderno
  */
 export function generatePDF(doc: Document): Blob {
   const pdf = new jsPDF();
   
-  // Configurazione font e colori
-  const primaryColor = [44, 62, 80]; // Blu scuro
-  const secondaryColor = [52, 152, 219]; // Blu
-  const textColor = [51, 51, 51]; // Grigio scuro
+  // Configurazione colori moderni
+  const colors = {
+    primary: [37, 99, 235],      // Blue-600
+    secondary: [99, 102, 241],   // Indigo-500
+    accent: [16, 185, 129],      // Emerald-500
+    dark: [31, 41, 55],          // Gray-800
+    medium: [75, 85, 99],        // Gray-600
+    light: [156, 163, 175],      // Gray-400
+    background: [249, 250, 251], // Gray-50
+    white: [255, 255, 255]
+  };
   
-  let yPosition = 20;
+  let yPosition = 0;
   const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = 20;
   const contentWidth = pageWidth - (margin * 2);
   
-  // Header con logo e titolo
-  pdf.setFillColor(...primaryColor);
-  pdf.rect(0, 0, pageWidth, 30, 'F');
+  // === HEADER MODERNO CON GRADIENTE ===
+  // Background gradiente simulato con rettangoli sovrapposti
+  pdf.setFillColor(...colors.primary);
+  pdf.rect(0, 0, pageWidth, 45, 'F');
   
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(20);
+  pdf.setFillColor(37, 99, 235, 0.8); // Trasparenza simulata
+  pdf.rect(0, 0, pageWidth, 35, 'F');
+  
+  // Logo e titolo principale
+  pdf.setTextColor(...colors.white);
+  pdf.setFontSize(24);
   pdf.setFont('helvetica', 'bold');
   pdf.text('ACCADEMIA TPL', margin, 20);
   
-  pdf.setFontSize(12);
+  pdf.setFontSize(11);
   pdf.setFont('helvetica', 'normal');
-  pdf.text('Sistema Gestionale Trasporto Pubblico Locale', margin, 26);
+  pdf.text('Sistema Gestionale Trasporto Pubblico Locale', margin, 28);
   
-  yPosition = 50;
+  // Data e ora generazione (allineata a destra)
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('it-IT', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  pdf.setFontSize(9);
+  pdf.text(`Generato il ${dateStr}`, pageWidth - margin - 60, 32);
   
-  // Titolo documento
-  pdf.setTextColor(...primaryColor);
-  pdf.setFontSize(18);
+  yPosition = 60;
+  
+  // === BADGE TIPO DOCUMENTO ===
+  const typeLabel = getTypeLabel(doc.type);
+  const badgeWidth = pdf.getTextWidth(typeLabel) + 16;
+  
+  // Background badge
+  pdf.setFillColor(...colors.secondary);
+  pdf.roundedRect(margin, yPosition - 8, badgeWidth, 16, 3, 3, 'F');
+  
+  // Testo badge
+  pdf.setTextColor(...colors.white);
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(typeLabel, margin + 8, yPosition);
+  
+  yPosition += 25;
+  
+  // === TITOLO DOCUMENTO CON STILE MODERNO ===
+  pdf.setTextColor(...colors.dark);
+  pdf.setFontSize(22);
   pdf.setFont('helvetica', 'bold');
   const titleLines = pdf.splitTextToSize(doc.title, contentWidth);
   pdf.text(titleLines, margin, yPosition);
-  yPosition += titleLines.length * 8 + 10;
+  yPosition += titleLines.length * 10 + 5;
   
-  // Sottotitolo con tipo e categoria
-  pdf.setTextColor(...secondaryColor);
-  pdf.setFontSize(14);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(`${getTypeLabel(doc.type)} - ${doc.category}`, margin, yPosition);
+  // Linea decorativa sotto il titolo
+  pdf.setDrawColor(...colors.accent);
+  pdf.setLineWidth(2);
+  pdf.line(margin, yPosition, margin + 80, yPosition);
   yPosition += 15;
   
-  // Descrizione se presente
+  // === CATEGORIA E METADATA ===
+  pdf.setTextColor(...colors.medium);
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(`Categoria: ${doc.category}`, margin, yPosition);
+  yPosition += 20;
+  
+  // === DESCRIZIONE CON BOX COLORATO ===
   if (doc.description) {
-    pdf.setTextColor(...textColor);
+    // Box background
+    pdf.setFillColor(...colors.background);
+    pdf.setDrawColor(...colors.light);
+    pdf.setLineWidth(0.5);
+    
+    const descLines = pdf.splitTextToSize(doc.description, contentWidth - 20);
+    const boxHeight = descLines.length * 6 + 20;
+    
+    pdf.roundedRect(margin, yPosition - 5, contentWidth, boxHeight, 5, 5, 'FD');
+    
+    // Icona descrizione
+    pdf.setTextColor(...colors.secondary);
+    pdf.setFontSize(8);
+    pdf.text('📄', margin + 10, yPosition + 5);
+    
+    // Testo descrizione
+    pdf.setTextColor(...colors.dark);
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'normal');
-    const descLines = pdf.splitTextToSize(doc.description, contentWidth);
-    pdf.text(descLines, margin, yPosition);
-    yPosition += descLines.length * 6 + 15;
+    pdf.text(descLines, margin + 20, yPosition + 8);
+    yPosition += boxHeight + 15;
   }
   
-  // Sezione dettagli tecnici
-  pdf.setTextColor(...primaryColor);
+  // === SEZIONE DETTAGLI CON DESIGN A CARD ===
+  // Card background
+  pdf.setFillColor(...colors.white);
+  pdf.setDrawColor(...colors.light);
+  pdf.setLineWidth(0.5);
+  pdf.roundedRect(margin, yPosition, contentWidth, 85, 8, 8, 'FD');
+  
+  // Titolo sezione
+  pdf.setTextColor(...colors.primary);
   pdf.setFontSize(14);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Dettagli Documento', margin, yPosition);
-  yPosition += 10;
+  pdf.text('📋 Dettagli Tecnici', margin + 15, yPosition + 18);
   
-  // Tabella dettagli
+  yPosition += 30;
+  
+  // Griglia dettagli con icone
   const details = [
-    ['Nome File', doc.filename || 'N/A'],
-    ['Dimensione', doc.file_size ? `${doc.file_size} KB` : 'N/A'],
-    ['Tipo MIME', doc.mime_type || 'N/A'],
-    ['Versione', doc.version || '1.0'],
-    ['Stato', getStatusLabel(doc.status)],
-    ['Download', (doc.download_count || 0).toString()]
+    ['📁', 'Nome File', doc.filename || 'N/A'],
+    ['💾', 'Dimensione', doc.file_size ? `${doc.file_size} KB` : 'N/A'],
+    ['🔧', 'Tipo MIME', doc.mime_type || 'application/octet-stream'],
+    ['🏷️', 'Versione', doc.version || '1.0'],
+    ['⚡', 'Stato', getStatusLabel(doc.status)],
+    ['📊', 'Download', (doc.download_count || 0).toString()]
   ];
   
-  pdf.setTextColor(...textColor);
+  pdf.setTextColor(...colors.dark);
   pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'normal');
   
-  details.forEach(([label, value]) => {
+  // Layout a due colonne
+  const leftColumn = margin + 15;
+  const rightColumn = margin + (contentWidth / 2) + 10;
+  let leftY = yPosition;
+  let rightY = yPosition;
+  
+  details.forEach(([icon, label, value], index) => {
+    const isLeftColumn = index % 2 === 0;
+    const x = isLeftColumn ? leftColumn : rightColumn;
+    const y = isLeftColumn ? leftY : rightY;
+    
+    // Icona
+    pdf.setFontSize(12);
+    pdf.text(icon, x, y);
+    
     // Label in grassetto
     pdf.setFont('helvetica', 'bold');
-    pdf.text(label + ':', margin, yPosition);
+    pdf.setFontSize(9);
+    pdf.setTextColor(...colors.medium);
+    pdf.text(label + ':', x + 15, y);
     
-    // Valore normale
+    // Valore
     pdf.setFont('helvetica', 'normal');
-    pdf.text(value, margin + 60, yPosition);
+    pdf.setTextColor(...colors.dark);
+    const truncatedValue = value.length > 25 ? value.substring(0, 25) + '...' : value;
+    pdf.text(truncatedValue, x + 15, y + 8);
     
-    yPosition += 8;
+    if (isLeftColumn) {
+      leftY += 20;
+    } else {
+      rightY += 20;
+    }
   });
   
-  yPosition += 10;
+  yPosition = Math.max(leftY, rightY) + 15;
   
-  // Sezione informazioni upload
-  pdf.setTextColor(...primaryColor);
+  // === SEZIONE INFORMAZIONI UPLOAD ===
+  // Card background
+  pdf.setFillColor(...colors.background);
+  pdf.setDrawColor(...colors.light);
+  pdf.roundedRect(margin, yPosition, contentWidth, 65, 8, 8, 'FD');
+  
+  // Titolo sezione
+  pdf.setTextColor(...colors.secondary);
   pdf.setFontSize(14);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Informazioni Upload', margin, yPosition);
-  yPosition += 10;
+  pdf.text('📤 Informazioni Upload', margin + 15, yPosition + 18);
+  
+  yPosition += 30;
   
   const uploadInfo = [
-    ['Data Upload', new Date(doc.created_at).toLocaleDateString('it-IT', {
+    ['📅', 'Data Upload', new Date(doc.created_at).toLocaleDateString('it-IT', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     })],
-    ['Ultima Modifica', new Date(doc.updated_at).toLocaleDateString('it-IT', {
+    ['🔄', 'Ultima Modifica', new Date(doc.updated_at).toLocaleDateString('it-IT', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     })],
-    ['Caricato da', doc.uploaded_by || 'Sistema']
+    ['👤', 'Caricato da', doc.uploaded_by || 'Sistema Automatico']
   ];
   
-  pdf.setTextColor(...textColor);
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'normal');
-  
-  uploadInfo.forEach(([label, value]) => {
+  uploadInfo.forEach(([icon, label, value]) => {
+    // Icona
+    pdf.setFontSize(12);
+    pdf.text(icon, leftColumn, yPosition);
+    
+    // Label
     pdf.setFont('helvetica', 'bold');
-    pdf.text(label + ':', margin, yPosition);
+    pdf.setFontSize(9);
+    pdf.setTextColor(...colors.medium);
+    pdf.text(label + ':', leftColumn + 15, yPosition);
     
+    // Valore
     pdf.setFont('helvetica', 'normal');
-    pdf.text(value, margin + 60, yPosition);
+    pdf.setTextColor(...colors.dark);
+    pdf.text(value, leftColumn + 15, yPosition + 8);
     
-    yPosition += 8;
+    yPosition += 18;
   });
   
-  // Tags se presenti
+  // === TAGS CON DESIGN MODERNO ===
   if (doc.tags && doc.tags.length > 0) {
-    yPosition += 10;
-    pdf.setTextColor(...primaryColor);
+    yPosition += 20;
+    
+    // Titolo tags
+    pdf.setTextColor(...colors.accent);
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Tag', margin, yPosition);
-    yPosition += 10;
+    pdf.text('🏷️ Tag Associati', margin, yPosition);
+    yPosition += 15;
     
-    pdf.setTextColor(...textColor);
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    const tagsText = doc.tags.join(', ');
-    const tagLines = pdf.splitTextToSize(tagsText, contentWidth);
-    pdf.text(tagLines, margin, yPosition);
-    yPosition += tagLines.length * 6 + 15;
+    // Render tags come pillole colorate
+    let tagX = margin;
+    let tagY = yPosition;
+    
+    doc.tags.forEach((tag, index) => {
+      const tagWidth = pdf.getTextWidth(tag) + 12;
+      
+      // Verifica se il tag va a capo
+      if (tagX + tagWidth > pageWidth - margin) {
+        tagX = margin;
+        tagY += 20;
+      }
+      
+      // Background tag
+      pdf.setFillColor(...colors.accent);
+      pdf.roundedRect(tagX, tagY - 8, tagWidth, 14, 7, 7, 'F');
+      
+      // Testo tag
+      pdf.setTextColor(...colors.white);
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(tag, tagX + 6, tagY);
+      
+      tagX += tagWidth + 8;
+    });
+    
+    yPosition = tagY + 25;
   }
   
-  // Footer
-  const footerY = pdf.internal.pageSize.getHeight() - 20;
-  pdf.setTextColor(128, 128, 128);
+  // === FOOTER ELEGANTE ===
+  const footerY = pageHeight - 25;
+  
+  // Linea decorativa footer
+  pdf.setDrawColor(...colors.light);
+  pdf.setLineWidth(0.5);
+  pdf.line(margin, footerY - 10, pageWidth - margin, footerY - 10);
+  
+  // Informazioni footer
+  pdf.setTextColor(...colors.light);
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
-  pdf.text('Generato da Accademia TPL - ' + new Date().toLocaleDateString('it-IT'), margin, footerY);
-  pdf.text('ID Documento: ' + doc.id, pageWidth - margin - 50, footerY);
+  
+  // Sinistra: Info generazione
+  pdf.text('Documento generato automaticamente da Accademia TPL', margin, footerY);
+  
+  // Centro: ID documento
+  const idText = `ID: ${doc.id.substring(0, 8)}...`;
+  const idWidth = pdf.getTextWidth(idText);
+  pdf.text(idText, (pageWidth - idWidth) / 2, footerY);
+  
+  // Destra: Pagina
+  const pageText = 'Pagina 1 di 1';
+  const pageWidth2 = pdf.getTextWidth(pageText);
+  pdf.text(pageText, pageWidth - margin - pageWidth2, footerY);
+  
+  // === WATERMARK SOTTILE ===
+  pdf.setTextColor(240, 240, 240);
+  pdf.setFontSize(60);
+  pdf.setFont('helvetica', 'bold');
+  
+  // Calcola posizione centrale per watermark
+  const watermarkText = 'ACCADEMIA';
+  const watermarkWidth = pdf.getTextWidth(watermarkText);
+  const watermarkX = (pageWidth - watermarkWidth) / 2;
+  const watermarkY = pageHeight / 2;
+  
+  // Ruota il testo per watermark diagonale
+  pdf.saveGraphicsState();
+  pdf.setGState(new pdf.GState({ opacity: 0.05 }));
+  
+  // Trasforma coordinate per rotazione
+  const angle = -45 * Math.PI / 180;
+  pdf.text(watermarkText, watermarkX, watermarkY, {
+    angle: angle
+  });
+  
+  pdf.restoreGraphicsState();
+  
+  // === BORDO DECORATIVO ===
+  pdf.setDrawColor(...colors.primary);
+  pdf.setLineWidth(1);
+  pdf.rect(5, 5, pageWidth - 10, pageHeight - 10);
   
   // Converti in blob
   return pdf.output('blob');
@@ -181,11 +352,11 @@ export function generatePDF(doc: Document): Blob {
 
 function getTypeLabel(type: string): string {
   switch (type) {
-    case 'template': return 'Template';
-    case 'form': return 'Modulo';
-    case 'guide': return 'Guida';
-    case 'report': return 'Report';
-    default: return type || 'N/A';
+    case 'template': return 'TEMPLATE';
+    case 'form': return 'MODULO';
+    case 'guide': return 'GUIDA';
+    case 'report': return 'REPORT';
+    default: return type?.toUpperCase() || 'DOCUMENTO';
   }
 }
 
@@ -194,6 +365,6 @@ function getStatusLabel(status: string | undefined): string {
     case 'active': return 'Attivo';
     case 'draft': return 'Bozza';
     case 'archived': return 'Archiviato';
-    default: return status || 'N/A';
+    default: return status || 'Non Specificato';
   }
 }
