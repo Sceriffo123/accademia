@@ -25,23 +25,6 @@ export interface Normative {
   updated_at: string;
 }
 
-export interface Document {
-  id: string;
-  title: string;
-  description?: string;
-  type: 'template' | 'form' | 'guide' | 'report';
-  category: string;
-  size?: string;
-  author: string;
-  downloads: number;
-  tags: string[];
-  file_path?: string;
-  file_url?: string;
-  mime_type?: string;
-  created_at: string;
-  updated_at: string;
-}
-
 // Interfacce per Database Tables
 export interface DatabaseTable {
   name: string;
@@ -94,22 +77,19 @@ export async function initializeTables() {
       )
     `;
 
-    // Crea tabella documents
-    console.log('🎓 ACCADEMIA: Configurazione archivio documenti...');
+    // Crea tabella normatives
+    console.log('🎓 ACCADEMIA: Configurazione archivio normative...');
     await sql`
-      CREATE TABLE IF NOT EXISTS documents (
+      CREATE TABLE IF NOT EXISTS normatives (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         title TEXT NOT NULL,
-        description TEXT,
-        type VARCHAR(20) NOT NULL CHECK (type IN ('template', 'form', 'guide', 'report')),
+        content TEXT NOT NULL,
         category VARCHAR(100) NOT NULL,
-        size VARCHAR(20),
-        author VARCHAR(255) NOT NULL,
-        downloads INTEGER DEFAULT 0,
+        type VARCHAR(20) NOT NULL CHECK (type IN ('law', 'regulation', 'ruling')),
+        reference_number VARCHAR(100) UNIQUE NOT NULL,
+        publication_date DATE NOT NULL,
+        effective_date DATE NOT NULL,
         tags TEXT[] DEFAULT '{}',
-        file_path TEXT,
-        file_url TEXT,
-        mime_type VARCHAR(100),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
@@ -586,229 +566,26 @@ export async function updateNormative(id: string, data: {
   }
 }
 
-// === METODI PER DOCUMENTI ===
-export async function getAllDocuments(): Promise<Document[]> {
+export async function deleteNormative(id: string): Promise<boolean> {
   try {
+    console.log('🎓 ACCADEMIA: Eliminazione normativa:', id);
+    
     const result = await sql`
-      SELECT * FROM documents
-      ORDER BY created_at DESC
-    `;
-    return result;
-  } catch (error) {
-    console.error('Errore recupero documenti:', error);
-    return [];
-  }
-}
-
-export async function getDocumentById(id: string): Promise<Document | null> {
-  try {
-    const result = await sql`
-      SELECT * FROM documents
-      WHERE id = ${id}
-    `;
-    return result[0] as Document;
-  } catch (error) {
-    console.error('Errore recupero documento per ID:', error);
-    return null;
-  }
-}
-
-export async function getDocumentsCount(): Promise<number> {
-  try {
-    const result = await sql`SELECT COUNT(*) as count FROM documents`;
-    return parseInt(result[0].count);
-  } catch (error) {
-    console.error('Errore conteggio documenti:', error);
-    return 0;
-  }
-}
-
-export async function getRecentDocumentsCount(days: number = 30): Promise<number> {
-  try {
-    const result = await sql`
-      SELECT COUNT(*) as count FROM documents 
-      WHERE created_at >= NOW() - INTERVAL '1 day' * ${days}
-    `;
-    return parseInt(result[0].count);
-  } catch (error) {
-    console.error('Errore conteggio documenti recenti:', error);
-    return 0;
-  }
-}
-
-// === METODI CRUD PER DOCUMENTI ===
-export async function createDocument(data: {
-  title: string;
-  description?: string;
-  type: 'template' | 'form' | 'guide' | 'report';
-  category: string;
-  size?: string;
-  author: string;
-  tags?: string[];
-  file_path?: string;
-  file_url?: string;
-  mime_type?: string;
-}): Promise<Document | null> {
-  try {
-    console.log('🎓 ACCADEMIA: Creazione nuovo documento...');
-
-    const result = await sql`
-      INSERT INTO documents (
-        title, description, type, category, size, author, tags, 
-        file_path, file_url, mime_type, updated_at
-      )
-      VALUES (
-        ${data.title}, ${data.description}, ${data.type}, ${data.category}, 
-        ${data.size}, ${data.author}, ${data.tags || []}, 
-        ${data.file_path}, ${data.file_url}, ${data.mime_type}, NOW()
-      )
-      RETURNING *
-    `;
-
-    console.log('🎓 ACCADEMIA: Documento creato con successo:', result[0]?.title);
-    return result[0] as Document;
-  } catch (error) {
-    console.error('🚨 ACCADEMIA: Errore creazione documento:', error?.message);
-    throw error;
-  }
-}
-
-export async function updateDocument(id: string, data: {
-  title?: string;
-  description?: string;
-  type?: 'template' | 'form' | 'guide' | 'report';
-  category?: string;
-  size?: string;
-  author?: string;
-  tags?: string[];
-  file_path?: string;
-  file_url?: string;
-  mime_type?: string;
-}): Promise<Document | null> {
-  try {
-    console.log('🎓 ACCADEMIA: updateDocument chiamata con:', { id, data });
-
-    const updates = [];
-    const values = [];
-    let paramIndex = 1;
-
-    if (data.title !== undefined) {
-      updates.push(`title = $${paramIndex++}`);
-      values.push(data.title);
-    }
-    if (data.description !== undefined) {
-      updates.push(`description = $${paramIndex++}`);
-      values.push(data.description);
-    }
-    if (data.type !== undefined) {
-      updates.push(`type = $${paramIndex++}`);
-      values.push(data.type);
-    }
-    if (data.category !== undefined) {
-      updates.push(`category = $${paramIndex++}`);
-      values.push(data.category);
-    }
-    if (data.size !== undefined) {
-      updates.push(`size = $${paramIndex++}`);
-      values.push(data.size);
-    }
-    if (data.author !== undefined) {
-      updates.push(`author = $${paramIndex++}`);
-      values.push(data.author);
-    }
-    if (data.tags !== undefined) {
-      updates.push(`tags = $${paramIndex++}`);
-      values.push(data.tags);
-    }
-    if (data.file_path !== undefined) {
-      updates.push(`file_path = $${paramIndex++}`);
-      values.push(data.file_path);
-    }
-    if (data.file_url !== undefined) {
-      updates.push(`file_url = $${paramIndex++}`);
-      values.push(data.file_url);
-    }
-    if (data.mime_type !== undefined) {
-      updates.push(`mime_type = $${paramIndex++}`);
-      values.push(data.mime_type);
-    }
-
-    if (updates.length === 0) {
-      console.log('🎓 ACCADEMIA: Nessun campo da aggiornare');
-      return null;
-    }
-
-    // Aggiungi sempre updated_at
-    updates.push(`updated_at = NOW()`);
-
-    console.log('🎓 ACCADEMIA: Query SQL:', updates.join(', '));
-    console.log('🎓 ACCADEMIA: Valori:', values);
-
-    // Usa il metodo template literal invece di sql.unsafe per compatibilità
-    const result = await sql`
-      UPDATE documents
-      SET title = ${data.title}, description = ${data.description}, type = ${data.type},
-          category = ${data.category}, size = ${data.size}, author = ${data.author},
-          tags = ${data.tags}, file_path = ${data.file_path}, file_url = ${data.file_url},
-          mime_type = ${data.mime_type}, updated_at = NOW()
-      WHERE id = ${id}
-      RETURNING *
-    `;
-
-    console.log('🎓 ACCADEMIA: Risultato query:', result);
-    console.log('🎓 ACCADEMIA: Tipo del risultato:', typeof result);
-    console.log('🎓 ACCADEMIA: È un array?', Array.isArray(result));
-    console.log('🎓 ACCADEMIA: Lunghezza risultato:', result?.length);
-
-    if (result && result.length > 0) {
-      console.log('🎓 ACCADEMIA: Documento aggiornato:', result[0]?.title);
-      return result[0] as Document;
-    } else {
-      console.log('🎓 ACCADEMIA: Nessun documento aggiornato');
-      return null;
-    }
-  } catch (error) {
-    console.error('🚨 ACCADEMIA: Errore aggiornamento documento:', error?.message);
-    console.error('🚨 ACCADEMIA: Dettagli errore:', error);
-    throw error;
-  }
-}
-
-export async function deleteDocument(id: string): Promise<boolean> {
-  try {
-    console.log('🎓 ACCADEMIA: Eliminazione documento:', id);
-
-    const result = await sql`
-      DELETE FROM documents
+      DELETE FROM normatives 
       WHERE id = ${id}
       RETURNING id, title
     `;
-
+    
     if (result.length > 0) {
-      console.log('🎓 ACCADEMIA: Documento eliminato:', result[0].title);
+      console.log('🎓 ACCADEMIA: Normativa eliminata:', result[0].title);
       return true;
     } else {
-      console.log('🎓 ACCADEMIA: Documento non trovato per eliminazione');
+      console.log('🎓 ACCADEMIA: Normativa non trovata per eliminazione');
       return false;
     }
   } catch (error) {
-    console.error('🚨 ACCADEMIA: Errore eliminazione documento:', error?.message);
+    console.error('🚨 ACCADEMIA: Errore eliminazione normativa:', error?.message);
     throw error;
-  }
-}
-
-export async function incrementDocumentDownloads(id: string): Promise<boolean> {
-  try {
-    const result = await sql`
-      UPDATE documents 
-      SET downloads = downloads + 1
-      WHERE id = ${id}
-      RETURNING id
-    `;
-    return result.length > 0;
-  } catch (error) {
-    console.error('Errore incremento download documento:', error);
-    return false;
   }
 }
 
@@ -870,14 +647,14 @@ async function insertDefaultRoleConfiguration() {
                      'normatives.view', 'normatives.create', 'normatives.edit', 'normatives.delete', 'normatives.publish',
                      'system.settings', 'system.permissions', 'system.logs', 'reports.view', 'reports.export',
                      'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.upload'],
-        sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'superadmin', 'reports', 'settings', 'documents']
+        sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'superadmin', 'reports', 'settings']
       },
       {
         role: 'admin',
         permissions: ['users.view', 'users.create', 'users.edit', 'normatives.view', 'normatives.create', 
                      'normatives.edit', 'normatives.delete', 'normatives.publish', 'system.logs', 'reports.view', 'reports.export',
                      'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.upload'],
-        sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'reports', 'documents']
+        sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'reports']
       },
       {
         role: 'operator',
