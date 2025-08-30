@@ -73,6 +73,7 @@ export default function Admin() {
   // Stati per gestione documenti
   const [showEditDocument, setShowEditDocument] = useState(false);
   const [editingDocument, setEditingDocument] = useState<any>(null);
+  const [viewingDocument, setViewingDocument] = useState<any>(null);
   const [documentForm, setDocumentForm] = useState({
     title: '',
     description: '',
@@ -965,7 +966,7 @@ export default function Admin() {
 
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => console.log('View document:', document.id)}
+                          onClick={() => setViewingDocument(document)}
                           className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
                           title="Visualizza"
                         >
@@ -1599,6 +1600,337 @@ export default function Admin() {
                   className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
                 >
                   Crea Documento
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Visualizza Documento */}
+        {viewingDocument && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Visualizza Documento</h3>
+                <button
+                  onClick={() => setViewingDocument(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Titolo</label>
+                    <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                      {viewingDocument.title}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome File</label>
+                    <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                      {viewingDocument.filename}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione</label>
+                  <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 min-h-[60px]">
+                    {viewingDocument.description || 'Nessuna descrizione'}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                    <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        viewingDocument.type === 'template' ? 'bg-blue-100 text-blue-800' :
+                        viewingDocument.type === 'form' ? 'bg-green-100 text-green-800' :
+                        viewingDocument.type === 'guide' ? 'bg-purple-100 text-purple-800' :
+                        'bg-orange-100 text-orange-800'
+                      }`}>
+                        {viewingDocument.type === 'template' ? 'Template' :
+                         viewingDocument.type === 'form' ? 'Modulo' :
+                         viewingDocument.type === 'guide' ? 'Guida' : 'Report'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                    <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                      {viewingDocument.category}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Dimensione</label>
+                    <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                      {viewingDocument.file_size ? `${viewingDocument.file_size} KB` : 'N/A'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Versione</label>
+                    <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                      {viewingDocument.version || 'N/A'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Stato</label>
+                    <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        viewingDocument.status === 'active' ? 'bg-green-100 text-green-800' :
+                        viewingDocument.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {viewingDocument.status === 'active' ? 'Attivo' :
+                         viewingDocument.status === 'pending' ? 'In Attesa' : 'Rifiutato'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Percorso File</label>
+                    <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm">
+                      {viewingDocument.file_path || 'N/A'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo MIME</label>
+                    <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm">
+                      {viewingDocument.mime_type || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                  <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                    {viewingDocument.tags && viewingDocument.tags.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {viewingDocument.tags.map((tag: string, index: number) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-gray-500">Nessun tag</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Download</label>
+                    <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                      📊 {viewingDocument.download_count || 0} download
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Data Creazione</label>
+                    <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                      {viewingDocument.created_at ? new Date(viewingDocument.created_at).toLocaleDateString('it-IT') : 'N/A'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setViewingDocument(null)}
+                  className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                >
+                  Chiudi
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Modifica Documento */}
+        {showEditDocument && editingDocument && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Modifica Documento</h3>
+                <button
+                  onClick={() => setShowEditDocument(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Titolo *</label>
+                    <input
+                      type="text"
+                      value={editingDocument.title}
+                      onChange={(e) => setEditingDocument({...editingDocument, title: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome File *</label>
+                    <input
+                      type="text"
+                      value={editingDocument.filename}
+                      onChange={(e) => setEditingDocument({...editingDocument, filename: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione</label>
+                  <textarea
+                    value={editingDocument.description || ''}
+                    onChange={(e) => setEditingDocument({...editingDocument, description: e.target.value})}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
+                    <select
+                      value={editingDocument.type}
+                      onChange={(e) => setEditingDocument({...editingDocument, type: e.target.value as 'template' | 'form' | 'guide' | 'report'})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="template">Template</option>
+                      <option value="form">Modulo</option>
+                      <option value="guide">Guida</option>
+                      <option value="report">Report</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Categoria *</label>
+                    <input
+                      type="text"
+                      value={editingDocument.category}
+                      onChange={(e) => setEditingDocument({...editingDocument, category: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Dimensione (KB)</label>
+                    <input
+                      type="number"
+                      value={editingDocument.file_size || ''}
+                      onChange={(e) => setEditingDocument({...editingDocument, file_size: e.target.value ? parseInt(e.target.value) : undefined})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Versione</label>
+                    <input
+                      type="text"
+                      value={editingDocument.version || ''}
+                      onChange={(e) => setEditingDocument({...editingDocument, version: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Stato</label>
+                    <select
+                      value={editingDocument.status}
+                      onChange={(e) => setEditingDocument({...editingDocument, status: e.target.value as 'active' | 'pending' | 'rejected'})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="active">Attivo</option>
+                      <option value="pending">In Attesa</option>
+                      <option value="rejected">Rifiutato</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Percorso File</label>
+                    <input
+                      type="text"
+                      value={editingDocument.file_path || ''}
+                      onChange={(e) => setEditingDocument({...editingDocument, file_path: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo MIME</label>
+                    <input
+                      type="text"
+                      value={editingDocument.mime_type || ''}
+                      onChange={(e) => setEditingDocument({...editingDocument, mime_type: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {editingDocument.tags?.map((tag: string, index: number) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newTags = editingDocument.tags?.filter((_: string, i: number) => i !== index) || [];
+                            setEditingDocument({...editingDocument, tags: newTags});
+                          }}
+                          className="ml-2 text-blue-600 hover:text-blue-800"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowEditDocument(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleUpdateDocument}
+                  className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                >
+                  Salva Modifiche
                 </button>
               </div>
             </div>
