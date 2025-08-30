@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getAllDocuments, getUserPermissions, getUserSections, getUserById, updateDocument } from '../lib/neonDatabase';
+import { checkFileExists, generateDownloadUrl } from '../lib/arubaUpload';
+import FileUpload from '../components/FileUpload';
 import { 
   FileText, 
   Download, 
@@ -55,6 +57,7 @@ export default function Docx() {
   const [uploaderName, setUploaderName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   useEffect(() => {
     if (selectedDocument?.uploaded_by) {
@@ -150,17 +153,28 @@ export default function Docx() {
         return;
       }
 
-      console.log('🔄 Inizio download documento:', doc.filename);
-      const { generatePDF } = await import('../lib/pdfGenerator');
-      const blob = generatePDF(doc);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${doc.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      console.log('🔄 Inizio download documento da Aruba:', doc.filename);
+      console.log('🔄 URL file:', doc.file_url);
+
+      // Verifica se il file esiste su Aruba
+      const fileExists = await checkFileExists(doc.file_url);
+      if (!fileExists) {
+        console.error('❌ File non trovato su Aruba:', doc.file_url);
+        alert('File non disponibile. Contatta l\'amministratore.');
+        return;
+      }
+
+      // Genera URL di download con tracking
+      const downloadUrl = generateDownloadUrl(doc.file_url, doc.id);
       
-      console.log('✅ Download completato con successo');
+      // Apri il file in una nuova finestra per download
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.target = '_blank';
+      link.download = doc.filename;
+      link.click();
+      
+      console.log('✅ Download avviato da Aruba:', downloadUrl);
 
     } catch (error) {
       console.error('❌ Errore durante il download:', error);
@@ -199,6 +213,13 @@ export default function Docx() {
   function handleCancelEdit() {
     setIsEditMode(false);
     setEditingDocument(null);
+  }
+
+  // Handler per completamento upload
+  function handleUploadComplete(newDocument: any) {
+    console.log('🎓 DOCX: Upload completato:', newDocument.title);
+    setShowUploadModal(false);
+    loadDocuments(); // Ricarica la lista documenti
   }
 
   // Controllo permessi e visibilità
@@ -383,6 +404,7 @@ export default function Docx() {
 
                 <div className="flex items-end">
                   <button 
+                    onClick={() => setShowUploadModal(true)}
                     disabled={!canUpload}
                     className={`w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                       canUpload 
@@ -406,6 +428,7 @@ export default function Docx() {
               Documenti ({filteredDocuments.length})
             </h2>
             <button 
+              onClick={() => setShowUploadModal(true)}
               disabled={!canCreate}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                 canCreate 
@@ -483,6 +506,10 @@ export default function Docx() {
                         className={`p-2 transition-colors ${
                           canView ? 'text-gray-400 hover:text-green-600' : 'text-gray-300 cursor-not-allowed'
                         }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadDocument(doc);
+                        }}
                       >
                         <Download className="h-4 w-4" />
                       </button>
@@ -797,6 +824,16 @@ export default function Docx() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <FileUpload
+          onUploadComplete={handleUploadComplete}
+          onClose={() => setShowUploadModal(false)}
+          category="generale"
+          type="template"
+        />
       )}
     </div>
   );
