@@ -11,7 +11,16 @@ import {
 } from 'lucide-react';
 
 export default function Home() {
-  const { user } = useAuth();
+  // Gestisci il caso in cui AuthProvider non è ancora disponibile
+  let authData;
+  try {
+    authData = useAuth();
+  } catch (error) {
+    // AuthProvider non è ancora disponibile, usa valori di default
+    authData = { user: null };
+  }
+
+  const { user } = authData;
 
   const features = [
     {
