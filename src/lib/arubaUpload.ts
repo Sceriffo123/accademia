@@ -18,12 +18,12 @@ interface ArubaConfig {
 
 // Configurazione Aruba dalle variabili d'ambiente
 const arubaConfig: ArubaConfig = {
-  host: import.meta.env.VITE_ARUBA_FTP_HOST || 'fluxdata.eu',
+  host: 'fluxdata.eu',
   username: import.meta.env.VITE_ARUBA_FTP_USERNAME || 'MSSql216075',
   password: import.meta.env.VITE_ARUBA_FTP_PASSWORD || 'Vapensiero@2025',
   port: parseInt(import.meta.env.VITE_ARUBA_FTP_PORT || '21'),
-  basePath: import.meta.env.VITE_ARUBA_BASE_PATH || '/documenti',
-  publicUrl: import.meta.env.VITE_ARUBA_PUBLIC_URL || 'https://unicacgil.it/documenti'
+  basePath: '/documenti',
+  publicUrl: 'https://fluxdata.eu/documenti'
 };
 
 /**
