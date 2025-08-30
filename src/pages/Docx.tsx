@@ -47,6 +47,7 @@ export default function Docx() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [userSections, setUserSections] = useState<string[]>([]);
 
   useEffect(() => {
