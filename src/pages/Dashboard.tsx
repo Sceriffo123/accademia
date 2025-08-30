@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getNormativesCount, getRecentNormativesCount, getNormatives } from '../lib/api';
-import { FileText, GraduationCap, TrendingUp, Clock, BookOpen, BadgeAlert as Alert, ChevronRight } from 'lucide-react';
+import { getNormativesCount, getRecentNormativesCount, getNormatives, getUsersCount } from '../lib/api';
+import { getAllDocuments, getDocumentsCount } from '../lib/neonDatabase';
+import { FileText, GraduationCap, TrendingUp, Clock, BookOpen, BadgeAlert as Alert, ChevronRight, Users, Database } from 'lucide-react';
 
 interface DashboardStats {
   totalNormatives: number;
   recentNormatives: number;
-  completedCourses: number;
-  totalCourses: number;
+  totalUsers: number;
+  totalDocuments: number;
 }
 
 export default function Dashboard() {
@@ -16,10 +17,12 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats>({
     totalNormatives: 0,
     recentNormatives: 0,
-    completedCourses: 0,
-    totalCourses: 0
+    totalUsers: 0,
+    totalDocuments: 0
   });
   const [recentNormatives, setRecentNormatives] = useState<any[]>([]);
+  const [recentDocuments, setRecentDocuments] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,19 +31,43 @@ export default function Dashboard() {
 
   async function fetchDashboardData() {
     try {
-      // Fetch normatives data
+      // Fetch real data from database
       const totalNormatives = await getNormativesCount();
       const recentNormatives = await getRecentNormativesCount(30);
       const latestNormatives = await getNormatives();
+      const totalUsers = await getUsersCount();
+      const totalDocuments = await getDocumentsCount();
+      const latestDocuments = await getAllDocuments();
 
       setStats({
         totalNormatives,
         recentNormatives,
-        completedCourses: 0, // Mock data
-        totalCourses: 8     // Mock data
+        totalUsers,
+        totalDocuments
       });
 
       setRecentNormatives(latestNormatives.slice(0, 3));
+      setRecentDocuments(latestDocuments.slice(0, 3));
+      
+      // Combina attività recenti da normative e documenti
+      const combinedActivity = [
+        ...latestNormatives.slice(0, 2).map(n => ({
+          id: n.id,
+          title: n.title,
+          type: 'normative',
+          date: n.created_at,
+          description: `Nuova ${n.type === 'law' ? 'legge' : n.type === 'regulation' ? 'regolamento' : 'sentenza'} pubblicata`
+        })),
+        ...latestDocuments.slice(0, 2).map(d => ({
+          id: d.id,
+          title: d.title,
+          type: 'document',
+          date: d.created_at,
+          description: `Nuovo ${d.type === 'template' ? 'template' : d.type === 'form' ? 'modulo' : d.type === 'guide' ? 'guida' : 'report'} caricato`
+        }))
+      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+      
+      setRecentActivity(combinedActivity);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -54,28 +81,28 @@ export default function Dashboard() {
       value: stats.totalNormatives,
       icon: FileText,
       color: 'bg-blue-500',
-      change: '+12%'
+      change: stats.recentNormatives > 0 ? `+${stats.recentNormatives} recenti` : 'Nessun aggiornamento'
     },
     {
-      title: 'Aggiornamenti Recenti',
-      value: stats.recentNormatives,
-      icon: TrendingUp,
+      title: 'Utenti Registrati',
+      value: stats.totalUsers,
+      icon: Users,
       color: 'bg-green-500',
-      change: '+3 questo mese'
+      change: 'Profili attivi'
     },
     {
-      title: 'Corsi Completati',
-      value: `${stats.completedCourses}/${stats.totalCourses}`,
-      icon: GraduationCap,
+      title: 'Documenti Disponibili',
+      value: stats.totalDocuments,
+      icon: Database,
       color: 'bg-purple-500',
-      change: '2 in corso'
+      change: 'Template e guide'
     },
     {
       title: 'Ultimo Accesso',
       value: 'Oggi',
       icon: Clock,
       color: 'bg-orange-500',
-      change: '14:30'
+      change: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
     }
   ];
 
@@ -156,23 +183,90 @@ export default function Dashboard() {
                 </div>
                 <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
               </Link>
+              
+              <Link
+                to="/docx"
+                className="flex items-center justify-between p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors group"
+              >
+                <div className="flex items-center space-x-3">
+                  <Database className="h-5 w-5 text-green-600" />
+                  <span className="font-medium text-gray-900">Gestisci Documenti</span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-green-600 transition-colors" />
+              </Link>
             </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Aggiornamenti Recenti
+              Attività Recente
             </h2>
-            {recentNormatives.length > 0 ? (
+            {recentActivity.length > 0 ? (
               <div className="space-y-4">
-                {recentNormatives.map((normative) => (
-                  <Link
-                    key={normative.id}
-                    to={`/normative/${normative.id}`}
+                {recentActivity.map((activity) => (
+                  <div
+                    key={activity.id}
                     className="block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                   >
-                    <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">
-                      {normative.title}
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">
+                          {activity.title}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-2">
+                          {activity.description}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            activity.type === 'normative' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                          }`}>
+                            {activity.type === 'normative' ? 'Normativa' : 'Documento'}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(activity.date).toLocaleDateString('it-IT')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <Alert className="h-8 w-8 mx-auto mb-3" />
+                <p>Nessuna attività recente</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Recent Documents Section */}
+        {recentDocuments.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Documenti Recenti
+              </h2>
+              <Link
+                to="/docx"
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+              >
+                Vedi tutti →
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {recentDocuments.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center space-x-3 mb-2">
+                    <Database className="h-4 w-4 text-gray-400" />
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      doc.type === 'template' ? 'bg-blue-100 text-blue-800' :
+                      doc.type === 'form' ? 'bg-green-100 text-green-800' :
+                      doc.type === 'guide' ? 'bg-purple-100 text-purple-800' :
+                      'bg-orange-100 text-orange-800'
                     </h3>
                     <div className="flex items-center justify-between">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -180,56 +274,60 @@ export default function Dashboard() {
                         normative.type === 'regulation' ? 'bg-green-100 text-green-800' :
                         'bg-orange-100 text-orange-800'
                       }`}>
-                        {normative.type === 'law' ? 'Legge' :
-                         normative.type === 'regulation' ? 'Regolamento' : 'Sentenza'}
+                      {doc.type === 'template' ? 'Template' :
+                       doc.type === 'form' ? 'Modulo' :
+                       doc.type === 'guide' ? 'Guida' : 'Report'}
                       </span>
+                  </div>
+                  <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">
+                    {doc.title}
+                  </h3>
+                  <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-500">
-                        {new Date(normative.publication_date).toLocaleDateString('it-IT')}
+                      {new Date(doc.created_at).toLocaleDateString('it-IT')}
                       </span>
                     </div>
-                  </Link>
+                </div>
                 ))}
               </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <Alert className="h-8 w-8 mx-auto mb-3" />
-                <p>Nessun aggiornamento recente</p>
-              </div>
-            )}
           </div>
-        </div>
+        )}
 
         {/* Progress Section */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">
-            Il tuo Progresso
+            Statistiche Sistema
           </h2>
           <div className="space-y-6">
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700">
-                  Normative Studiate
+                  Utilizzo Database
                 </span>
                 <span className="text-sm text-gray-500">
-                  15/50
+                  {stats.totalNormatives + stats.totalDocuments} elementi
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-blue-600 h-2 rounded-full w-[30%] transition-all duration-300"></div>
+                <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{
+                  width: `${Math.min((stats.totalNormatives + stats.totalDocuments) / 100 * 100, 100)}%`
+                }}></div>
               </div>
             </div>
             
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700">
-                  Formazione Completata
+                  Utenti Attivi
                 </span>
                 <span className="text-sm text-gray-500">
-                  0/8
+                  {stats.totalUsers} registrati
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-purple-600 h-2 rounded-full w-[0%] transition-all duration-300"></div>
+                <div className="bg-purple-600 h-2 rounded-full transition-all duration-300" style={{
+                  width: `${Math.min(stats.totalUsers / 50 * 100, 100)}%`
+                }}></div>
               </div>
             </div>
           </div>
