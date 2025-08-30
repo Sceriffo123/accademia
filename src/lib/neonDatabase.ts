@@ -99,6 +99,30 @@ export async function initializeTables() {
         approved_by UUID REFERENCES users(id),
     `;
 
+    // Crea tabella documents
+    console.log('🎓 ACCADEMIA: Configurazione archivio documenti...');
+    await sql`
+      CREATE TABLE IF NOT EXISTS documents (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title TEXT NOT NULL,
+        description TEXT,
+        filename VARCHAR(255) NOT NULL,
+        file_url TEXT NOT NULL,
+        file_path TEXT,
+        file_size INTEGER,
+        mime_type VARCHAR(100),
+        type VARCHAR(20) DEFAULT 'template' CHECK (type IN ('template', 'form', 'guide', 'report')),
+        category VARCHAR(100) NOT NULL,
+        tags TEXT[] DEFAULT '{}',
+        version VARCHAR(20) DEFAULT '1.0',
+        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'draft', 'archived')),
+        uploaded_by UUID REFERENCES users(id),
+        download_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+
     // Crea tabella activity_logs
     console.log('🎓 ACCADEMIA: Configurazione sistema di audit...');
     await sql`
