@@ -180,7 +180,6 @@ export default function NormativeDetail() {
       action: handleCopyLink
     }
   ];
-  }
 
   if (loading) {
     return (
