@@ -55,7 +55,6 @@ export default function Docx() {
   const [uploaderName, setUploaderName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const canUpload = userPermissions.includes('documents.upload');
 
   useEffect(() => {
     if (selectedDocument?.uploaded_by) {
