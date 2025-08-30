@@ -119,3 +119,18 @@ export async function updateUserPassword(id: string, newPassword: string): Promi
   const { updateUserPassword } = await import('./neonDatabase');
   return await updateUserPassword(id, newPassword);
 }
+
+export async function createDocument(data: any): Promise<any> {
+  const { createDocument } = await import('./neonDatabase');
+  return await createDocument(data);
+}
+
+export async function updateDocument(id: string, data: any): Promise<any> {
+  const { updateDocument } = await import('./neonDatabase');
+  return await updateDocument(id, data);
+}
+
+export async function deleteDocument(id: string): Promise<boolean> {
+  const { deleteDocument } = await import('./neonDatabase');
+  return await deleteDocument(id);
+}
