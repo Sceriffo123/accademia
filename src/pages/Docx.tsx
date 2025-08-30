@@ -225,6 +225,7 @@ export default function Docx() {
   const canView = userPermissions.includes('documents.view');
   const canCreate = userPermissions.includes('documents.create');
   const canEdit = userPermissions.includes('documents.edit');
+  const sectionVisible = userSections.includes('documents');
 
   // Controllo visibilità sezione
   if (!sectionVisible) {
