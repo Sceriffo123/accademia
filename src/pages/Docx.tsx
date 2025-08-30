@@ -151,6 +151,7 @@ export default function Docx() {
       }
 
       console.log('🔄 Inizio download documento:', doc.filename);
+      console.log('🔗 URL endpoint:', `/api/documents/download/${doc.id}`);
 
       // Valida che il documento abbia un ID valido
       if (!doc.id) {
