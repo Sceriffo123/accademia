@@ -151,28 +151,10 @@ export default function Docx() {
       }
 
       console.log('🔄 Inizio download documento:', doc.filename);
-      console.log('🔗 URL endpoint:', `/api/documents/download/${doc.id}`);
-
-      // Valida che il documento abbia un ID valido
-      if (!doc.id) {
-        console.error('❌ ID documento non valido');
-        return;
-      }
-
-      // Fetch del file come blob per gestire correttamente i file binari
-      const response = await fetch(`/api/documents/download/${doc.id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/octet-stream',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      // Converti la risposta in blob per preservare i dati binari
-      const blob = await response.blob();
+      console.log('🔧 Richiesta generazione PDF dinamica in corso...');
+      // Importazione dinamica per evitare problemi di dipendenza circolare
+      const { generatePDF } = await import('../lib/pdfGenerator');
+      const blob = generatePDF(doc);
       
       // Crea URL temporaneo per il blob
       const blobUrl = window.URL.createObjectURL(blob);
