@@ -48,6 +48,7 @@ export default function Admin() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddNormative, setShowAddNormative] = useState(false);
+  const [showAddUser, setShowAddUser] = useState(false);
   const [showAddDocument, setShowAddDocument] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showPasswordModal, setShowPasswordModal] = useState<any>(null);
