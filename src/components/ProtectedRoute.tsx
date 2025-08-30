@@ -15,8 +15,22 @@ export default function ProtectedRoute({
   superAdminOnly = false,
   operatorOnly = false 
 }: ProtectedRouteProps) {
-  const { user, profile, loading } = useAuth();
   const location = useLocation();
+
+  // Gestisci il caso in cui AuthProvider non è ancora disponibile
+  let authData;
+  try {
+    authData = useAuth();
+  } catch (error) {
+    // AuthProvider non è ancora disponibile, mostra caricamento
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-800"></div>
+      </div>
+    );
+  }
+
+  const { user, profile, loading } = authData;
 
   if (loading) {
     return (
