@@ -78,14 +78,19 @@ export default function Docx() {
 
   async function loadDocuments() {
     try {
+      console.log('🎓 DOCX: Inizio caricamento documenti...');
       setLoading(true);
       const docs = await getAllDocuments();
+      console.log('🎓 DOCX: Documenti caricati dal database:', docs);
+      console.log('🎓 DOCX: Numero documenti:', docs.length);
       setDocuments(docs);
+      console.log('🎓 DOCX: Documenti salvati nello stato');
     } catch (error) {
-      console.error('Errore caricamento documenti:', error);
+      console.error('🚨 DOCX: Errore caricamento documenti:', error);
       setDocuments([]);
     } finally {
       setLoading(false);
+      console.log('🎓 DOCX: Caricamento completato');
     }
   }
 
@@ -306,7 +311,12 @@ export default function Docx() {
             </button>
           </div>
 
-          {filteredDocuments.length > 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-800 mx-auto mb-4"></div>
+              <p className="text-gray-600">Caricamento documenti...</p>
+            </div>
+          ) : documents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredDocuments.map((doc) => (
                 <div
