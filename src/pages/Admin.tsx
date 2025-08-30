@@ -70,6 +70,8 @@ export default function Admin() {
     reference_number: '',
     publication_date: '',
     effective_date: '',
+    filename: '',
+    file_path: '',
     tags: [] as string[]
   });
   const [tagInput, setTagInput] = useState('');
@@ -126,6 +128,8 @@ export default function Admin() {
         reference_number: normativeForm.reference_number,
         publication_date: normativeForm.publication_date,
         effective_date: normativeForm.effective_date,
+        filename: normativeForm.filename || undefined,
+        file_path: normativeForm.file_path || undefined,
         tags: normativeForm.tags
       });
       
@@ -138,6 +142,8 @@ export default function Admin() {
         reference_number: '',
         publication_date: '',
         effective_date: '',
+        filename: '',
+        file_path: '',
         tags: []
       });
       setTagInput('');
@@ -192,6 +198,8 @@ export default function Admin() {
             ? formatDateForInput(editingNormative.effective_date)
             : editingNormative.effective_date)
           : editingNormative.effective_date,
+        filename: editingNormative.filename || undefined,
+        file_path: editingNormative.file_path || undefined,
         tags: editingNormative.tags
       });
 
@@ -1259,6 +1267,30 @@ export default function Admin() {
                   </div>
                 </div>
                 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome File</label>
+                    <input
+                      type="text"
+                      value={normativeForm.filename}
+                      onChange={(e) => setNormativeForm({...normativeForm, filename: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="documento.pdf"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Percorso File</label>
+                    <input
+                      type="text"
+                      value={normativeForm.file_path}
+                      onChange={(e) => setNormativeForm({...normativeForm, file_path: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="https://drive.google.com/file/d/..."
+                    />
+                  </div>
+                </div>
+                
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Contenuto *</label>
                   <textarea
@@ -1405,6 +1437,30 @@ export default function Admin() {
                       value={editingNormative.effective_date}
                       onChange={(e) => setEditingNormative({...editingNormative, effective_date: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome File</label>
+                    <input
+                      type="text"
+                      value={editingNormative.filename || ''}
+                      onChange={(e) => setEditingNormative({...editingNormative, filename: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="documento.pdf"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Percorso File</label>
+                    <input
+                      type="text"
+                      value={editingNormative.file_path || ''}
+                      onChange={(e) => setEditingNormative({...editingNormative, file_path: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="https://drive.google.com/file/d/..."
                     />
                   </div>
                 </div>

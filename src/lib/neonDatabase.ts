@@ -20,6 +20,8 @@ export interface Normative {
   reference_number: string;
   publication_date: string;
   effective_date: string;
+  filename?: string;
+  file_path?: string;
   tags: string[];
   created_at: string;
   updated_at: string;
@@ -89,6 +91,8 @@ export async function initializeTables() {
         reference_number VARCHAR(100) UNIQUE NOT NULL,
         publication_date DATE NOT NULL,
         effective_date DATE NOT NULL,
+        filename VARCHAR(255),
+        file_path VARCHAR(500),
         tags TEXT[] DEFAULT '{}',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -159,7 +163,20 @@ export async function initializeTables() {
     await insertDefaultPermissions();
     await insertDefaultRoleConfiguration();
 
-    console.log('🎓 ACCADEMIA: Sistema inizializzato con successo!');
+    // Migrazione: Aggiungi colonne filename e file_path a normatives se non esistono
+    console.log('🎓 ACCADEMIA: Verifica migrazione normatives...');
+    try {
+      await sql`
+        ALTER TABLE normatives 
+        ADD COLUMN IF NOT EXISTS filename VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS file_path VARCHAR(500)
+      `;
+      console.log('🎓 ACCADEMIA: Migrazione normatives completata.');
+    } catch (migrationError) {
+      console.log('🎓 ACCADEMIA: Colonne già esistenti o errore migrazione:', migrationError);
+    }
+
+    console.log('🎓 ACCADEMIA: Inizializzazione completata con successo!');
     return true;
   } catch (error) {
     console.error('🚨 ACCADEMIA: Errore critico durante l\'inizializzazione:', error);
@@ -449,6 +466,8 @@ export async function createNormative(data: {
   reference_number: string;
   publication_date: string;
   effective_date: string;
+  filename?: string;
+  file_path?: string;
   tags?: string[];
 }): Promise<Normative | null> {
   try {
@@ -457,12 +476,12 @@ export async function createNormative(data: {
     const result = await sql`
       INSERT INTO normatives (
         title, content, category, type, reference_number, 
-        publication_date, effective_date, tags, updated_at
+        publication_date, effective_date, filename, file_path, tags, updated_at
       )
       VALUES (
         ${data.title}, ${data.content}, ${data.category}, ${data.type}, 
         ${data.reference_number}, ${data.publication_date}, ${data.effective_date}, 
-        ${data.tags || []}, NOW()
+        ${data.filename || null}, ${data.file_path || null}, ${data.tags || []}, NOW()
       )
       RETURNING *
     `;
@@ -483,6 +502,8 @@ export async function updateNormative(id: string, data: {
   reference_number?: string;
   publication_date?: string;
   effective_date?: string;
+  filename?: string;
+  file_path?: string;
   tags?: string[];
 }): Promise<Normative | null> {
   try {
@@ -542,6 +563,7 @@ export async function updateNormative(id: string, data: {
       SET title = ${data.title}, content = ${data.content}, category = ${data.category},
           type = ${data.type}, reference_number = ${data.reference_number},
           publication_date = ${data.publication_date}, effective_date = ${data.effective_date},
+          filename = ${data.filename || null}, file_path = ${data.file_path || null},
           tags = ${data.tags}, updated_at = NOW()
       WHERE id = ${id}
       RETURNING *
