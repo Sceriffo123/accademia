@@ -147,7 +147,6 @@ export default function Docx() {
       // Verifica permessi prima del download
       if (!canView) {
         console.error('❌ Permessi insufficienti per scaricare il documento');
-        // TODO: Mostrare notifica errore permessi
         return;
       }
 
@@ -156,33 +155,46 @@ export default function Docx() {
       // Valida che il documento abbia un ID valido
       if (!doc.id) {
         console.error('❌ ID documento non valido');
-        // TODO: Mostrare notifica errore
         return;
       }
 
-      // Crea un link temporaneo per il download
-      const link = document.createElement('a');
-      link.href = `/api/documents/download/${doc.id}`; // Endpoint API per download
-      link.download = doc.filename || 'documento'; // Nome file di fallback
-      link.target = '_blank'; // Apri in nuova scheda se necessario
+      // Fetch del file come blob per gestire correttamente i file binari
+      const response = await fetch(`/api/documents/download/${doc.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/octet-stream',
+        },
+      });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Converti la risposta in blob per preservare i dati binari
+      const blob = await response.blob();
+      
+      // Crea URL temporaneo per il blob
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      // Crea link per il download
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = doc.filename || 'documento.pdf';
+      
       // Aggiungi alla pagina temporaneamente
       document.body.appendChild(link);
-
+      
       // Triggera il download
       link.click();
-
-      // Rimuovi il link dalla pagina
+      
+      // Cleanup: rimuovi link e revoca URL blob
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
 
-      console.log('✅ Download avviato per:', doc.filename);
-
-      // TODO: Potresti aggiungere una notifica di successo
-      // alert('Download avviato: ' + doc.filename);
+      console.log('✅ Download completato per:', doc.filename);
 
     } catch (error) {
       console.error('❌ Errore durante il download:', error);
-      // TODO: Implementare notifica errore all'utente
       alert('Errore durante il download. Riprova più tardi.');
     }
   }
