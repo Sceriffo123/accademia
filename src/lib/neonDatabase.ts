@@ -982,6 +982,12 @@ export async function updateRolePermission(role: string, permissionId: string, g
 
 export async function updateRoleSection(role: string, section: string, visible: boolean): Promise<boolean> {
   try {
+    // PROTEZIONE CRITICA: Il SuperAdmin non può disabilitare la propria sezione superadmin
+    if (role === 'superadmin' && section === 'superadmin' && !visible) {
+      console.warn('🚨 ACCADEMIA: Tentativo bloccato - SuperAdmin non può disabilitare la propria sezione');
+      return false;
+    }
+
     await sql`
       INSERT INTO role_sections (role, section, visible)
       VALUES (${role}, ${section}, ${visible})

@@ -518,7 +518,7 @@ export default function SuperAdmin() {
                           {Array.from(roleMatrix.keys()).map(role => {
                             const roleData = roleMatrix.get(role);
                             const isVisible = roleData?.sections.includes(section);
-                            const isDisabled = false; // SuperAdmin può sempre modificare tutto
+                            const isDisabled = role === 'superadmin' && section === 'superadmin'; // Protezione: SuperAdmin non può disabilitare la propria sezione
                             
                             return (
                               <td key={role} className="py-3 px-4 text-center">
