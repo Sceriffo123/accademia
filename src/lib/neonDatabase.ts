@@ -1,8 +1,12 @@
 import { neon } from '@neondatabase/serverless';
 import { DEFAULT_ROLE_PERMISSIONS } from './permissions';
 
-// Inizializza connessione Neon
-const sql = neon(import.meta.env.VITE_DATABASE_URL);
+// Inizializza connessione Neon solo in ambiente server
+const sql = typeof window === 'undefined' 
+  ? neon(import.meta.env.VITE_DATABASE_URL)
+  : (() => {
+      throw new Error('Database operations must be performed on the server side');
+    });
 
 export interface User {
   id: string;
