@@ -5,9 +5,7 @@ import {
   getAllNormatives,
   getAllDocuments,
   getAllCourses, createCourse, updateCourse, deleteCourse, getCourseEnrollments, deleteEnrollment,
-  getQuizByCourseId, createQuiz, updateQuiz, deleteQuiz, getQuizQuestions, createQuizQuestion, updateQuizQuestion, deleteQuizQuestion,
-  createCourseModule, getCourseModules, updateCourseModule, deleteCourseModule,
-  type User, type Course, type Enrollment, type Quiz, type QuizQuestion, type CourseModule
+  type User, type Course, type Enrollment
 } from '../lib/neonDatabase';
 import { 
   Users, 
@@ -38,12 +36,10 @@ interface AdminStats {
 }
 
 type TabType = 'overview' | 'users' | 'normatives' | 'documents' | 'courses';
-type CourseSubTabType = 'courses' | 'quizzes';
 
 export default function Admin() {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
-  const [courseSubTab, setCourseSubTab] = useState<CourseSubTabType>('courses');
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
     totalNormatives: 0,
@@ -68,23 +64,6 @@ export default function Admin() {
   const [courseEnrollments, setCourseEnrollments] = useState<{[courseId: string]: number}>({});
   const [showCreateCourse, setShowCreateCourse] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
-  
-  // Stati per quiz
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
-  const [showCreateQuiz, setShowCreateQuiz] = useState(false);
-  const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
-  
-  // Stati per domande quiz
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [showCreateQuestion, setShowCreateQuestion] = useState(false);
-  const [editingQuestion, setEditingQuestion] = useState<QuizQuestion | null>(null);
-
-  // Stati per moduli corso
-  const [modules, setModules] = useState<CourseModule[]>([]);
-  const [selectedModule, setSelectedModule] = useState<CourseModule | null>(null);
-  const [showCreateModule, setShowCreateModule] = useState(false);
-  const [editingModule, setEditingModule] = useState<CourseModule | null>(null);
   const [selectedCourseEnrollments, setSelectedCourseEnrollments] = useState<Enrollment[]>([]);
   const [showEnrollmentsModal, setShowEnrollmentsModal] = useState(false);
   const [selectedCourseTitle, setSelectedCourseTitle] = useState('');
@@ -100,23 +79,6 @@ export default function Admin() {
     is_free: true,
     passing_score: 70,
     tags: ''
-  });
-  
-  const [newQuiz, setNewQuiz] = useState({
-    title: '',
-    description: '',
-    time_limit: 30,
-    passing_score: 70,
-    max_attempts: 3
-  });
-  
-  const [newQuestion, setNewQuestion] = useState({
-    question: '',
-    options: ['', '', '', ''],
-    correct_answer: 0,
-    explanation: '',
-    points: 1,
-    order: 1
   });
 
   useEffect(() => {
@@ -145,9 +107,6 @@ export default function Admin() {
       }
       setCourseEnrollments(enrollmentCounts);
       
-      // Carica tutti i quiz
-      await fetchQuizzes();
-      
       setStats({
         totalUsers: usersData.length,
         totalNormatives: normativesData.length,
@@ -155,149 +114,9 @@ export default function Admin() {
         completionRate: 85
       });
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching admin data:', error);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function fetchQuizzes() {
-    try {
-      // I quiz ora sono collegati ai moduli, quindi non possiamo più recuperarli direttamente dai corsi
-      // Per ora manteniamo vuoto l'array quiz finché non implementiamo la nuova logica
-      setQuizzes([]);
-    } catch (error) {
-      console.error('Error fetching quizzes:', error);
-    }
-  }
-
-  async function fetchModules(courseId: string) {
-    try {
-      const modulesData = await getCourseModules(courseId);
-      setModules(modulesData);
-    } catch (error) {
-      console.error('Error fetching modules:', error);
-    }
-  }
-
-  async function handleCreateQuiz() {
-    if (!selectedCourseForQuiz) return;
-    
-    try {
-      const quizData = {
-        course_id: selectedCourseForQuiz,
-        ...newQuiz
-      };
-      
-      await createQuiz(quizData);
-      await fetchQuizzes();
-      setNewQuiz({
-        title: '',
-        description: '',
-        time_limit: 30,
-        passing_score: 70,
-        max_attempts: 3
-      });
-      setSelectedCourseForQuiz('');
-      setShowCreateQuiz(false);
-    } catch (error) {
-      console.error('Error creating quiz:', error);
-    }
-  }
-
-  async function handleUpdateQuiz() {
-    if (!editingQuiz) return;
-    
-    try {
-      await updateQuiz(editingQuiz.id, newQuiz);
-      await fetchQuizzes();
-      setEditingQuiz(null);
-      setNewQuiz({
-        title: '',
-        description: '',
-        time_limit: 30,
-        passing_score: 70,
-        max_attempts: 3
-      });
-    } catch (error) {
-      console.error('Error updating quiz:', error);
-    }
-  }
-
-  async function handleDeleteQuiz(quizId: string) {
-    if (!confirm('Sei sicuro di voler eliminare questo quiz? Questa azione eliminerà anche tutte le domande associate.')) return;
-    
-    try {
-      await deleteQuiz(quizId);
-      await fetchQuizzes();
-    } catch (error) {
-      console.error('Error deleting quiz:', error);
-    }
-  }
-
-  async function handleViewQuizQuestions(quizId: string) {
-    try {
-      const questions = await getQuizQuestions(quizId);
-      setQuizQuestions(questions);
-      setShowQuizQuestions(quizId);
-    } catch (error) {
-      console.error('Error fetching quiz questions:', error);
-    }
-  }
-
-  async function handleCreateQuestion() {
-    if (!showQuizQuestions) return;
-    
-    try {
-      const questionData = {
-        quiz_id: showQuizQuestions,
-        ...newQuestion
-      };
-      
-      await createQuizQuestion(questionData);
-      await handleViewQuizQuestions(showQuizQuestions);
-      setNewQuestion({
-        question: '',
-        options: ['', '', '', ''],
-        correct_answer: 0,
-        explanation: '',
-        points: 1,
-        order: quizQuestions.length + 1
-      });
-      setShowCreateQuestion(false);
-    } catch (error) {
-      console.error('Error creating question:', error);
-    }
-  }
-
-  async function handleUpdateQuestion() {
-    if (!editingQuestion) return;
-    
-    try {
-      await updateQuizQuestion(editingQuestion.id, newQuestion);
-      await handleViewQuizQuestions(showQuizQuestions);
-      setEditingQuestion(null);
-      setNewQuestion({
-        question: '',
-        options: ['', '', '', ''],
-        correct_answer: 0,
-        explanation: '',
-        points: 1,
-        order: 1
-      });
-    } catch (error) {
-      console.error('Error updating question:', error);
-    }
-  }
-
-  async function handleDeleteQuestion(questionId: string) {
-    if (!confirm('Sei sicuro di voler eliminare questa domanda?')) return;
-    
-    try {
-      await deleteQuizQuestion(questionId);
-      await handleViewQuizQuestions(showQuizQuestions);
-    } catch (error) {
-      console.error('Error deleting question:', error);
     }
   }
 
@@ -895,188 +714,73 @@ export default function Admin() {
           {/* Courses Tab */}
           {activeTab === 'courses' && (
             <div className="p-6">
-              {/* Sub-tabs for Courses */}
-              <div className="flex space-x-1 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-4 sm:space-y-0">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Gestione Corsi ({courses.length})
+                </h2>
                 <button
-                  onClick={() => setCourseSubTab('courses')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    courseSubTab === 'courses'
-                      ? 'bg-purple-100 text-purple-700'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
+                  onClick={() => setShowCreateCourse(true)}
+                  className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
                 >
-                  Corsi
-                </button>
-                <button
-                  onClick={() => setCourseSubTab('quizzes')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    courseSubTab === 'quizzes'
-                      ? 'bg-purple-100 text-purple-700'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Quiz
+                  <Plus className="h-4 w-4" />
+                  <span>Nuovo Corso</span>
                 </button>
               </div>
 
-              {/* Courses Sub-tab */}
-              {courseSubTab === 'courses' && (
-                <>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-4 sm:space-y-0">
-                    <h2 className="text-xl font-semibold text-gray-900">
-                      Gestione Corsi ({courses.length})
-                    </h2>
-                    <button
-                      onClick={() => setShowCreateCourse(true)}
-                      className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Nuovo Corso</span>
-                    </button>
-                  </div>
-
-                  {/* Courses List */}
-                  <div className="space-y-4">
-                    {courses.map((course) => (
-                      <div key={course.id} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900">{course.title}</h3>
-                            <p className="text-gray-600 text-sm">{course.category}</p>
-                            <div className="flex items-center space-x-4 mt-2">
-                              <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                                course.is_free ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                              }`}>
-                                {course.is_free ? 'Gratuito' : `€${course.price}`}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {courseEnrollments[course.id] || 0} iscritti
-                              </span>
-                              <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                                course.status === 'active' ? 'bg-green-100 text-green-800' :
-                                course.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
-                                {course.status === 'active' ? 'Attivo' :
-                                 course.status === 'draft' ? 'Bozza' : 'Archiviato'}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => handleViewEnrollments(course)}
-                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Visualizza iscritti"
-                            >
-                              <Users className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => setEditingCourse(course)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Modifica corso"
-                            >
-                              <Edit3 className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteCourse(course.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Elimina corso"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
+              {/* Courses List */}
+              <div className="space-y-4">
+                {courses.map((course) => (
+                  <div key={course.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900">{course.title}</h3>
+                        <p className="text-gray-600 text-sm">{course.category}</p>
+                        <div className="flex items-center space-x-4 mt-2">
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                            course.is_free ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {course.is_free ? 'Gratuito' : `€${course.price}`}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {courseEnrollments[course.id] || 0} iscritti
+                          </span>
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                            course.status === 'active' ? 'bg-green-100 text-green-800' :
+                            course.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {course.status === 'active' ? 'Attivo' :
+                             course.status === 'draft' ? 'Bozza' : 'Archiviato'}
+                          </span>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* Quizzes Sub-tab */}
-              {courseSubTab === 'quizzes' && (
-                <>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-4 sm:space-y-0">
-                    <h2 className="text-xl font-semibold text-gray-900">
-                      Gestione Quiz ({quizzes.length})
-                    </h2>
-                    <button
-                      onClick={() => setShowCreateQuiz(true)}
-                      className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Nuovo Quiz</span>
-                    </button>
-                  </div>
-
-                  {/* Quizzes List */}
-                  <div className="space-y-4">
-                    {quizzes.map((quiz) => {
-                      const course = courses.find(c => c.id === quiz.course_id);
-                      return (
-                        <div key={quiz.id} className="border border-gray-200 rounded-lg p-4">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-gray-900">{quiz.title}</h3>
-                              <p className="text-gray-600 text-sm">{course?.title || 'Corso non trovato'}</p>
-                              <div className="flex items-center space-x-4 mt-2">
-                                <span className="text-xs text-gray-500">
-                                  {quiz.time_limit} min
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  Soglia: {quiz.passing_score}%
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  Max tentativi: {quiz.max_attempts}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => handleViewQuizQuestions(quiz.id)}
-                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                title="Gestisci domande"
-                              >
-                                <FileText className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEditingQuiz(quiz);
-                                  setNewQuiz({
-                                    title: quiz.title,
-                                    description: quiz.description,
-                                    time_limit: quiz.time_limit,
-                                    passing_score: quiz.passing_score,
-                                    max_attempts: quiz.max_attempts
-                                  });
-                                }}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Modifica quiz"
-                              >
-                                <Edit3 className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteQuiz(quiz.id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Elimina quiz"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    
-                    {quizzes.length === 0 && (
-                      <div className="text-center py-8 text-gray-500">
-                        <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                        <p>Nessun quiz trovato</p>
-                        <p className="text-sm">Crea il primo quiz per iniziare</p>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleViewEnrollments(course)}
+                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          title="Visualizza iscritti"
+                        >
+                          <Users className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setEditingCourse(course)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Modifica corso"
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCourse(course.id)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Elimina corso"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
-                    )}
+                    </div>
                   </div>
-                </>
-              )}
+                ))}
+              </div>
             </div>
           )}
         </div>
