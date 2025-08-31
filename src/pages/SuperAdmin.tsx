@@ -13,7 +13,6 @@ import {
 } from '../lib/neonDatabase';
 import { 
   Shield, 
-  AlertTriangle, 
   Users, 
   Settings, 
   Eye,
@@ -63,7 +62,6 @@ export default function SuperAdmin() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTableName, setSelectedTableName] = useState('');
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [showMigrationModal, setShowMigrationModal] = useState(false);
   const [migrationStatus, setMigrationStatus] = useState<'idle' | 'checking' | 'migrating' | 'success' | 'error'>('idle');
   const [migrationMessage, setMigrationMessage] = useState('');
 
@@ -121,11 +119,10 @@ export default function SuperAdmin() {
   }
 
   async function handleForceMigration() {
-    setShowMigrationModal(true);
-  }
+    if (!confirm('Sei sicuro di voler eseguire la migrazione del database? Questa operazione modificherà la struttura del database.')) {
+      return;
+    }
 
-  async function confirmMigration() {
-    setShowMigrationModal(false);
     setMigrationStatus('migrating');
     setMigrationMessage('Esecuzione migrazione database...');
     
@@ -1306,56 +1303,6 @@ export default function SuperAdmin() {
                   <p className="text-sm">Impossibile caricare la struttura della tabella</p>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Conferma Migrazione */}
-      {showMigrationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="flex-shrink-0">
-                  <AlertTriangle className="h-8 w-8 text-amber-500" />
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    Conferma Migrazione Database
-                  </h3>
-                </div>
-              </div>
-              
-              <div className="mb-6">
-                <p className="text-sm text-gray-600 mb-3">
-                  Stai per eseguire una migrazione forzata del database. Questa operazione:
-                </p>
-                <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                  <li>• Modificherà la struttura delle tabelle</li>
-                  <li>• Aggiungerà colonne mancanti</li>
-                  <li>• Popolerà i corsi di formazione</li>
-                  <li>• Potrebbe richiedere alcuni minuti</li>
-                </ul>
-                <p className="text-sm text-amber-600 mt-3 font-medium">
-                  ⚠️ Assicurati di aver fatto un backup del database
-                </p>
-              </div>
-
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowMigrationModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Annulla
-                </button>
-                <button
-                  onClick={confirmMigration}
-                  className="px-4 py-2 text-sm font-medium text-white bg-amber-600 border border-transparent rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
-                >
-                  Conferma Migrazione
-                </button>
-              </div>
             </div>
           </div>
         </div>

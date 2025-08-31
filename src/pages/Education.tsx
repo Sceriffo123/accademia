@@ -1,132 +1,127 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  BookOpen, 
+  GraduationCap, 
   PlayCircle, 
-  CheckCircle, 
-  Lock, 
-  Star, 
   Clock, 
   Users, 
-  Award, 
-  Euro, 
-  GraduationCap
+  Star,
+  CheckCircle,
+  Lock,
+  BookOpen
 } from 'lucide-react';
-import { getAllCourses, createEnrollment, checkUserEnrollment, type Course, type Enrollment } from '../lib/neonDatabase';
-import { useAuth } from '../contexts/AuthContext';
+
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+  duration: string;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  enrollments: number;
+  rating: number;
+  completed: boolean;
+  locked: boolean;
+  modules: number;
+}
 
 export default function Education() {
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [enrollments, setEnrollments] = useState<{[key: string]: Enrollment}>({});
-  const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
 
-  useEffect(() => {
-    fetchCourses();
-  }, [user]);
-
-  const fetchCourses = async () => {
-    try {
-      setLoading(true);
-      const coursesData = await getAllCourses();
-      setCourses(coursesData);
-
-      // Se l'utente è loggato, verifica le iscrizioni
-      if (user) {
-        const userEnrollments: {[key: string]: Enrollment} = {};
-        for (const course of coursesData) {
-          const enrollment = await checkUserEnrollment(user.id, course.id);
-          if (enrollment) {
-            userEnrollments[course.id] = enrollment;
-          }
-        }
-        setEnrollments(userEnrollments);
-      }
-    } catch (error) {
-      console.error('Errore caricamento corsi:', error);
-    } finally {
-      setLoading(false);
+  const courses: Course[] = [
+    {
+      id: '1',
+      title: 'Normative di Base del Trasporto Locale',
+      description: 'Introduzione alle principali normative che regolano il trasporto pubblico locale non di linea',
+      duration: '2 ore',
+      level: 'beginner',
+      enrollments: 245,
+      rating: 4.8,
+      completed: false,
+      locked: false,
+      modules: 6
+    },
+    {
+      id: '2',
+      title: 'Licenze e Autorizzazioni',
+      description: 'Procedure per ottenere e mantenere le licenze necessarie per operare nel settore',
+      duration: '3 ore',
+      level: 'intermediate',
+      enrollments: 189,
+      rating: 4.9,
+      completed: false,
+      locked: false,
+      modules: 8
+    },
+    {
+      id: '3',
+      title: 'Sicurezza e Responsabilità',
+      description: 'Normative sulla sicurezza, responsabilità civile e penale degli operatori',
+      duration: '2.5 ore',
+      level: 'intermediate',
+      enrollments: 156,
+      rating: 4.7,
+      completed: false,
+      locked: false,
+      modules: 7
+    },
+    {
+      id: '4',
+      title: 'Gestione Documenti e Adempimenti',
+      description: 'Come gestire correttamente documenti, registri e adempimenti obbligatori',
+      duration: '1.5 ore',
+      level: 'beginner',
+      enrollments: 203,
+      rating: 4.6,
+      completed: true,
+      locked: false,
+      modules: 5
+    },
+    {
+      id: '5',
+      title: 'Controlli e Sanzioni',
+      description: 'Normative sui controlli, procedure sanzionatorie e ricorsi',
+      duration: '2 ore',
+      level: 'advanced',
+      enrollments: 98,
+      rating: 4.9,
+      completed: false,
+      locked: true,
+      modules: 6
+    },
+    {
+      id: '6',
+      title: 'Evoluzione Normativa 2024',
+      description: 'Aggiornamenti e novità normative introdotte nel 2024',
+      duration: '1 ora',
+      level: 'advanced',
+      enrollments: 67,
+      rating: 5.0,
+      completed: false,
+      locked: true,
+      modules: 4
     }
-  };
-
-  const handleEnrollment = async (courseId: string) => {
-    if (!user) {
-      alert('Devi effettuare il login per iscriverti ai corsi');
-      return;
-    }
-
-    try {
-      const course = courses.find(c => c.id === courseId);
-      if (!course) return;
-
-      const paymentStatus = course.is_free ? 'free' : 'pending';
-      
-      await createEnrollment({
-        user_id: user.id,
-        course_id: courseId,
-        payment_status: paymentStatus
-      });
-
-      // Ricarica le iscrizioni
-      await fetchCourses();
-      
-      if (course.is_free) {
-        alert('Iscrizione completata con successo!');
-      } else {
-        alert(`Iscrizione registrata! Procedi al pagamento di €${course.price}`);
-      }
-    } catch (error) {
-      console.error('Errore iscrizione:', error);
-      alert('Errore durante l\'iscrizione. Riprova.');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Caricamento corsi...</p>
-        </div>
-      </div>
-    );
-  }
-
+  ];
 
   const filteredCourses = selectedLevel === 'all' 
     ? courses 
     : courses.filter(course => course.level === selectedLevel);
 
-  const getLevelBadgeColor = (level: string) => {
-    switch (level) {
-      case 'beginner': return 'bg-green-100 text-green-800';
-      case 'intermediate': return 'bg-yellow-100 text-yellow-800';
-      case 'advanced': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getLevelText = (level: string) => {
+  function getLevelLabel(level: string) {
     switch (level) {
       case 'beginner': return 'Base';
       case 'intermediate': return 'Intermedio';
       case 'advanced': return 'Avanzato';
       default: return level;
     }
-  };
+  }
 
-  const getEnrollmentStatus = (courseId: string) => {
-    const enrollment = enrollments[courseId];
-    if (!enrollment) return null;
-    
-    switch (enrollment.status) {
-      case 'completed': return { text: 'Completato', color: 'text-green-600', icon: CheckCircle };
-      case 'in_progress': return { text: 'In Corso', color: 'text-blue-600', icon: PlayCircle };
-      case 'enrolled': return { text: 'Iscritto', color: 'text-yellow-600', icon: Users };
-      case 'failed': return { text: 'Non Superato', color: 'text-red-600', icon: Lock };
-      default: return null;
+  function getLevelColor(level: string) {
+    switch (level) {
+      case 'beginner': return 'bg-green-100 text-green-800';
+      case 'intermediate': return 'bg-yellow-100 text-yellow-800';
+      case 'advanced': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
-  };
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -183,7 +178,6 @@ export default function Education() {
                 value={selectedLevel}
                 onChange={(e) => setSelectedLevel(e.target.value)}
                 className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                aria-label="Filtra corsi per livello"
               >
                 <option value="all">Tutti i livelli</option>
                 <option value="beginner">Base</option>
@@ -207,12 +201,20 @@ export default function Education() {
             >
               <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-blue-100">
-                    <BookOpen className="h-6 w-6 text-blue-800" />
+                  <div className={`p-3 rounded-xl ${
+                    course.completed ? 'bg-green-100' : course.locked ? 'bg-gray-100' : 'bg-blue-100'
+                  }`}>
+                    {course.completed ? (
+                      <CheckCircle className="h-6 w-6 text-green-800" />
+                    ) : course.locked ? (
+                      <Lock className="h-6 w-6 text-gray-500" />
+                    ) : (
+                      <BookOpen className="h-6 w-6 text-blue-800" />
+                    )}
                   </div>
-                  <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getLevelBadgeColor(course.level)}`}>
-                    {getLevelText(course.level)}
-                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getLevelColor(course.level)}`}>
+                    {getLevelLabel(course.level)}
+                  </span>
                 </div>
 
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 line-clamp-2">
@@ -223,54 +225,44 @@ export default function Education() {
                   {course.description}
                 </p>
 
-                <div className="flex items-center space-x-4 mb-4">
-                  <div className="flex items-center space-x-1">
-                    <Users className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-gray-600">{course.enrollment_count || 0} iscritti</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                    <span className="text-sm text-gray-600">{course.rating}</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <BookOpen className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-gray-600">{course.modules_count} moduli</span>
-                  </div>
-                  {!course.is_free && (
+                <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                  <div className="flex items-center space-x-4">
                     <div className="flex items-center space-x-1">
-                      <Euro className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium text-green-600">€{course.price}</span>
+                      <Clock className="h-4 w-4" />
+                      <span>{course.duration}</span>
                     </div>
-                  )}
+                    <div className="flex items-center space-x-1">
+                      <Users className="h-4 w-4" />
+                      <span>{course.enrollments}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Star className="h-4 w-4 fill-current text-yellow-400" />
+                    <span className="font-medium">{course.rating}</span>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-1">
-                    <Clock className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-gray-600">{course.duration}</span>
-                  </div>
-                  {(() => {
-                    const enrollmentStatus = getEnrollmentStatus(course.id);
-                    if (enrollmentStatus) {
-                      const IconComponent = enrollmentStatus.icon;
-                      return (
-                        <span className={`flex items-center space-x-2 text-sm font-medium ${enrollmentStatus.color}`}>
-                          <IconComponent className="h-4 w-4" />
-                          <span>{enrollmentStatus.text}</span>
-                        </span>
-                      );
-                    }
-                    
-                    return (
-                      <button 
-                        onClick={() => handleEnrollment(course.id)}
-                        className="flex items-center space-x-2 bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors text-sm"
-                      >
-                        <PlayCircle className="h-4 w-4" />
-                        <span>{course.is_free ? 'Iscriviti Gratis' : `Iscriviti - €${course.price}`}</span>
-                      </button>
-                    );
-                  })()}
+                  <span className="text-sm text-gray-600">
+                    {course.modules} moduli
+                  </span>
+                  
+                  {course.completed ? (
+                    <span className="flex items-center space-x-2 text-green-600 text-sm font-medium">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Completato</span>
+                    </span>
+                  ) : course.locked ? (
+                    <span className="flex items-center space-x-2 text-gray-400 text-sm">
+                      <Lock className="h-4 w-4" />
+                      <span>Bloccato</span>
+                    </span>
+                  ) : (
+                    <button className="flex items-center space-x-2 bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors text-sm">
+                      <PlayCircle className="h-4 w-4" />
+                      <span>Inizia</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
