@@ -39,7 +39,9 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  RefreshCw
+  RefreshCw,
+  GraduationCap,
+  Wrench
 } from 'lucide-react';
 
 interface AdminStats {
@@ -49,7 +51,7 @@ interface AdminStats {
   completionRate: number;
 }
 
-type TabType = 'overview' | 'users' | 'normatives' | 'documents';
+type TabType = 'overview' | 'users' | 'normatives' | 'documents' | 'courses';
 
 export default function Admin() {
   const { profile } = useAuth();
@@ -74,6 +76,9 @@ export default function Admin() {
     role: 'user' as 'user' | 'admin' | 'superadmin' | 'operator'
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [migrationStatus, setMigrationStatus] = useState<'idle' | 'checking' | 'migrating' | 'success' | 'error'>('idle');
+  const [migrationMessage, setMigrationMessage] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -142,6 +147,64 @@ export default function Admin() {
     }
   }
 
+  // Funzioni di migrazione database
+  async function handleCheckMigration() {
+    setMigrationStatus('checking');
+    setMigrationMessage('Verifica stato database...');
+    
+    try {
+      const { checkDatabaseStatus } = await import('../lib/checkMigration');
+      const status = await checkDatabaseStatus();
+      
+      if (status) {
+        if (!status.coursesTableExists) {
+          setMigrationMessage('Tabella courses mancante - Migrazione necessaria');
+          setMigrationStatus('error');
+        } else if (status.coursesPermissionsCount === 0) {
+          setMigrationMessage('Permessi courses mancanti - Migrazione necessaria');
+          setMigrationStatus('error');
+        } else {
+          setMigrationMessage('Database allineato correttamente');
+          setMigrationStatus('success');
+        }
+      } else {
+        setMigrationMessage('Errore durante la verifica');
+        setMigrationStatus('error');
+      }
+    } catch (error) {
+      console.error('Errore verifica migrazione:', error);
+      setMigrationMessage('Errore durante la verifica');
+      setMigrationStatus('error');
+    }
+    
+    setTimeout(() => setMigrationStatus('idle'), 3000);
+  }
+
+  async function handleForceMigration() {
+    setMigrationStatus('migrating');
+    setMigrationMessage('Esecuzione migrazione database...');
+    
+    try {
+      const { forceMigration } = await import('../lib/checkMigration');
+      const success = await forceMigration();
+      
+      if (success) {
+        setMigrationMessage('Migrazione completata con successo');
+        setMigrationStatus('success');
+        fetchData(); // Ricarica i dati
+      } else {
+        setMigrationMessage('Errore durante la migrazione');
+        setMigrationStatus('error');
+      }
+    } catch (error) {
+      console.error('Errore migrazione:', error);
+      setMigrationMessage('Errore durante la migrazione');
+      setMigrationStatus('error');
+    }
+    
+    setTimeout(() => setMigrationStatus('idle'), 3000);
+  }
+
   const filteredUsers = users.filter(user =>
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.full_name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -192,7 +255,8 @@ export default function Admin() {
     { id: 'overview', label: 'Panoramica', icon: BarChart3 },
     { id: 'users', label: 'Utenti', icon: Users },
     { id: 'normatives', label: 'Normative', icon: FileText },
-    { id: 'documents', label: 'Documenti', icon: Database }
+    { id: 'documents', label: 'Documenti', icon: Database },
+    { id: 'courses', label: 'Formazione', icon: GraduationCap }
   ];
 
   if (loading) {
@@ -207,14 +271,58 @@ export default function Admin() {
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-            Pannello Amministrazione
-          </h1>
-          <p className="text-gray-600">
-            Gestione utenti, contenuti e monitoraggio piattaforma
-          </p>
+        <div className="mb-8 flex flex-col lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+              Pannello Amministrazione
+            </h1>
+            <p className="text-gray-600">
+              Gestione utenti, contenuti e monitoraggio piattaforma
+            </p>
+          </div>
+          
+          {/* Pulsanti Migrazione Database */}
+          <div className="mt-4 lg:mt-0 flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={handleCheckMigration}
+              disabled={migrationStatus !== 'idle'}
+              className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Wrench className="h-4 w-4" />
+              <span>
+                {migrationStatus === 'checking' ? 'Verifica...' : 'Verifica DB'}
+              </span>
+            </button>
+            
+            <button
+              onClick={handleForceMigration}
+              disabled={migrationStatus !== 'idle'}
+              className="inline-flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <RefreshCw className={`h-4 w-4 ${migrationStatus === 'migrating' ? 'animate-spin' : ''}`} />
+              <span>
+                {migrationStatus === 'migrating' ? 'Migrazione...' : 'Forza Migrazione'}
+              </span>
+            </button>
+          </div>
         </div>
+
+        {/* Status Migrazione */}
+        {migrationStatus !== 'idle' && (
+          <div className={`mb-6 p-4 rounded-lg border ${
+            migrationStatus === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
+            migrationStatus === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+            'bg-blue-50 border-blue-200 text-blue-800'
+          }`}>
+            <div className="flex items-center space-x-2">
+              {migrationStatus === 'success' && <CheckCircle className="h-5 w-5" />}
+              {migrationStatus === 'error' && <X className="h-5 w-5" />}
+              {(migrationStatus === 'checking' || migrationStatus === 'migrating') && 
+                <RefreshCw className="h-5 w-5 animate-spin" />}
+              <span className="font-medium">{migrationMessage}</span>
+            </div>
+          </div>
+        )}
 
         {/* Stats Grid - Mobile 2x2, Desktop 4x1 */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
