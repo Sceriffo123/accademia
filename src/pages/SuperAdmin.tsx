@@ -30,7 +30,9 @@ import {
   X,
   Database,
   Search,
-  HelpCircle
+  HelpCircle,
+  Wrench,
+  RefreshCw
 } from 'lucide-react';
 
 interface Notification {
@@ -60,6 +62,8 @@ export default function SuperAdmin() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTableName, setSelectedTableName] = useState('');
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [migrationStatus, setMigrationStatus] = useState<'idle' | 'checking' | 'migrating' | 'success' | 'error'>('idle');
+  const [migrationMessage, setMigrationMessage] = useState('');
 
   function addNotification(type: 'success' | 'error' | 'info', title: string, message: string) {
     const id = Date.now().toString();
@@ -74,6 +78,77 @@ export default function SuperAdmin() {
 
   function removeNotification(id: string) {
     setNotifications(prev => prev.filter(n => n.id !== id));
+  }
+
+  // Funzioni di migrazione database
+  async function handleCheckMigration() {
+    setMigrationStatus('checking');
+    setMigrationMessage('Verifica stato database...');
+    
+    try {
+      const { checkDatabaseStatus } = await import('../lib/checkMigration');
+      const status = await checkDatabaseStatus();
+      
+      if (status) {
+        if (!status.coursesTableExists) {
+          setMigrationMessage('Tabella courses mancante - Migrazione necessaria');
+          setMigrationStatus('error');
+          addNotification('error', 'Migrazione Necessaria', 'La tabella courses non esiste nel database');
+        } else if (status.coursesPermissionsCount === 0) {
+          setMigrationMessage('Permessi courses mancanti - Migrazione necessaria');
+          setMigrationStatus('error');
+          addNotification('error', 'Migrazione Necessaria', 'I permessi per i corsi non sono configurati');
+        } else {
+          setMigrationMessage('Database allineato correttamente');
+          setMigrationStatus('success');
+          addNotification('success', 'Database OK', 'Tutte le tabelle e permessi sono configurati correttamente');
+        }
+      } else {
+        setMigrationMessage('Errore durante la verifica');
+        setMigrationStatus('error');
+        addNotification('error', 'Errore Verifica', 'Impossibile verificare lo stato del database');
+      }
+    } catch (error) {
+      console.error('Errore verifica migrazione:', error);
+      setMigrationMessage('Errore durante la verifica');
+      setMigrationStatus('error');
+      addNotification('error', 'Errore Sistema', 'Si è verificato un errore durante la verifica');
+    }
+    
+    setTimeout(() => setMigrationStatus('idle'), 3000);
+  }
+
+  async function handleForceMigration() {
+    if (!confirm('Sei sicuro di voler eseguire la migrazione del database? Questa operazione modificherà la struttura del database.')) {
+      return;
+    }
+
+    setMigrationStatus('migrating');
+    setMigrationMessage('Esecuzione migrazione database...');
+    
+    try {
+      const { forceMigration } = await import('../lib/checkMigration');
+      const success = await forceMigration();
+      
+      if (success) {
+        setMigrationMessage('Migrazione completata con successo');
+        setMigrationStatus('success');
+        addNotification('success', 'Migrazione Completata', 'Il database è stato aggiornato correttamente');
+        // Ricarica i dati del database
+        loadDatabaseData();
+      } else {
+        setMigrationMessage('Errore durante la migrazione');
+        setMigrationStatus('error');
+        addNotification('error', 'Errore Migrazione', 'La migrazione del database è fallita');
+      }
+    } catch (error) {
+      console.error('Errore migrazione:', error);
+      setMigrationMessage('Errore durante la migrazione');
+      setMigrationStatus('error');
+      addNotification('error', 'Errore Sistema', 'Si è verificato un errore durante la migrazione');
+    }
+    
+    setTimeout(() => setMigrationStatus('idle'), 3000);
   }
 
   // Solo SuperAdmin può accedere
@@ -644,6 +719,75 @@ export default function SuperAdmin() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Impostazioni Sistema
                 </h3>
+                
+                {/* Sezione Migrazione Database */}
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-3 bg-red-100 rounded-xl">
+                        <Database className="h-6 w-6 text-red-600" />
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-semibold text-red-900">
+                          Migrazione Database
+                        </h4>
+                        <p className="text-sm text-red-700">
+                          Strumenti avanzati per la gestione del database
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button
+                        onClick={handleCheckMigration}
+                        disabled={migrationStatus !== 'idle'}
+                        className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <Wrench className="h-4 w-4" />
+                        <span>
+                          {migrationStatus === 'checking' ? 'Verifica...' : 'Verifica DB'}
+                        </span>
+                      </button>
+                      
+                      <button
+                        onClick={handleForceMigration}
+                        disabled={migrationStatus !== 'idle'}
+                        className="inline-flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <RefreshCw className={`h-4 w-4 ${migrationStatus === 'migrating' ? 'animate-spin' : ''}`} />
+                        <span>
+                          {migrationStatus === 'migrating' ? 'Migrazione...' : 'Forza Migrazione'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Status Migrazione */}
+                  {migrationStatus !== 'idle' && (
+                    <div className={`p-4 rounded-lg border ${
+                      migrationStatus === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
+                      migrationStatus === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+                      'bg-blue-50 border-blue-200 text-blue-800'
+                    }`}>
+                      <div className="flex items-center space-x-2">
+                        {migrationStatus === 'success' && <CheckCircle className="h-5 w-5" />}
+                        {migrationStatus === 'error' && <X className="h-5 w-5" />}
+                        {(migrationStatus === 'checking' || migrationStatus === 'migrating') && 
+                          <RefreshCw className="h-5 w-5 animate-spin" />}
+                        <span className="font-medium">{migrationMessage}</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="mt-4 text-sm text-red-700">
+                    <p className="font-medium mb-2">⚠️ Attenzione:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>La verifica controlla lo stato delle tabelle e permessi</li>
+                      <li>La migrazione forzata modifica la struttura del database</li>
+                      <li>Eseguire solo se necessario e con backup aggiornato</li>
+                    </ul>
+                  </div>
+                </div>
                 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                   <div className="flex items-center space-x-3 mb-4">
