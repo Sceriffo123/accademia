@@ -67,56 +67,82 @@ export async function migrateHardcodedQuizzes(): Promise<{ success: boolean; mes
     let migratedCount = 0;
     let skippedCount = 0;
     
-    // 2. Per ogni corso, crea un quiz
+    // Per ogni corso, crea moduli completi (introduzione, contenuti, quiz)
     for (const course of allCourses) {
       console.log(`🔄 Migrazione moduli completi per corso: ${course.title}`);
       
-      // 1. Modulo Introduzione
-      const introModule = await sql`
-        INSERT INTO course_modules (course_id, title, type, content, duration, order_num, level)
-        VALUES (
-          ${course.id}, 
-          'Introduzione al Corso', 
-          'lesson', 
-          'Panoramica generale degli argomenti che verranno trattati nel corso', 
-          15, 
-          1,
-          ${course.level}
-        )
-        RETURNING id
+      // Verifica moduli esistenti per questo corso
+      const existingModules = await sql`
+        SELECT type FROM course_modules 
+        WHERE course_id = ${course.id}
       `;
       
-      // 2. Modulo Contenuti Principali
-      const contentModule = await sql`
-        INSERT INTO course_modules (course_id, title, type, content, duration, order_num, level)
-        VALUES (
-          ${course.id}, 
-          'Contenuti Principali', 
-          'lesson', 
-          'Approfondimento dettagliato degli argomenti del corso con esempi pratici e casi studio', 
-          45, 
-          2,
-          ${course.level}
-        )
-        RETURNING id
+      const existingTypes = existingModules.map(m => m.type);
+      let moduleId;
+      
+      // 1. Crea Modulo Introduzione se non esiste
+      if (!existingTypes.includes('lesson')) {
+        const introModule = await sql`
+          INSERT INTO course_modules (course_id, title, type, content, duration, order_num, level)
+          VALUES (
+            ${course.id}, 
+            'Introduzione al Corso', 
+            'lesson', 
+            'Panoramica generale degli argomenti che verranno trattati nel corso', 
+            15, 
+            1,
+            ${course.level}
+          )
+          RETURNING id
+        `;
+        console.log(`✅ Modulo Introduzione creato per ${course.title}`);
+      }
+      
+      // 2. Crea Modulo Contenuti Principali se non esiste  
+      if (existingTypes.filter(t => t === 'lesson').length < 2) {
+        const contentModule = await sql`
+          INSERT INTO course_modules (course_id, title, type, content, duration, order_num, level)
+          VALUES (
+            ${course.id}, 
+            'Contenuti Principali', 
+            'lesson', 
+            'Approfondimento dettagliato degli argomenti del corso con esempi pratici e casi studio', 
+            45, 
+            2,
+            ${course.level}
+          )
+          RETURNING id
+        `;
+        console.log(`✅ Modulo Contenuti creato per ${course.title}`);
+      }
+      
+      // 3. Crea o trova Modulo Quiz Finale
+      let quizModules = await sql`
+        SELECT id FROM course_modules 
+        WHERE course_id = ${course.id} AND type = 'quiz'
+        LIMIT 1
       `;
       
-      // 3. Modulo Quiz Finale
-      const quizModule = await sql`
-        INSERT INTO course_modules (course_id, title, type, content, duration, order_num, level)
-        VALUES (
-          ${course.id}, 
-          'Quiz Finale', 
-          'quiz', 
-          'Modulo di valutazione finale per verificare le competenze acquisite', 
-          30, 
-          3,
-          ${course.level}
-        )
-        RETURNING id
-      `;
-      
-      const moduleId = quizModule[0].id;
+      if (quizModules.length === 0) {
+        const quizModule = await sql`
+          INSERT INTO course_modules (course_id, title, type, content, duration, order_num, level)
+          VALUES (
+            ${course.id}, 
+            'Quiz Finale', 
+            'quiz', 
+            'Modulo di valutazione finale per verificare le competenze acquisite', 
+            30, 
+            3,
+            ${course.level}
+          )
+          RETURNING id
+        `;
+        moduleId = quizModule[0].id;
+        console.log(`✅ Modulo Quiz creato per ${course.title}`);
+      } else {
+        moduleId = quizModules[0].id;
+        console.log(`ℹ️ Modulo Quiz esistente per ${course.title}`);
+      }
       console.log(`✅ Modulo quiz creato per ${course.title}`);
       
       // Verifica se il quiz esiste già
