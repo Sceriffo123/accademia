@@ -80,10 +80,10 @@ export async function migrateHardcodedQuizzes(): Promise<{ success: boolean; mes
     
     let moduleId;
     if (moduleResult.length === 0) {
-      // Crea un modulo per il quiz
+      // Crea un modulo per il quiz con tutti i campi obbligatori
       const newModuleResult = await sql`
-        INSERT INTO course_modules (course_id, title, description, type, order_num)
-        VALUES (${courseId}, 'Quiz Finale', 'Modulo di valutazione finale', 'quiz', 999)
+        INSERT INTO course_modules (course_id, title, description, type, level, order_num)
+        VALUES (${courseId}, 'Quiz Finale', 'Modulo di valutazione finale', 'quiz', 'intermediate', 999)
         RETURNING id
       `;
       moduleId = newModuleResult[0].id;
