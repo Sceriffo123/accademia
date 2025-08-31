@@ -283,6 +283,10 @@ export async function initializeTables() {
       )
     `;
 
+    // Crea tabelle quiz
+    console.log('🎓 ACCADEMIA: Configurazione sistema quiz...');
+    await createQuizTables();
+
     // Inserisci configurazione ruoli di default se non esiste
     // Inserisci dati di esempio
     console.log('🎓 ACCADEMIA: Popolamento archivio con dati iniziali...');
