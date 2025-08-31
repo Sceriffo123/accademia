@@ -538,6 +538,22 @@ export async function incrementDownloadCount(id: string): Promise<boolean> {
   }
 }
 
+export async function getAllTables(): Promise<string[]> {
+  try {
+    console.log('🎓 NEON: Recupero lista tabelle');
+    const result = await sql`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      ORDER BY table_name
+    `;
+    return result.map(row => row.table_name);
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero tabelle:', error);
+    return [];
+  }
+}
+
 // === INIZIALIZZAZIONE DATABASE ===
 
 export async function initializeDatabase(): Promise<boolean> {
