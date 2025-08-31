@@ -725,14 +725,14 @@ export default function Admin() {
                 className="bg-white rounded-xl shadow-sm p-4 lg:p-6 border border-gray-100"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className={`p-2 lg:p-3 rounded-lg ${isActive ? 'bg-blue-500' : 'bg-gray-100'}`}>
-                    <Icon className={`h-4 w-4 lg:h-6 lg:w-6 ${isActive ? 'text-white' : 'text-gray-600'}`} />
+                  <div className={`p-2 lg:p-3 rounded-lg ${stat.color}`}>
+                    <Icon className={`h-4 w-4 lg:h-6 lg:w-6 text-white`} />
                   </div>
                 </div>
-                <h3 className={`text-sm lg:text-lg font-semibold mb-2 leading-tight ${isActive ? 'text-blue-900' : 'text-gray-900'}`}>
+                <h3 className={`text-sm lg:text-lg font-semibold mb-2 leading-tight text-gray-900`}>
                   {stat.title}
                 </h3>
-                <p className={`text-xs lg:text-sm leading-tight ${isActive ? 'text-blue-700' : 'text-gray-600'}`}>
+                <p className={`text-xs lg:text-sm leading-tight text-gray-600`}>
                   {stat.value}
                 </p>
                 <span className="text-sm text-green-600 font-medium">
