@@ -1005,13 +1005,13 @@ export default function Admin() {
 
             {activeTab === 'documents' && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <h3 className="text-lg font-semibold text-gray-900">
                     Gestione Documenti ({documents.length})
                   </h3>
                   <button
                     onClick={() => setShowAddDocument(true)}
-                    className="flex items-center space-x-2 bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors"
+                    className="flex items-center justify-center space-x-2 bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors w-full sm:w-auto"
                   >
                     <Plus className="h-5 w-5" />
                     <span>Aggiungi Documento</span>
@@ -1022,16 +1022,16 @@ export default function Admin() {
                   {documents.map((document) => (
                     <div
                       key={document.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors space-y-3 sm:space-y-0"
                     >
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 mb-1 truncate">
                           {document.filename}
                         </h4>
-                        <p className="text-sm text-gray-600 mb-2">
+                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
                           {document.title}
                         </p>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                             document.type === 'template' ? 'bg-blue-100 text-blue-800' :
                             document.type === 'form' ? 'bg-green-100 text-green-800' :
@@ -1042,7 +1042,7 @@ export default function Admin() {
                              document.type === 'form' ? 'Modulo' :
                              document.type === 'guide' ? 'Guida' : 'Report'}
                           </span>
-                          <span>{document.category}</span>
+                          <span className="text-xs sm:text-sm truncate">{document.category}</span>
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                             document.status === 'active' ? 'bg-green-100 text-green-800' :
                             document.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
@@ -1051,12 +1051,12 @@ export default function Admin() {
                             {document.status === 'active' ? 'Attivo' :
                              document.status === 'draft' ? 'Bozza' : 'Archiviato'}
                           </span>
-                          <span>📊 {document.download_count} download</span>
-                          {document.file_size && <span>💾 {document.file_size} KB</span>}
+                          <span className="text-xs">📊 {document.download_count}</span>
+                          {document.file_size && <span className="text-xs">💾 {document.file_size}KB</span>}
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center justify-end space-x-2 flex-shrink-0">
                         <button
                           onClick={() => setViewingDocument(document)}
                           className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
