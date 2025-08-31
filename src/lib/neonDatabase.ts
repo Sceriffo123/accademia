@@ -559,6 +559,17 @@ export async function getRolePermissionsMatrix() {
   return DEFAULT_ROLE_PERMISSIONS;
 }
 
+export async function updateRolePermission(role: string, permission: string, granted: boolean): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Aggiornamento permesso ruolo:', { role, permission, granted });
+    // Placeholder function - implementazione da completare
+    return true;
+  } catch (error) {
+    console.error('🚨 NEON: Errore aggiornamento permesso ruolo:', error);
+    return false;
+  }
+}
+
 export async function getTableRecords(tableName: string, limit: number = 100): Promise<any[]> {
   try {
     console.log('🎓 NEON: Recupero record da tabella:', tableName);
