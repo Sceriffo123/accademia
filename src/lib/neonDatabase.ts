@@ -2129,6 +2129,37 @@ export async function createQuiz(quiz: Omit<Quiz, 'id' | 'created_at' | 'updated
   }
 }
 
+// Aggiorna quiz
+export async function updateQuiz(quizId: string, quiz: Partial<Omit<Quiz, 'id' | 'created_at' | 'updated_at'>>): Promise<void> {
+  try {
+    await sql`
+      UPDATE quizzes 
+      SET title = ${quiz.title}, description = ${quiz.description}, 
+          time_limit = ${quiz.time_limit}, passing_score = ${quiz.passing_score}, 
+          max_attempts = ${quiz.max_attempts}, updated_at = NOW()
+      WHERE id = ${quizId}
+    `;
+  } catch (error) {
+    console.error('Errore aggiornamento quiz:', error);
+    throw error;
+  }
+}
+
+// Elimina quiz
+export async function deleteQuiz(quizId: string): Promise<void> {
+  try {
+    // Prima elimina le domande
+    await sql`DELETE FROM quiz_questions WHERE quiz_id = ${quizId}`;
+    // Poi elimina i tentativi
+    await sql`DELETE FROM quiz_attempts WHERE quiz_id = ${quizId}`;
+    // Infine elimina il quiz
+    await sql`DELETE FROM quizzes WHERE id = ${quizId}`;
+  } catch (error) {
+    console.error('Errore eliminazione quiz:', error);
+    throw error;
+  }
+}
+
 // Crea domanda quiz
 export async function createQuizQuestion(question: Omit<QuizQuestion, 'id'>): Promise<string> {
   try {
@@ -2141,6 +2172,32 @@ export async function createQuizQuestion(question: Omit<QuizQuestion, 'id'>): Pr
     return result[0].id;
   } catch (error) {
     console.error('Errore creazione domanda quiz:', error);
+    throw error;
+  }
+}
+
+// Aggiorna domanda quiz
+export async function updateQuizQuestion(questionId: string, question: Partial<Omit<QuizQuestion, 'id'>>): Promise<void> {
+  try {
+    await sql`
+      UPDATE quiz_questions 
+      SET question = ${question.question}, options = ${JSON.stringify(question.options)}, 
+          correct_answer = ${question.correct_answer}, explanation = ${question.explanation}, 
+          points = ${question.points}, order_num = ${question.order}
+      WHERE id = ${questionId}
+    `;
+  } catch (error) {
+    console.error('Errore aggiornamento domanda quiz:', error);
+    throw error;
+  }
+}
+
+// Elimina domanda quiz
+export async function deleteQuizQuestion(questionId: string): Promise<void> {
+  try {
+    await sql`DELETE FROM quiz_questions WHERE id = ${questionId}`;
+  } catch (error) {
+    console.error('Errore eliminazione domanda quiz:', error);
     throw error;
   }
 }
