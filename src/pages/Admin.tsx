@@ -224,23 +224,34 @@ export default function Admin() {
     }
   };
 
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [enrollmentToCancel, setEnrollmentToCancel] = useState<string | null>(null);
+
   const handleCancelEnrollment = async (enrollmentId: string) => {
-    if (!confirm('Sei sicuro di voler annullare questa iscrizione?')) return;
+    setEnrollmentToCancel(enrollmentId);
+    setShowCancelConfirm(true);
+  };
+
+  const confirmCancelEnrollment = async () => {
+    if (!enrollmentToCancel) return;
     
     try {
-      await deleteEnrollment(enrollmentId);
+      await deleteEnrollment(enrollmentToCancel);
       // Ricarica le iscrizioni del corso corrente
-      const updatedEnrollments = selectedCourseEnrollments.filter(e => e.id !== enrollmentId);
+      const updatedEnrollments = selectedCourseEnrollments.filter(e => e.id !== enrollmentToCancel);
       setSelectedCourseEnrollments(updatedEnrollments);
       
       // Aggiorna il conteggio degli iscritti
-      const courseId = selectedCourseEnrollments.find(e => e.id === enrollmentId)?.course_id;
+      const courseId = selectedCourseEnrollments.find(e => e.id === enrollmentToCancel)?.course_id;
       if (courseId) {
         setCourseEnrollments(prev => ({
           ...prev,
           [courseId]: (prev[courseId] || 1) - 1
         }));
       }
+      
+      setShowCancelConfirm(false);
+      setEnrollmentToCancel(null);
     } catch (error) {
       console.error('Error canceling enrollment:', error);
     }
@@ -1355,6 +1366,61 @@ export default function Admin() {
                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Chiudi
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Conferma Annullamento Iscrizione */}
+        {showCancelConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <AlertTriangle className="h-6 w-6 text-amber-500" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Conferma Annullamento
+                  </h3>
+                </div>
+              </div>
+              
+              <div className="p-6">
+                <p className="text-gray-600 mb-4">
+                  Sei sicuro di voler annullare questa iscrizione al corso?
+                </p>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-amber-800">
+                      <p className="font-medium mb-1">Attenzione:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>L&apos;iscrizione verrà rimossa definitivamente</li>
+                        <li>L&apos;utente perderà l&apos;accesso al corso</li>
+                        <li>I progressi del corso verranno mantenuti per eventuali future iscrizioni</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setShowCancelConfirm(false);
+                    setEnrollmentToCancel(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={confirmCancelEnrollment}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Conferma Annullamento
                 </button>
               </div>
             </div>
