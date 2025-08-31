@@ -9,6 +9,7 @@ import {
   createCourseModule, getCourseModules, updateCourseModule, deleteCourseModule,
   type User, type Course, type Enrollment, type Quiz, type QuizQuestion, type CourseModule
 } from '../lib/neonDatabase';
+import { migrateHardcodedQuizzes, checkMigrationStatus } from '../lib/migration';
 import { 
   Users, 
   FileText, 
@@ -87,6 +88,10 @@ export default function Admin() {
   const [showCreateModule, setShowCreateModule] = useState(false);
   const [editingModule, setEditingModule] = useState<CourseModule | null>(null);
   const [selectedCourseEnrollments, setSelectedCourseEnrollments] = useState<Enrollment[]>([]);
+  
+  // Stati per migrazione
+  const [migrationStatus, setMigrationStatus] = useState<string>('');
+  const [showMigrationModal, setShowMigrationModal] = useState(false);
   const [showEnrollmentsModal, setShowEnrollmentsModal] = useState(false);
   const [selectedCourseTitle, setSelectedCourseTitle] = useState('');
   const [newModule, setNewModule] = useState({
@@ -469,6 +474,34 @@ export default function Admin() {
       }
     }
   }
+
+  // Gestione migrazione quiz hardcoded
+  const handleMigrateQuizzes = async () => {
+    setMigrationStatus('Migrazione in corso...');
+    try {
+      const result = await migrateHardcodedQuizzes();
+      if (result.success) {
+        setMigrationStatus(`✅ ${result.message}`);
+        // Ricarica i quiz dopo la migrazione
+        await loadQuizzes();
+      } else {
+        setMigrationStatus(`❌ ${result.message}`);
+      }
+    } catch (error) {
+      setMigrationStatus(`❌ Errore: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+    }
+  };
+
+  const checkMigrationNeeded = async () => {
+    try {
+      const status = await checkMigrationStatus();
+      if (status.hasHardcodedQuiz && !status.hasDatabaseQuiz) {
+        setShowMigrationModal(true);
+      }
+    } catch (error) {
+      console.error('Errore verifica migrazione:', error);
+    }
+  };
 
 
   const filteredUsers = users.filter(user =>
@@ -1004,7 +1037,8 @@ export default function Admin() {
                             <button
                               onClick={() => {
                                 setSelectedCourseForQuiz(course.id);
-                                setCourseSubTab('quiz');
+                                setActiveTab('courses');
+                                setCourseSubTab('quizzes');
                               }}
                               className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
                               title="Gestisci quiz del corso"
@@ -1114,21 +1148,46 @@ export default function Admin() {
               {courseSubTab === 'quizzes' && (
                 <>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-4 sm:space-y-0">
-                    <h2 className="text-xl font-semibold text-gray-900">
-                      Gestione Quiz ({quizzes.length})
-                    </h2>
-                    <button
-                      onClick={() => setShowCreateQuiz(true)}
-                      className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Nuovo Quiz</span>
-                    </button>
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-900">
+                        Gestione Quiz ({quizzes.filter(quiz => !selectedCourseForQuiz || quiz.course_id === selectedCourseForQuiz).length})
+                      </h2>
+                      {selectedCourseForQuiz && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          Corso: {courses.find(c => c.id === selectedCourseForQuiz)?.title}
+                          <button
+                            onClick={() => setSelectedCourseForQuiz('')}
+                            className="ml-2 text-blue-600 hover:text-blue-800 text-xs underline"
+                          >
+                            (mostra tutti)
+                          </button>
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={() => setShowMigrationModal(true)}
+                        className="flex items-center space-x-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+                        title="Migra quiz hardcoded al database"
+                      >
+                        <Database className="h-4 w-4" />
+                        <span>Migra Quiz</span>
+                      </button>
+                      <button
+                        onClick={() => setShowCreateQuiz(true)}
+                        className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Nuovo Quiz</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Quizzes List */}
                   <div className="space-y-4">
-                    {quizzes.map((quiz) => {
+                    {quizzes
+                      .filter(quiz => !selectedCourseForQuiz || quiz.course_id === selectedCourseForQuiz)
+                      .map((quiz) => {
                       const course = courses.find(c => c.id === quiz.course_id);
                       return (
                         <div key={quiz.id} className="border border-gray-200 rounded-lg p-4">
@@ -2211,6 +2270,55 @@ export default function Admin() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Migration Modal */}
+        {showMigrationModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Migrazione Quiz Hardcoded
+              </h3>
+              
+              <div className="space-y-4">
+                <p className="text-gray-600">
+                  Questo strumento migrerà i quiz hardcoded dal CourseViewer al database Neon.
+                </p>
+                
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-sm text-amber-800">
+                    <strong>⚠️ Attenzione:</strong> Questa operazione creerà il quiz "Evoluzione Normativa 2024" 
+                    nel database con tutte le sue domande.
+                  </p>
+                </div>
+                
+                {migrationStatus && (
+                  <div className="bg-gray-50 border rounded-lg p-3">
+                    <p className="text-sm font-mono">{migrationStatus}</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowMigrationModal(false);
+                    setMigrationStatus('');
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleMigrateQuizzes}
+                  disabled={migrationStatus.includes('corso')}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+                >
+                  Avvia Migrazione
+                </button>
               </div>
             </div>
           </div>
