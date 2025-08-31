@@ -256,12 +256,28 @@ export default function Admin() {
   }
 
   async function handleUpdateModule() {
-    if (!editingModule) return;
+    if (!editingModule) {
+      console.error('No editing module found');
+      showToast('Errore: nessun modulo selezionato per la modifica');
+      return;
+    }
     
     try {
       console.log('Updating module:', editingModule);
-      await updateCourseModule(editingModule.id, editingModule);
-      console.log('Module updated successfully');
+      
+      // Validazione dati obbligatori
+      if (!editingModule.title?.trim()) {
+        showToast('Errore: il titolo del modulo è obbligatorio');
+        return;
+      }
+      
+      if (!editingModule.course_id) {
+        showToast('Errore: il corso di appartenenza è obbligatorio');
+        return;
+      }
+      
+      const result = await updateCourseModule(editingModule.id, editingModule);
+      console.log('Module updated successfully:', result);
       
       // Ricarica tutti i dati per mantenere sincronizzazione completa
       await fetchData();
@@ -269,10 +285,11 @@ export default function Admin() {
       setEditingModule(null);
       
       // Mostra toast di successo
-      showToast('Modulo aggiornato con successo!');
+      showToast('✅ Modulo aggiornato con successo!');
     } catch (error) {
       console.error('Error updating module:', error);
-      showToast('Errore durante l\'aggiornamento del modulo: ' + (error as Error).message);
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+      showToast('❌ Errore durante l\'aggiornamento del modulo: ' + errorMessage);
     }
   }
 

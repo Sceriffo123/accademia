@@ -2263,6 +2263,8 @@ export async function getCourseModules(courseId: string): Promise<CourseModule[]
 
 export async function updateCourseModule(moduleId: string, module: Partial<Omit<CourseModule, 'id' | 'created_at' | 'updated_at'>>): Promise<void> {
   try {
+    console.log('updateCourseModule called with:', { moduleId, module });
+    
     const updates = [];
     const values = [];
     
@@ -2276,13 +2278,25 @@ export async function updateCourseModule(moduleId: string, module: Partial<Omit<
     if (module.duration_minutes !== undefined) { updates.push('duration_minutes = $' + (values.length + 1)); values.push(module.duration_minutes); }
     if (module.is_required !== undefined) { updates.push('is_required = $' + (values.length + 1)); values.push(module.is_required); }
     if (module.level !== undefined) { updates.push('level = $' + (values.length + 1)); values.push(module.level); }
+    if (module.course_id !== undefined) { updates.push('course_id = $' + (values.length + 1)); values.push(module.course_id); }
     
     updates.push('updated_at = NOW()');
     values.push(moduleId);
     
+    console.log('Updates to apply:', updates);
+    console.log('Values:', values);
+    
     if (updates.length > 1) { // Almeno un campo da aggiornare oltre a updated_at
       const query = `UPDATE course_modules SET ${updates.join(', ')} WHERE id = $${values.length}`;
-      await sql.unsafe(query, values);
+      console.log('Executing query:', query);
+      const result = await sql(query, values);
+      console.log('Update result:', result);
+      
+      if (result.length === 0) {
+        throw new Error(`Nessun modulo trovato con ID: ${moduleId}`);
+      }
+    } else {
+      console.log('No fields to update');
     }
   } catch (error) {
     console.error('Errore aggiornamento modulo corso:', error);
