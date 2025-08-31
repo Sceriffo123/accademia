@@ -75,14 +75,6 @@ export default function Docx() {
     }
   }, [profile?.role]);
 
-  useEffect(() => {
-    if (profile?.role) {
-      loadUserPermissions();
-      loadUserSections();
-      loadDocuments();
-    }
-  }, [profile?.role]);
-
   async function loadUserPermissions() {
     try {
       const permissions = await getUserPermissions(profile?.role || '');
