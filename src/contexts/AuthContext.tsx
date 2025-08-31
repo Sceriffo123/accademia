@@ -1,9 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
-  getUserByEmail, 
-  getUserById, 
-  createUser, 
-  verifyPassword,
+  localDB,
   type User 
 } from '../lib/localDatabase';
 
@@ -71,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function fetchUserByEmail(email: string) {
     try {
-      const userData = await getUserByEmail(email);
+      const userData = await localDB.getUserByEmail(email);
       if (userData) {
         setUser({
           id: userData.id,
@@ -96,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     try {
       // Trova utente nel database Neon
-      const user = await getUserByEmail(email);
+      const user = await localDB.getUserByEmail(email);
       
       if (!user) {
         console.log('🎓 ACCADEMIA: Credenziali non riconosciute');
@@ -104,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Verifica password
-      const isValidPassword = await verifyPassword(password, user.password_hash);
+      const isValidPassword = await localDB.verifyPassword(password, user.password_hash);
       
       if (!isValidPassword) {
         console.log('🎓 ACCADEMIA: Credenziali non valide');
@@ -135,7 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signUp(email: string, password: string, fullName: string) {
     try {
       // Verifica se l'utente esiste già
-      const existingUser = await getUserByEmail(email);
+      const existingUser = await localDB.getUserByEmail(email);
       if (existingUser) {
         return { error: 'Email già registrata' };
       }
@@ -148,7 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const passwordHash = await hashPassword(password);
 
       // Crea nuovo utente nel database Neon
-      const newUser = await createUser(email, fullName, passwordHash);
+      const newUser = await localDB.createUser(email, fullName, passwordHash);
       
       if (!newUser) {
         return { error: 'Errore nella creazione dell\'utente' };
