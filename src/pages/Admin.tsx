@@ -710,10 +710,10 @@ export default function Admin() {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
             Pannello Amministrativo
           </h1>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-            Gestione utenti, contenuti e monitoraggio piattaforma
-          </p>
-        </div>
+         <p className="text-gray-600">
+           Gestione utenti, contenuti e monitoraggio piattaforma
+         </p>
+       </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
