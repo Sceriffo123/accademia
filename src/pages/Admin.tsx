@@ -90,11 +90,10 @@ export default function Admin() {
   const [editingModule, setEditingModule] = useState<CourseModule | null>(null);
   const [selectedCourseEnrollments, setSelectedCourseEnrollments] = useState<Enrollment[]>([]);
   
-  // Stati per migrazione
-  const [migrationStatus, setMigrationStatus] = useState<string>('');
-  const [showMigrationModal, setShowMigrationModal] = useState(false);
-  const [showEnrollmentsModal, setShowEnrollmentsModal] = useState(false);
-  const [selectedCourseTitle, setSelectedCourseTitle] = useState('');
+  // Stato corso selezionato condiviso tra tab
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  
+  // Nuovo modulo form
   const [newModule, setNewModule] = useState({
     course_id: '',
     title: '',
@@ -104,10 +103,16 @@ export default function Admin() {
     order_num: 1,
     level: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
     is_required: true,
-    duration_minutes: undefined as number | undefined,
+    duration_minutes: 30,
     video_url: '',
     document_url: ''
   });
+  
+  // Stati per migrazione
+  const [migrationStatus, setMigrationStatus] = useState<string>('');
+  const [showMigrationModal, setShowMigrationModal] = useState(false);
+  const [showEnrollmentsModal, setShowEnrollmentsModal] = useState(false);
+  const [selectedCourseTitle, setSelectedCourseTitle] = useState('');
   const [newCourse, setNewCourse] = useState({
     title: '',
     description: '',
@@ -222,8 +227,22 @@ export default function Admin() {
     if (!newModule.course_id || !newModule.title) return;
     
     try {
-      await createCourseModule(newModule);
-      await fetchModules(newModule.course_id);
+      await createCourseModule({
+        course_id: newModule.course_id,
+        title: newModule.title,
+        description: newModule.description,
+        type: newModule.type,
+        content: newModule.content,
+        order_num: newModule.order_num,
+        level: newModule.level,
+        is_required: newModule.is_required,
+        duration_minutes: newModule.duration_minutes,
+        video_url: newModule.video_url,
+        document_url: newModule.document_url
+      });
+      
+      // Ricarica tutti i moduli
+      await fetchData();
       setShowCreateModule(false);
       setNewModule({
         course_id: '',
@@ -233,7 +252,10 @@ export default function Admin() {
         content: '',
         order_num: 1,
         level: 'beginner',
-        is_required: true
+        is_required: true,
+        duration_minutes: 30,
+        video_url: '',
+        document_url: ''
       });
     } catch (error) {
       console.error('Error creating module:', error);
@@ -1054,14 +1076,25 @@ export default function Admin() {
                             </button>
                             <button
                               onClick={() => {
+                                setSelectedCourseId(course.id);
                                 setSelectedCourseForQuiz(course.id);
-                                setActiveTab('courses');
+                                setCourseSubTab('modules');
+                              }}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Gestisci moduli"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedCourseId(course.id);
+                                setSelectedCourseForQuiz(course.id);
                                 setCourseSubTab('quizzes');
                               }}
                               className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                              title="Gestisci quiz del corso"
+                              title="Gestisci quiz"
                             >
-                              <FileText className="h-4 w-4" />
+                              <BookOpen className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => setEditingCourse(course)}
@@ -1101,9 +1134,26 @@ export default function Admin() {
                     </button>
                   </div>
 
+                  {/* Course Filter */}
+                  {selectedCourseId && (
+                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                      <p className="text-sm text-blue-700">
+                        Filtrato per corso: <strong>{courses.find(c => c.id === selectedCourseId)?.title}</strong>
+                        <button 
+                          onClick={() => setSelectedCourseId('')}
+                          className="ml-2 text-blue-600 hover:text-blue-800"
+                        >
+                          ✕ Rimuovi filtro
+                        </button>
+                      </p>
+                    </div>
+                  )}
+
                   {/* Modules List */}
                   <div className="space-y-4">
-                    {modules.map((module) => {
+                    {modules
+                      .filter(module => !selectedCourseId || module.course_id === selectedCourseId)
+                      .map((module) => {
                       const course = courses.find(c => c.id === module.course_id);
                       return (
                         <div key={module.id} className="border border-gray-200 rounded-lg p-4">
@@ -1204,6 +1254,24 @@ export default function Admin() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Course Filter */}
+                  {selectedCourseId && (
+                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                      <p className="text-sm text-blue-700">
+                        Filtrato per corso: <strong>{courses.find(c => c.id === selectedCourseId)?.title}</strong>
+                        <button 
+                          onClick={() => {
+                            setSelectedCourseId('');
+                            setSelectedCourseForQuiz('');
+                          }}
+                          className="ml-2 text-blue-600 hover:text-blue-800"
+                        >
+                          ✕ Rimuovi filtro
+                        </button>
+                      </p>
+                    </div>
+                  )}
 
                   {/* Quizzes List */}
                   <div className="space-y-4">
@@ -2367,7 +2435,11 @@ export default function Admin() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Corso
                   </label>
-                  <select className="w-full border border-gray-300 rounded-lg px-3 py-2">
+                  <select 
+                    value={newModule.course_id}
+                    onChange={(e) => setNewModule({...newModule, course_id: e.target.value})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  >
                     <option value="">Seleziona corso...</option>
                     {courses.map(course => (
                       <option key={course.id} value={course.id}>{course.title}</option>
@@ -2381,6 +2453,8 @@ export default function Admin() {
                   </label>
                   <input
                     type="text"
+                    value={newModule.title}
+                    onChange={(e) => setNewModule({...newModule, title: e.target.value})}
                     placeholder="Es. Introduzione al Corso"
                     className="w-full border border-gray-300 rounded-lg px-3 py-2"
                   />
@@ -2390,7 +2464,11 @@ export default function Admin() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Tipo
                   </label>
-                  <select className="w-full border border-gray-300 rounded-lg px-3 py-2">
+                  <select 
+                    value={newModule.type}
+                    onChange={(e) => setNewModule({...newModule, type: e.target.value as any})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  >
                     <option value="lesson">Lezione</option>
                     <option value="video">Video</option>
                     <option value="document">Documento</option>
@@ -2405,6 +2483,8 @@ export default function Admin() {
                   </label>
                   <input
                     type="number"
+                    value={newModule.duration_minutes}
+                    onChange={(e) => setNewModule({...newModule, duration_minutes: parseInt(e.target.value) || 30})}
                     placeholder="30"
                     className="w-full border border-gray-300 rounded-lg px-3 py-2"
                   />
@@ -2415,6 +2495,8 @@ export default function Admin() {
                     Descrizione
                   </label>
                   <textarea
+                    value={newModule.description}
+                    onChange={(e) => setNewModule({...newModule, description: e.target.value})}
                     placeholder="Descrizione del modulo..."
                     rows={3}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2"
@@ -2430,7 +2512,9 @@ export default function Admin() {
                   Annulla
                 </button>
                 <button
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  onClick={handleCreateModule}
+                  disabled={!newModule.course_id || !newModule.title}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   Crea Modulo
                 </button>
