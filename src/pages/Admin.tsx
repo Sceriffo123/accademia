@@ -285,11 +285,19 @@ export default function Admin() {
       setEditingModule(null);
       
       // Mostra toast di successo
-      showToast('✅ Modulo aggiornato con successo!');
+      showToast({ 
+        type: 'success', 
+        title: 'Successo!', 
+        message: '✅ Modulo aggiornato con successo!' 
+      });
     } catch (error) {
       console.error('Error updating module:', error);
       const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
-      showToast('❌ Errore durante l\'aggiornamento del modulo: ' + errorMessage);
+      showToast({ 
+        type: 'error', 
+        title: 'Errore!', 
+        message: '❌ Errore durante l\'aggiornamento del modulo: ' + errorMessage 
+      });
     }
   }
 
