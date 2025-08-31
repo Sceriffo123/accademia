@@ -73,6 +73,7 @@ export default function Admin() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [showCreateQuiz, setShowCreateQuiz] = useState(false);
+  const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
   const [selectedQuizForQuestions, setSelectedQuizForQuestions] = useState<Quiz | null>(null);
   const [showQuestionsModal, setShowQuestionsModal] = useState(false);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -1825,6 +1826,158 @@ export default function Admin() {
                   Conferma Annullamento
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Creazione/Modifica Quiz */}
+        {(showCreateQuiz || editingQuiz) && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-lg">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {editingQuiz ? 'Modifica Quiz' : 'Nuovo Quiz'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowCreateQuiz(false);
+                    setEditingQuiz(null);
+                    setNewQuiz({
+                      title: '',
+                      description: '',
+                      time_limit: 30,
+                      passing_score: 70,
+                      max_attempts: 3
+                    });
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (editingQuiz) {
+                  handleUpdateQuiz();
+                } else {
+                  handleCreateQuiz();
+                }
+              }} className="space-y-4">
+                {!editingQuiz && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Corso
+                    </label>
+                    <select
+                      value={selectedCourseForQuiz}
+                      onChange={(e) => setSelectedCourseForQuiz(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    >
+                      <option value="">Seleziona un corso</option>
+                      {courses.map((course) => (
+                        <option key={course.id} value={course.id}>
+                          {course.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Titolo Quiz
+                  </label>
+                  <input
+                    type="text"
+                    value={newQuiz.title}
+                    onChange={(e) => setNewQuiz({...newQuiz, title: e.target.value})}
+                    placeholder="Inserisci il titolo del quiz"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descrizione
+                  </label>
+                  <textarea
+                    value={newQuiz.description}
+                    onChange={(e) => setNewQuiz({...newQuiz, description: e.target.value})}
+                    placeholder="Descrizione del quiz"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tempo (min)
+                    </label>
+                    <input
+                      type="number"
+                      value={newQuiz.time_limit}
+                      onChange={(e) => setNewQuiz({...newQuiz, time_limit: parseInt(e.target.value)})}
+                      min="1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Soglia (%)
+                    </label>
+                    <input
+                      type="number"
+                      value={newQuiz.passing_score}
+                      onChange={(e) => setNewQuiz({...newQuiz, passing_score: parseInt(e.target.value)})}
+                      min="1"
+                      max="100"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Max Tentativi
+                    </label>
+                    <input
+                      type="number"
+                      value={newQuiz.max_attempts}
+                      onChange={(e) => setNewQuiz({...newQuiz, max_attempts: parseInt(e.target.value)})}
+                      min="1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateQuiz(false);
+                      setEditingQuiz(null);
+                      setNewQuiz({
+                        title: '',
+                        description: '',
+                        time_limit: 30,
+                        passing_score: 70,
+                        max_attempts: 3
+                      });
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    {editingQuiz ? 'Aggiorna' : 'Crea'} Quiz
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
