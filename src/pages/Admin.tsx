@@ -2522,6 +2522,148 @@ export default function Admin() {
             </div>
           </div>
         )}
+
+        {/* Edit Module Modal */}
+        {editingModule && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Modifica Modulo
+              </h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Corso
+                  </label>
+                  <select 
+                    value={editingModule.course_id}
+                    onChange={(e) => setEditingModule({...editingModule, course_id: e.target.value})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  >
+                    <option value="">Seleziona corso...</option>
+                    {courses.map(course => (
+                      <option key={course.id} value={course.id}>{course.title}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Titolo Modulo
+                  </label>
+                  <input
+                    type="text"
+                    value={editingModule.title}
+                    onChange={(e) => setEditingModule({...editingModule, title: e.target.value})}
+                    placeholder="Es. Introduzione al Corso"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo
+                  </label>
+                  <select 
+                    value={editingModule.type}
+                    onChange={(e) => setEditingModule({...editingModule, type: e.target.value as any})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  >
+                    <option value="lesson">Lezione</option>
+                    <option value="video">Video</option>
+                    <option value="document">Documento</option>
+                    <option value="quiz">Quiz</option>
+                    <option value="assignment">Compito</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Durata (minuti)
+                  </label>
+                  <input
+                    type="number"
+                    value={editingModule.duration_minutes || 30}
+                    onChange={(e) => setEditingModule({...editingModule, duration_minutes: parseInt(e.target.value) || 30})}
+                    placeholder="30"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Descrizione
+                  </label>
+                  <textarea
+                    value={editingModule.description || ''}
+                    onChange={(e) => setEditingModule({...editingModule, description: e.target.value})}
+                    placeholder="Descrizione del modulo..."
+                    rows={3}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ordine
+                  </label>
+                  <input
+                    type="number"
+                    value={editingModule.order_num || 1}
+                    onChange={(e) => setEditingModule({...editingModule, order_num: parseInt(e.target.value) || 1})}
+                    min="1"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Livello
+                  </label>
+                  <select 
+                    value={editingModule.level}
+                    onChange={(e) => setEditingModule({...editingModule, level: e.target.value as any})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  >
+                    <option value="beginner">Base</option>
+                    <option value="intermediate">Intermedio</option>
+                    <option value="advanced">Avanzato</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="is_required"
+                    checked={editingModule.is_required || false}
+                    onChange={(e) => setEditingModule({...editingModule, is_required: e.target.checked})}
+                    className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="is_required" className="ml-2 block text-sm text-gray-700">
+                    Modulo obbligatorio
+                  </label>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setEditingModule(null)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleUpdateModule}
+                  disabled={!editingModule.course_id || !editingModule.title}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  Aggiorna Modulo
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
