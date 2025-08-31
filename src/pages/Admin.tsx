@@ -7,9 +7,9 @@ import {
   deleteUser, 
   createNewUser, 
   updateUserPassword,
-  getAllNormatives,
+  getNormatives,
   getNormativesCount,
-  getAllDocuments,
+  getDocuments,
   getDocumentsCount,
   getUserById
 } from '../lib/api';
@@ -83,8 +83,8 @@ export default function Admin() {
     try {
       const [usersData, normativesData, documentsData] = await Promise.all([
         getUsers(true, profile?.id),
-        getAllNormatives(),
-        getAllDocuments()
+        getNormatives(),
+        getDocuments()
       ]);
 
       setUsers(usersData);
