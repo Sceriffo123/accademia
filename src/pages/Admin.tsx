@@ -1002,6 +1002,16 @@ export default function Admin() {
                               <Users className="h-4 w-4" />
                             </button>
                             <button
+                              onClick={() => {
+                                setSelectedCourseForQuiz(course.id);
+                                setCourseSubTab('quiz');
+                              }}
+                              className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                              title="Gestisci quiz del corso"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </button>
+                            <button
                               onClick={() => setEditingCourse(course)}
                               className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                               title="Modifica corso"
