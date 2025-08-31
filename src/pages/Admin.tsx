@@ -407,8 +407,18 @@ export default function Admin() {
       setNewUser({ email: '', fullName: '', password: '', role: 'user' });
       setShowCreateUser(false);
       fetchData();
+      showToast({ 
+        type: 'success', 
+        title: 'Successo!', 
+        message: 'Utente creato con successo!' 
+      });
     } catch (error) {
       console.error('Error creating user:', error);
+      showToast({ 
+        type: 'error', 
+        title: 'Errore!', 
+        message: 'Errore durante la creazione dell\'utente.' 
+      });
     }
   };
 
@@ -524,8 +534,18 @@ export default function Admin() {
       try {
         await deleteUser(userId);
         fetchData();
+        showToast({ 
+          type: 'success', 
+          title: 'Successo!', 
+          message: 'Utente eliminato con successo!' 
+        });
       } catch (error) {
         console.error('Error deleting user:', error);
+        showToast({ 
+          type: 'error', 
+          title: 'Errore!', 
+          message: 'Errore durante l\'eliminazione dell\'utente.' 
+        });
       }
     }
   }
@@ -649,7 +669,7 @@ export default function Admin() {
               >
                 <div className="flex items-center justify-between mb-3 lg:mb-4">
                   <div className={`p-2 lg:p-3 rounded-lg ${stat.color}`}>
-                    <Icon className="h-4 w-4 lg:h-6 lg:w-6 text-white" />
+                    <Icon className="h-4 w-4 text-white" />
                   </div>
                   <span className="text-xs lg:text-sm text-green-600 font-medium">
                     {stat.change}
@@ -965,7 +985,7 @@ export default function Admin() {
                     <div className="flex flex-col space-y-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 mb-1">{doc.title}</h3>
+                          <h3 className="font-semibold text-gray-900">{doc.title}</h3>
                           <p className="text-sm text-gray-600 mb-2">{doc.filename}</p>
                           <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
                             doc.type === 'template' ? 'bg-blue-100 text-blue-800' :
@@ -2082,17 +2102,9 @@ export default function Admin() {
                   Sei sicuro di voler annullare questa iscrizione al corso?
                 </p>
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm text-amber-800">
-                      <p className="font-medium mb-1">Attenzione:</p>
-                      <ul className="list-disc list-inside space-y-1">
-                        <li>L&apos;iscrizione verrà rimossa definitivamente</li>
-                        <li>L&apos;utente perderà l&apos;accesso al corso</li>
-                        <li>I progressi del corso verranno mantenuti per eventuali future iscrizioni</li>
-                      </ul>
-                    </div>
-                  </div>
+                  <p className="text-sm text-amber-800">
+                    <strong>⚠️ Attenzione:</strong> Questa azione eliminerà l'iscrizione dell'utente al corso.
+                  </p>
                 </div>
               </div>
               
