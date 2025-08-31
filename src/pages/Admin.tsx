@@ -2345,6 +2345,91 @@ export default function Admin() {
             </div>
           </div>
         )}
+
+        {/* Create Module Modal */}
+        {showCreateModule && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Crea Nuovo Modulo
+              </h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Corso
+                  </label>
+                  <select className="w-full border border-gray-300 rounded-lg px-3 py-2">
+                    <option value="">Seleziona corso...</option>
+                    {courses.map(course => (
+                      <option key={course.id} value={course.id}>{course.title}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Titolo Modulo
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Es. Introduzione al Corso"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo
+                  </label>
+                  <select className="w-full border border-gray-300 rounded-lg px-3 py-2">
+                    <option value="lesson">Lezione</option>
+                    <option value="video">Video</option>
+                    <option value="document">Documento</option>
+                    <option value="quiz">Quiz</option>
+                    <option value="assignment">Compito</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Durata (minuti)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="30"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Descrizione
+                  </label>
+                  <textarea
+                    placeholder="Descrizione del modulo..."
+                    rows={3}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowCreateModule(false)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Crea Modulo
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
