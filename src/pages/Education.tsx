@@ -126,10 +126,10 @@ export default function Education() {
     if (!enrollment) return null;
     
     switch (enrollment.status) {
-      case 'completed': return { text: 'Completato', color: 'text-green-600', icon: CheckCircle, status: 'completed' };
-      case 'in_progress': return { text: 'In Corso', color: 'text-blue-600', icon: PlayCircle, status: 'in_progress' };
-      case 'enrolled': return { text: 'Iscritto', color: 'text-yellow-600', icon: Users, status: 'enrolled' };
-      case 'failed': return { text: 'Non Superato', color: 'text-red-600', icon: Lock, status: 'failed' };
+      case 'completed': return { text: 'Completato', color: 'text-green-600', icon: CheckCircle };
+      case 'in_progress': return { text: 'In Corso', color: 'text-blue-600', icon: PlayCircle };
+      case 'enrolled': return { text: 'Iscritto', color: 'text-yellow-600', icon: Users };
+      case 'failed': return { text: 'Non Superato', color: 'text-red-600', icon: Lock };
       default: return null;
     }
   };
@@ -260,17 +260,10 @@ export default function Education() {
                     if (enrollmentStatus) {
                       const IconComponent = enrollmentStatus.icon;
                       return (
-                        <button
-                          onClick={() => window.location.href = `/course/${course.id}`}
-                          className={`flex items-center space-x-2 text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
-                            enrollmentStatus.status === 'completed' 
-                              ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                              : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-                          }`}
-                        >
+                        <span className={`flex items-center space-x-2 text-sm font-medium ${enrollmentStatus.color}`}>
                           <IconComponent className="h-4 w-4" />
-                          <span>{enrollmentStatus.status === 'completed' ? 'Rivedi Corso' : 'Accedi al Corso'}</span>
-                        </button>
+                          <span>{enrollmentStatus.text}</span>
+                        </span>
                       );
                     }
                     
