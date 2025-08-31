@@ -38,7 +38,7 @@ interface AdminStats {
 }
 
 type TabType = 'overview' | 'users' | 'normatives' | 'documents' | 'courses';
-type CourseSubTabType = 'courses' | 'quizzes';
+type CourseSubTabType = 'courses' | 'modules' | 'quizzes';
 
 export default function Admin() {
   const { profile } = useAuth();
@@ -88,6 +88,19 @@ export default function Admin() {
   const [selectedCourseEnrollments, setSelectedCourseEnrollments] = useState<Enrollment[]>([]);
   const [showEnrollmentsModal, setShowEnrollmentsModal] = useState(false);
   const [selectedCourseTitle, setSelectedCourseTitle] = useState('');
+  const [newModule, setNewModule] = useState({
+    course_id: '',
+    title: '',
+    description: '',
+    type: 'lesson' as 'lesson' | 'video' | 'document' | 'quiz' | 'assignment',
+    content: '',
+    order_num: 1,
+    level: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
+    is_required: true,
+    duration_minutes: undefined as number | undefined,
+    video_url: '',
+    document_url: ''
+  });
   const [newCourse, setNewCourse] = useState({
     title: '',
     description: '',
@@ -177,6 +190,52 @@ export default function Admin() {
       setModules(modulesData);
     } catch (error) {
       console.error('Error fetching modules:', error);
+    }
+  }
+
+  // Handlers per moduli
+  async function handleCreateModule() {
+    if (!newModule.course_id || !newModule.title) return;
+    
+    try {
+      await createCourseModule(newModule);
+      await fetchModules(newModule.course_id);
+      setShowCreateModule(false);
+      setNewModule({
+        course_id: '',
+        title: '',
+        description: '',
+        type: 'lesson',
+        content: '',
+        order_num: 1,
+        level: 'beginner',
+        is_required: true
+      });
+    } catch (error) {
+      console.error('Error creating module:', error);
+    }
+  }
+
+  async function handleUpdateModule() {
+    if (!editingModule) return;
+    
+    try {
+      await updateCourseModule(editingModule.id, editingModule);
+      await fetchModules(editingModule.course_id);
+      setEditingModule(null);
+    } catch (error) {
+      console.error('Error updating module:', error);
+    }
+  }
+
+  async function handleDeleteModule(moduleId: string) {
+    if (!confirm('Sei sicuro di voler eliminare questo modulo?')) return;
+    
+    try {
+      await deleteCourseModule(moduleId);
+      setModules(modules.filter(m => m.id !== moduleId));
+    } catch (error) {
+      console.error('Error deleting module:', error);
     }
   }
 
@@ -908,6 +967,16 @@ export default function Admin() {
                   Corsi
                 </button>
                 <button
+                  onClick={() => setCourseSubTab('modules')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    courseSubTab === 'modules'
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Moduli
+                </button>
+                <button
                   onClick={() => setCourseSubTab('quizzes')}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                     courseSubTab === 'quizzes'
@@ -988,6 +1057,83 @@ export default function Admin() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                </>
+              )}
+
+              {/* Modules Sub-tab */}
+              {courseSubTab === 'modules' && (
+                <>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-4 sm:space-y-0">
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      Gestione Moduli ({modules.length})
+                    </h2>
+                    <button
+                      onClick={() => setShowCreateModule(true)}
+                      className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Nuovo Modulo</span>
+                    </button>
+                  </div>
+
+                  {/* Modules List */}
+                  <div className="space-y-4">
+                    {modules.map((module) => {
+                      const course = courses.find(c => c.id === module.course_id);
+                      return (
+                        <div key={module.id} className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-gray-900">{module.title}</h3>
+                              <p className="text-gray-600 text-sm">Corso: {course?.title || 'N/A'}</p>
+                              <div className="flex items-center space-x-4 mt-2">
+                                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                                  module.type === 'lesson' ? 'bg-blue-100 text-blue-800' :
+                                  module.type === 'video' ? 'bg-green-100 text-green-800' :
+                                  module.type === 'document' ? 'bg-yellow-100 text-yellow-800' :
+                                  module.type === 'quiz' ? 'bg-purple-100 text-purple-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {module.type}
+                                </span>
+                                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                                  module.level === 'beginner' ? 'bg-green-100 text-green-800' :
+                                  module.level === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {module.level}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  Ordine: {module.order_num}
+                                </span>
+                                {module.duration_minutes && (
+                                  <span className="text-xs text-gray-500">
+                                    {module.duration_minutes} min
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => setEditingModule(module)}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Modifica modulo"
+                              >
+                                <Edit3 className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteModule(module.id)}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Elimina modulo"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </>
               )}
