@@ -416,7 +416,7 @@ export default function CourseViewer() {
                             quiz={quizData}
                             onComplete={(result) => {
                               console.log('Quiz completato:', result);
-                              setShowQuiz(false);
+                              // Non chiudere immediatamente - lascia che l'utente veda i risultati
                               if (result.passed) {
                                 handleModuleComplete(currentModule);
                               }
