@@ -79,6 +79,7 @@ export default function Admin() {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [showCreateQuestion, setShowCreateQuestion] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<QuizQuestion | null>(null);
+  const [selectedCourseForQuiz, setSelectedCourseForQuiz] = useState('');
 
   // Stati per moduli corso
   const [modules, setModules] = useState<CourseModule[]>([]);
