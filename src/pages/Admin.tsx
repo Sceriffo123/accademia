@@ -4,8 +4,8 @@ import {
   getAllUsers, createUser, updateUser, deleteUser,
   getAllNormatives,
   getAllDocuments,
-  getAllCourses, createCourse, updateCourse, deleteCourse, getCourseEnrollments,
-  type User, type Course
+  getAllCourses, createCourse, updateCourse, deleteCourse, getCourseEnrollments, deleteEnrollment,
+  type User, type Course, type Enrollment
 } from '../lib/neonDatabase';
 import { 
   Users, 
@@ -17,12 +17,14 @@ import {
   Edit3, 
   Edit,
   Trash2, 
-  X, 
   Eye, 
-  EyeOff,
+  EyeOff, 
+  Upload,
+  X,
+  AlertTriangle,
+  UserMinus,
   Search,
   CheckCircle,
-  Upload,
   BarChart3
 } from 'lucide-react';
 
@@ -62,6 +64,9 @@ export default function Admin() {
   const [courseEnrollments, setCourseEnrollments] = useState<{[courseId: string]: number}>({});
   const [showCreateCourse, setShowCreateCourse] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [selectedCourseEnrollments, setSelectedCourseEnrollments] = useState<Enrollment[]>([]);
+  const [showEnrollmentsModal, setShowEnrollmentsModal] = useState(false);
+  const [selectedCourseTitle, setSelectedCourseTitle] = useState('');
   const [newCourse, setNewCourse] = useState({
     title: '',
     description: '',
@@ -205,6 +210,39 @@ export default function Admin() {
       setCourses(courses.filter(course => course.id !== courseId));
     } catch (error) {
       console.error('Error deleting course:', error);
+    }
+  };
+
+  const handleViewEnrollments = async (course: Course) => {
+    try {
+      const enrollments = await getCourseEnrollments(course.id);
+      setSelectedCourseEnrollments(enrollments);
+      setSelectedCourseTitle(course.title);
+      setShowEnrollmentsModal(true);
+    } catch (error) {
+      console.error('Error fetching enrollments:', error);
+    }
+  };
+
+  const handleCancelEnrollment = async (enrollmentId: string) => {
+    if (!confirm('Sei sicuro di voler annullare questa iscrizione?')) return;
+    
+    try {
+      await deleteEnrollment(enrollmentId);
+      // Ricarica le iscrizioni del corso corrente
+      const updatedEnrollments = selectedCourseEnrollments.filter(e => e.id !== enrollmentId);
+      setSelectedCourseEnrollments(updatedEnrollments);
+      
+      // Aggiorna il conteggio degli iscritti
+      const courseId = selectedCourseEnrollments.find(e => e.id === enrollmentId)?.course_id;
+      if (courseId) {
+        setCourseEnrollments(prev => ({
+          ...prev,
+          [courseId]: (prev[courseId] || 1) - 1
+        }));
+      }
+    } catch (error) {
+      console.error('Error canceling enrollment:', error);
     }
   };
 
@@ -707,11 +745,18 @@ export default function Admin() {
                       </div>
                       <div className="flex items-center space-x-2">
                         <button
+                          onClick={() => handleViewEnrollments(course)}
+                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          title="Visualizza iscritti"
+                        >
+                          <Users className="h-4 w-4" />
+                        </button>
+                        <button
                           onClick={() => setEditingCourse(course)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="Modifica corso"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit3 className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteCourse(course.id)}
@@ -1223,6 +1268,93 @@ export default function Admin() {
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Salva Modifiche
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Gestione Iscrizioni */}
+        {showEnrollmentsModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Iscritti al corso: {selectedCourseTitle}
+                </h3>
+                <button
+                  onClick={() => setShowEnrollmentsModal(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Chiudi"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto max-h-[70vh]">
+                {selectedCourseEnrollments.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">Nessun iscritto per questo corso</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {selectedCourseEnrollments.map((enrollment) => (
+                      <div key={enrollment.id} className="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-4">
+                            <div className="flex-1">
+                              <h4 className="font-medium text-gray-900">
+                                {(enrollment as any).user_name || 'Nome non disponibile'}
+                              </h4>
+                              <p className="text-sm text-gray-600">
+                                {(enrollment as any).user_email || 'Email non disponibile'}
+                              </p>
+                              <div className="flex items-center space-x-4 mt-2">
+                                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                                  enrollment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                  enrollment.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {enrollment.status === 'completed' ? 'Completato' :
+                                   enrollment.status === 'in_progress' ? 'In corso' : 'Iscritto'}
+                                </span>
+                                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                                  enrollment.payment_status === 'paid' ? 'bg-green-100 text-green-800' :
+                                  enrollment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {enrollment.payment_status === 'paid' ? 'Pagato' :
+                                   enrollment.payment_status === 'pending' ? 'Pagamento pendente' : 'Gratuito'}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  Iscritto: {new Date(enrollment.enrolled_at).toLocaleDateString('it-IT')}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleCancelEnrollment(enrollment.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Annulla iscrizione"
+                          >
+                            <UserMinus className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+                <button
+                  onClick={() => setShowEnrollmentsModal(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Chiudi
                 </button>
               </div>
             </div>
