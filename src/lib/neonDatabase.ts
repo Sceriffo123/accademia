@@ -266,6 +266,20 @@ export async function getRecentNormativesCount(days: number = 30): Promise<numbe
   }
 }
 
+export async function getAllPermissions() {
+  try {
+    const result = await sql`
+      SELECT DISTINCT permission_name 
+      FROM user_permissions 
+      ORDER BY permission_name
+    `;
+    return result.map(row => row.permission_name);
+  } catch (error) {
+    console.error('Error getting all permissions:', error);
+    throw error;
+  }
+}
+
 // === FUNZIONI DOCUMENTI ===
 
 export async function createDocument(data: Omit<Document, 'id' | 'created_at' | 'updated_at'>): Promise<Document | null> {
