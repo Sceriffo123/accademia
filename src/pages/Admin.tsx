@@ -266,11 +266,21 @@ export default function Admin() {
     if (!editingModule) return;
     
     try {
+      console.log('Updating module:', editingModule);
       await updateCourseModule(editingModule.id, editingModule);
-      await fetchModules(editingModule.course_id);
+      console.log('Module updated successfully');
+      
+      // Ricarica tutti i moduli invece di solo quelli del corso
+      const allModules = await getCourseModules();
+      setModules(allModules);
+      
       setEditingModule(null);
+      
+      // Mostra notifica di successo
+      alert('Modulo aggiornato con successo!');
     } catch (error) {
       console.error('Error updating module:', error);
+      alert('Errore durante l\'aggiornamento del modulo: ' + error.message);
     }
   }
 
