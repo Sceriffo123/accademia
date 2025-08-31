@@ -1150,7 +1150,12 @@ export default function Admin() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-4 sm:space-y-0">
                     <div>
                       <h2 className="text-xl font-semibold text-gray-900">
-                        Gestione Quiz ({quizzes.filter(quiz => !selectedCourseForQuiz || quiz.course_id === selectedCourseForQuiz).length})
+                        Gestione Quiz ({quizzes.filter(quiz => {
+                          if (!selectedCourseForQuiz) return true;
+                          // Trova il modulo del quiz e verifica se appartiene al corso selezionato
+                          const module = modules.find(m => m.id === quiz.module_id);
+                          return module?.course_id === selectedCourseForQuiz;
+                        }).length})
                       </h2>
                       {selectedCourseForQuiz && (
                         <p className="text-sm text-gray-600 mt-1">
@@ -1186,9 +1191,15 @@ export default function Admin() {
                   {/* Quizzes List */}
                   <div className="space-y-4">
                     {quizzes
-                      .filter(quiz => !selectedCourseForQuiz || quiz.course_id === selectedCourseForQuiz)
+                      .filter(quiz => {
+                        if (!selectedCourseForQuiz) return true;
+                        // Trova il modulo del quiz e verifica se appartiene al corso selezionato
+                        const module = modules.find(m => m.id === quiz.module_id);
+                        return module?.course_id === selectedCourseForQuiz;
+                      })
                       .map((quiz) => {
-                      const course = courses.find(c => c.id === quiz.course_id);
+                      const module = modules.find(m => m.id === quiz.module_id);
+                      const course = courses.find(c => c.id === module?.course_id);
                       return (
                         <div key={quiz.id} className="border border-gray-200 rounded-lg p-4">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">

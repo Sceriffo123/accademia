@@ -71,10 +71,32 @@ export async function migrateHardcodedQuizzes(): Promise<{ success: boolean; mes
     const courseId = courseResult[0].id;
     console.log(`✅ Corso trovato: ${courseId}`);
     
-    // 2. Verifica se il quiz esiste già
+    // 2. Trova o crea un modulo per il quiz
+    const moduleResult = await sql`
+      SELECT id FROM course_modules 
+      WHERE course_id = ${courseId} AND title ILIKE '%quiz%'
+      LIMIT 1
+    `;
+    
+    let moduleId;
+    if (moduleResult.length === 0) {
+      // Crea un modulo per il quiz
+      const newModuleResult = await sql`
+        INSERT INTO course_modules (course_id, title, description, type, order_num)
+        VALUES (${courseId}, 'Quiz Finale', 'Modulo di valutazione finale', 'quiz', 999)
+        RETURNING id
+      `;
+      moduleId = newModuleResult[0].id;
+      console.log(`✅ Modulo quiz creato: ${moduleId}`);
+    } else {
+      moduleId = moduleResult[0].id;
+      console.log(`✅ Modulo quiz trovato: ${moduleId}`);
+    }
+    
+    // 3. Verifica se il quiz esiste già
     const existingQuiz = await sql`
       SELECT id FROM quizzes 
-      WHERE course_id = ${courseId} AND title = ${hardcodedQuizData.title}
+      WHERE module_id = ${moduleId} AND title = ${hardcodedQuizData.title}
     `;
     
     if (existingQuiz.length > 0) {
@@ -85,10 +107,10 @@ export async function migrateHardcodedQuizzes(): Promise<{ success: boolean; mes
       };
     }
     
-    // 3. Crea il quiz
+    // 4. Crea il quiz
     const quizResult = await sql`
-      INSERT INTO quizzes (course_id, title, description, time_limit, passing_score, max_attempts)
-      VALUES (${courseId}, ${hardcodedQuizData.title}, ${hardcodedQuizData.description}, 
+      INSERT INTO quizzes (module_id, title, description, time_limit, passing_score, max_attempts)
+      VALUES (${moduleId}, ${hardcodedQuizData.title}, ${hardcodedQuizData.description}, 
               ${hardcodedQuizData.time_limit}, ${hardcodedQuizData.passing_score}, ${hardcodedQuizData.max_attempts})
       RETURNING id
     `;
