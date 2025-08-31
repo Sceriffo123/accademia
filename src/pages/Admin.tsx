@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/useToast';
 import { 
   getAllUsers, createUser, updateUser, deleteUser,
   getAllNormatives,
@@ -7,8 +8,10 @@ import {
   getAllCourses, createCourse, updateCourse, deleteCourse, getCourseEnrollments, deleteEnrollment,
   getQuizByCourseId, createQuiz, updateQuiz, deleteQuiz, getQuizQuestions, createQuizQuestion, updateQuizQuestion, deleteQuizQuestion,
   createCourseModule, getCourseModules, updateCourseModule, deleteCourseModule,
+  sql,
   type User, type Course, type Enrollment, type Quiz, type QuizQuestion, type CourseModule
 } from '../lib/neonDatabase';
+import { migrateHardcodedQuizzes, checkMigrationStatus } from '../lib/migration';
 import { 
   Users, 
   FileText, 
@@ -38,10 +41,11 @@ interface AdminStats {
 }
 
 type TabType = 'overview' | 'users' | 'normatives' | 'documents' | 'courses';
-type CourseSubTabType = 'courses' | 'quizzes';
+type CourseSubTabType = 'courses' | 'modules' | 'quizzes';
 
 export default function Admin() {
   const { profile } = useAuth();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [courseSubTab, setCourseSubTab] = useState<CourseSubTabType>('courses');
   const [stats, setStats] = useState<AdminStats>({
@@ -74,11 +78,12 @@ export default function Admin() {
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [showCreateQuiz, setShowCreateQuiz] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
-  
-  // Stati per domande quiz
+  const [selectedQuizForQuestions, setSelectedQuizForQuestions] = useState<Quiz | null>(null);
+  const [showQuestionsModal, setShowQuestionsModal] = useState(false);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [showCreateQuestion, setShowCreateQuestion] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<QuizQuestion | null>(null);
+  const [selectedCourseForQuiz, setSelectedCourseForQuiz] = useState('');
 
   // Stati per moduli corso
   const [modules, setModules] = useState<CourseModule[]>([]);
@@ -86,6 +91,28 @@ export default function Admin() {
   const [showCreateModule, setShowCreateModule] = useState(false);
   const [editingModule, setEditingModule] = useState<CourseModule | null>(null);
   const [selectedCourseEnrollments, setSelectedCourseEnrollments] = useState<Enrollment[]>([]);
+  
+  // Stato corso selezionato condiviso tra tab
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  
+  // Nuovo modulo form
+  const [newModule, setNewModule] = useState({
+    course_id: '',
+    title: '',
+    description: '',
+    type: 'lesson' as 'lesson' | 'video' | 'document' | 'quiz' | 'assignment',
+    content: '',
+    order_num: 1,
+    level: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
+    is_required: true,
+    duration_minutes: 30,
+    video_url: '',
+    document_url: ''
+  });
+  
+  // Stati per migrazione
+  const [migrationStatus, setMigrationStatus] = useState<string>('');
+  const [showMigrationModal, setShowMigrationModal] = useState(false);
   const [showEnrollmentsModal, setShowEnrollmentsModal] = useState(false);
   const [selectedCourseTitle, setSelectedCourseTitle] = useState('');
   const [newCourse, setNewCourse] = useState({
@@ -109,15 +136,6 @@ export default function Admin() {
     passing_score: 70,
     max_attempts: 3
   });
-  
-  const [newQuestion, setNewQuestion] = useState({
-    question: '',
-    options: ['', '', '', ''],
-    correct_answer: 0,
-    explanation: '',
-    points: 1,
-    order: 1
-  });
 
   useEffect(() => {
     fetchData();
@@ -136,6 +154,14 @@ export default function Admin() {
       setNormatives(normativesData);
       setDocuments(documentsData);
       setCourses(coursesData);
+      
+      // Carica tutti i moduli
+      const allModules = [];
+      for (const course of coursesData) {
+        const courseModules = await getCourseModules(course.id);
+        allModules.push(...courseModules);
+      }
+      setModules(allModules);
       
       // Carica il conteggio degli iscritti per ogni corso
       const enrollmentCounts: {[courseId: string]: number} = {};
@@ -163,11 +189,20 @@ export default function Admin() {
 
   async function fetchQuizzes() {
     try {
-      // I quiz ora sono collegati ai moduli, quindi non possiamo più recuperarli direttamente dai corsi
-      // Per ora manteniamo vuoto l'array quiz finché non implementiamo la nuova logica
-      setQuizzes([]);
+      // Carica tutti i quiz direttamente dal database
+      const allQuizzes = await sql`
+        SELECT q.*, cm.title as module_title, c.title as course_title, c.id as course_id
+        FROM quizzes q
+        JOIN course_modules cm ON q.module_id = cm.id
+        JOIN courses c ON cm.course_id = c.id
+        ORDER BY c.title, q.title
+      `;
+      
+      setQuizzes(allQuizzes as Quiz[]);
+      console.log('Quiz caricati:', allQuizzes.length);
     } catch (error) {
       console.error('Error fetching quizzes:', error);
+      setQuizzes([]);
     }
   }
 
@@ -179,6 +214,136 @@ export default function Admin() {
       console.error('Error fetching modules:', error);
     }
   }
+
+  // Handlers per moduli
+  async function handleCreateModule() {
+    if (!newModule.course_id || !newModule.title) return;
+    
+    try {
+      await createCourseModule({
+        course_id: newModule.course_id,
+        title: newModule.title,
+        description: newModule.description,
+        type: newModule.type,
+        content: newModule.content,
+        order_num: newModule.order_num,
+        level: newModule.level,
+        is_required: newModule.is_required,
+        duration_minutes: newModule.duration_minutes,
+        video_url: newModule.video_url,
+        document_url: newModule.document_url
+      });
+      
+      // Ricarica tutti i moduli
+      await fetchData();
+      setShowCreateModule(false);
+      setNewModule({
+        course_id: '',
+        title: '',
+        description: '',
+        type: 'lesson',
+        content: '',
+        order_num: 1,
+        level: 'beginner',
+        is_required: true,
+        duration_minutes: 30,
+        video_url: '',
+        document_url: ''
+      });
+    } catch (error) {
+      console.error('Error creating module:', error);
+    }
+  }
+
+  async function handleUpdateModule() {
+    if (!editingModule) {
+      console.error('No editing module found');
+      showToast('Errore: nessun modulo selezionato per la modifica');
+      return;
+    }
+    
+    try {
+      console.log('Updating module:', editingModule);
+      
+      // Validazione dati obbligatori
+      if (!editingModule.title?.trim()) {
+        showToast('Errore: il titolo del modulo è obbligatorio');
+        return;
+      }
+      
+      if (!editingModule.course_id) {
+        showToast('Errore: il corso di appartenenza è obbligatorio');
+        return;
+      }
+      
+      const result = await updateCourseModule(editingModule.id, editingModule);
+      console.log('Module updated successfully:', result);
+      
+      // Ricarica tutti i dati per mantenere sincronizzazione completa
+      await fetchData();
+      
+      setEditingModule(null);
+      
+      // Mostra toast di successo
+      console.log('Chiamando showToast per successo modulo...');
+      showToast({ 
+        type: 'success', 
+        title: 'Successo!', 
+        message: '✅ Modulo aggiornato con successo!' 
+      });
+      console.log('showToast chiamato');
+    } catch (error) {
+      console.error('Error updating module:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+      showToast({ 
+        type: 'error', 
+        title: 'Errore!', 
+        message: '❌ Errore durante l\'aggiornamento del modulo: ' + errorMessage 
+      });
+    }
+  }
+
+  async function handleDeleteModule(moduleId: string) {
+    if (!confirm('Sei sicuro di voler eliminare questo modulo?')) return;
+    
+    try {
+      await deleteCourseModule(moduleId);
+      
+      // Ricarica tutti i dati per mantenere sincronizzazione completa
+      await fetchData();
+      
+      showToast('Modulo eliminato con successo!');
+    } catch (error) {
+      console.error('Error deleting module:', error);
+      showToast('Errore durante l\'eliminazione del modulo: ' + (error as Error).message);
+    }
+  }
+
+  // Handler per visualizzare e gestire domande quiz
+  const handleViewQuizQuestions = async (quiz: Quiz) => {
+    try {
+      setSelectedQuizForQuestions(quiz);
+      const quizQuestions = await getQuizQuestions(quiz.id);
+      setQuestions(quizQuestions);
+      setShowQuestionsModal(true);
+    } catch (error) {
+      console.error('Errore caricamento domande quiz:', error);
+      showToast('Errore nel caricamento delle domande del quiz');
+    }
+  };
+
+  const handleDeleteQuestion = async (questionId: string) => {
+    if (!confirm('Sei sicuro di voler eliminare questa domanda?')) return;
+    
+    try {
+      await deleteQuizQuestion(questionId);
+      setQuestions(questions.filter(q => q.id !== questionId));
+      showToast('Domanda eliminata con successo!');
+    } catch (error) {
+      console.error('Errore eliminazione domanda:', error);
+      showToast('Errore nell\'eliminazione della domanda');
+    }
+  };
 
   async function handleCreateQuiz() {
     if (!selectedCourseForQuiz) return;
@@ -235,82 +400,6 @@ export default function Admin() {
     }
   }
 
-  async function handleViewQuizQuestions(quizId: string) {
-    try {
-      const questions = await getQuizQuestions(quizId);
-      setQuizQuestions(questions);
-      setShowQuizQuestions(quizId);
-    } catch (error) {
-      console.error('Error fetching quiz questions:', error);
-    }
-  }
-
-  async function handleCreateQuestion() {
-    if (!showQuizQuestions) return;
-    
-    try {
-      const questionData = {
-        quiz_id: showQuizQuestions,
-        ...newQuestion
-      };
-      
-      await createQuizQuestion(questionData);
-      await handleViewQuizQuestions(showQuizQuestions);
-      setNewQuestion({
-        question: '',
-        options: ['', '', '', ''],
-        correct_answer: 0,
-        explanation: '',
-        points: 1,
-        order: quizQuestions.length + 1
-      });
-      setShowCreateQuestion(false);
-    } catch (error) {
-      console.error('Error creating question:', error);
-    }
-  }
-
-  async function handleUpdateQuestion() {
-    if (!editingQuestion) return;
-    
-    try {
-      await updateQuizQuestion(editingQuestion.id, newQuestion);
-      await handleViewQuizQuestions(showQuizQuestions);
-      setEditingQuestion(null);
-      setNewQuestion({
-        question: '',
-        options: ['', '', '', ''],
-        correct_answer: 0,
-        explanation: '',
-        points: 1,
-        order: 1
-      });
-    } catch (error) {
-      console.error('Error updating question:', error);
-    }
-  }
-
-  async function handleDeleteQuestion(questionId: string) {
-    if (!confirm('Sei sicuro di voler eliminare questa domanda?')) return;
-    
-    try {
-      await deleteQuizQuestion(questionId);
-      await handleViewQuizQuestions(showQuizQuestions);
-    } catch (error) {
-      console.error('Error deleting question:', error);
-    }
-  }
-
-  async function handleCreateUser() {
-    try {
-      await createUser(newUser.email, newUser.fullName, newUser.password, newUser.role);
-      setNewUser({ email: '', fullName: '', password: '', role: 'user' });
-      setShowCreateUser(false);
-      fetchData();
-    } catch (error) {
-      console.error('Error creating user:', error);
-    }
-  }
 
   const handleUpdateUser = async () => {
     if (!editingUser) return;
@@ -326,8 +415,40 @@ export default function Admin() {
         user.id === editingUser.id ? editingUser : user
       ));
       setEditingUser(null);
+      
+      showToast({ 
+        type: 'success', 
+        title: 'Successo!', 
+        message: 'Utente aggiornato con successo!' 
+      });
     } catch (error) {
       console.error('Error updating user:', error);
+      showToast({ 
+        type: 'error', 
+        title: 'Errore!', 
+        message: 'Errore durante l\'aggiornamento dell\'utente.' 
+      });
+    }
+  };
+
+  async function handleCreateUser() {
+    try {
+      await createUser(newUser.email, newUser.fullName, newUser.password, newUser.role);
+      setNewUser({ email: '', fullName: '', password: '', role: 'user' });
+      setShowCreateUser(false);
+      fetchData();
+      showToast({ 
+        type: 'success', 
+        title: 'Successo!', 
+        message: 'Utente creato con successo!' 
+      });
+    } catch (error) {
+      console.error('Error creating user:', error);
+      showToast({ 
+        type: 'error', 
+        title: 'Errore!', 
+        message: 'Errore durante la creazione dell\'utente.' 
+      });
     }
   };
 
@@ -443,11 +564,49 @@ export default function Admin() {
       try {
         await deleteUser(userId);
         fetchData();
+        showToast({ 
+          type: 'success', 
+          title: 'Successo!', 
+          message: 'Utente eliminato con successo!' 
+        });
       } catch (error) {
         console.error('Error deleting user:', error);
+        showToast({ 
+          type: 'error', 
+          title: 'Errore!', 
+          message: 'Errore durante l\'eliminazione dell\'utente.' 
+        });
       }
     }
   }
+
+  // Gestione migrazione quiz hardcoded
+  const handleMigrateQuizzes = async () => {
+    setMigrationStatus('Migrazione in corso...');
+    try {
+      const result = await migrateHardcodedQuizzes();
+      if (result.success) {
+        setMigrationStatus(`✅ ${result.message}`);
+        // Ricarica i quiz dopo la migrazione
+        await fetchQuizzes();
+      } else {
+        setMigrationStatus(`❌ ${result.message}`);
+      }
+    } catch (error) {
+      setMigrationStatus(`❌ Errore: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+    }
+  };
+
+  const checkMigrationNeeded = async () => {
+    try {
+      const status = await checkMigrationStatus();
+      if (status.hasHardcodedQuiz && !status.hasDatabaseQuiz) {
+        setShowMigrationModal(true);
+      }
+    } catch (error) {
+      console.error('Errore verifica migrazione:', error);
+    }
+  };
 
 
   const filteredUsers = users.filter(user =>
@@ -540,7 +699,7 @@ export default function Admin() {
               >
                 <div className="flex items-center justify-between mb-3 lg:mb-4">
                   <div className={`p-2 lg:p-3 rounded-lg ${stat.color}`}>
-                    <Icon className="h-4 w-4 lg:h-6 lg:w-6 text-white" />
+                    <Icon className="h-4 w-4 text-white" />
                   </div>
                   <span className="text-xs lg:text-sm text-green-600 font-medium">
                     {stat.change}
@@ -722,42 +881,74 @@ export default function Admin() {
                 />
               </div>
 
-              {/* Users List */}
-              <div className="space-y-4">
-                {filteredUsers.map((user) => (
-                  <div key={user.id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">{user.full_name}</h3>
-                        <p className="text-gray-600 text-sm">{user.email}</p>
-                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-2 ${
-                          user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                          user.role === 'superadmin' ? 'bg-red-100 text-red-800' :
-                          user.role === 'operator' ? 'bg-orange-100 text-orange-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {user.role === 'admin' ? 'Amministratore' :
-                           user.role === 'superadmin' ? 'Super Admin' :
-                           user.role === 'operator' ? 'Operatore' : 'Utente'}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => setEditingUser(user)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              {/* Users Table */}
+              <div className="bg-white overflow-hidden shadow rounded-lg">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Nome
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ruolo
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Registrato
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Azioni
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredUsers.map((user) => (
+                      <tr key={user.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{user.full_name}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-600">{user.email}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            user.role === 'admin' ? 'bg-red-100 text-red-800' :
+                            user.role === 'superadmin' ? 'bg-purple-100 text-purple-800' :
+                            user.role === 'operator' ? 'bg-orange-100 text-orange-800' :
+                            'bg-blue-100 text-blue-800'
+                          }`}>
+                            {user.role === 'admin' ? 'Admin' :
+                             user.role === 'superadmin' ? 'SuperAdmin' :
+                             user.role === 'operator' ? 'Operatore' : 'Utente'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(user.created_at).toLocaleDateString('it-IT')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => setEditingUser(user)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="Modifica utente"
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(user.id)}
+                              className="text-red-600 hover:text-red-900"
+                              title="Elimina utente"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -856,7 +1047,7 @@ export default function Admin() {
                     <div className="flex flex-col space-y-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 mb-1">{doc.title}</h3>
+                          <h3 className="font-semibold text-gray-900">{doc.title}</h3>
                           <p className="text-sm text-gray-600 mb-2">{doc.filename}</p>
                           <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
                             doc.type === 'template' ? 'bg-blue-100 text-blue-800' :
@@ -906,6 +1097,16 @@ export default function Admin() {
                   }`}
                 >
                   Corsi
+                </button>
+                <button
+                  onClick={() => setCourseSubTab('modules')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    courseSubTab === 'modules'
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Moduli
                 </button>
                 <button
                   onClick={() => setCourseSubTab('quizzes')}
@@ -971,6 +1172,28 @@ export default function Admin() {
                               <Users className="h-4 w-4" />
                             </button>
                             <button
+                              onClick={() => {
+                                setSelectedCourseId(course.id);
+                                setSelectedCourseForQuiz(course.id);
+                                setCourseSubTab('modules');
+                              }}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Gestisci moduli"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedCourseId(course.id);
+                                setSelectedCourseForQuiz(course.id);
+                                setCourseSubTab('quizzes');
+                              }}
+                              className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                              title="Gestisci quiz"
+                            >
+                              <BookOpen className="h-4 w-4" />
+                            </button>
+                            <button
                               onClick={() => setEditingCourse(course)}
                               className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                               title="Modifica corso"
@@ -992,81 +1215,334 @@ export default function Admin() {
                 </>
               )}
 
+              {/* Modules Sub-tab */}
+              {courseSubTab === 'modules' && (
+                <>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-4 sm:space-y-0">
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      Gestione Moduli ({modules.length})
+                    </h2>
+                    <button
+                      onClick={() => setShowCreateModule(true)}
+                      className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nuovo Modulo
+                    </button>
+                  </div>
+
+                  {/* Course Filter */}
+                  {selectedCourseId && (
+                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                      <p className="text-sm text-blue-700">
+                        Filtrato per corso: <strong>{courses.find(c => c.id === selectedCourseId)?.title}</strong>
+                        <button 
+                          onClick={() => setSelectedCourseId('')}
+                          className="ml-2 text-blue-600 hover:text-blue-800"
+                        >
+                          (rimuovi filtro)
+                        </button>
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Hierarchical Modules List */}
+                  <div className="space-y-6">
+                    {courses
+                      .filter(course => !selectedCourseId || course.id === selectedCourseId)
+                      .map((course) => {
+                        const courseModules = modules
+                          .filter(module => module.course_id === course.id)
+                          .sort((a, b) => (a.order_num || 0) - (b.order_num || 0));
+                        
+                        if (courseModules.length === 0) return null;
+                        
+                        return (
+                          <div key={course.id} className="border border-gray-300 rounded-lg overflow-hidden">
+                            {/* Course Header */}
+                            <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <BookOpen className="h-5 w-5 text-blue-600" />
+                                  <h3 className="font-semibold text-gray-900">{course.title}</h3>
+                                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                    {courseModules.length} moduli
+                                  </span>
+                                </div>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  course.level === 'beginner' ? 'bg-green-100 text-green-800' :
+                                  course.level === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {course.level}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {/* Course Modules */}
+                            <div className="divide-y divide-gray-100">
+                              {courseModules.map((module, index) => (
+                                <div key={module.id} className="px-4 py-3 hover:bg-gray-50">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-gray-400">├─</span>
+                                        <span className="text-lg">
+                                          {module.type === 'lesson' ? '📖' :
+                                           module.type === 'video' ? '🎥' :
+                                           module.type === 'document' ? '📄' :
+                                           module.type === 'quiz' ? '📝' : '📋'}
+                                        </span>
+                                      </div>
+                                      <div className="flex-1">
+                                        <h4 className="font-medium text-gray-900">{module.title}</h4>
+                                        <div className="flex items-center space-x-4 mt-1">
+                                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                                            module.type === 'lesson' ? 'bg-blue-100 text-blue-800' :
+                                            module.type === 'video' ? 'bg-green-100 text-green-800' :
+                                            module.type === 'document' ? 'bg-yellow-100 text-yellow-800' :
+                                            module.type === 'quiz' ? 'bg-purple-100 text-purple-800' :
+                                            'bg-gray-100 text-gray-800'
+                                          }`}>
+                                            {module.type}
+                                          </span>
+                                          <span className="text-xs text-gray-500">
+                                            #{module.order_num}
+                                          </span>
+                                          {module.duration_minutes && (
+                                            <span className="text-xs text-gray-500">
+                                              {module.duration_minutes} min
+                                            </span>
+                                          )}
+                                          {module.is_required && (
+                                            <span className="text-xs text-red-600 font-medium">
+                                              Obbligatorio
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <button
+                                        onClick={() => setEditingModule(module)}
+                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                        title="Modifica modulo"
+                                      >
+                                        <Edit3 className="h-4 w-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteModule(module.id)}
+                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Elimina modulo"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </>
+              )}
+
               {/* Quizzes Sub-tab */}
               {courseSubTab === 'quizzes' && (
                 <>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-4 sm:space-y-0">
-                    <h2 className="text-xl font-semibold text-gray-900">
-                      Gestione Quiz ({quizzes.length})
-                    </h2>
-                    <button
-                      onClick={() => setShowCreateQuiz(true)}
-                      className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Nuovo Quiz</span>
-                    </button>
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-900">
+                        Gestione Quiz ({quizzes.filter(quiz => {
+                          if (!selectedCourseForQuiz) return true;
+                          // Usa i dati della JOIN per filtrare per corso
+                          return (quiz as any).course_id === selectedCourseForQuiz;
+                        }).length})
+                      </h2>
+                      {selectedCourseForQuiz && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          Corso: {courses.find(c => c.id === selectedCourseForQuiz)?.title}
+                          <button
+                            onClick={() => setSelectedCourseForQuiz('')}
+                            className="ml-2 text-blue-600 hover:text-blue-800 text-xs underline"
+                          >
+                            (mostra tutti)
+                          </button>
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={() => setShowMigrationModal(true)}
+                        className="flex items-center space-x-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+                        title="Migra quiz hardcoded al database"
+                      >
+                        <Database className="h-4 w-4" />
+                        <span>Migra Quiz</span>
+                      </button>
+                      <button
+                        onClick={() => setShowCreateQuiz(true)}
+                        className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Nuovo Quiz</span>
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Quizzes List */}
-                  <div className="space-y-4">
-                    {quizzes.map((quiz) => {
-                      const course = courses.find(c => c.id === quiz.course_id);
-                      return (
-                        <div key={quiz.id} className="border border-gray-200 rounded-lg p-4">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-gray-900">{quiz.title}</h3>
-                              <p className="text-gray-600 text-sm">{course?.title || 'Corso non trovato'}</p>
-                              <div className="flex items-center space-x-4 mt-2">
-                                <span className="text-xs text-gray-500">
-                                  {quiz.time_limit} min
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  Soglia: {quiz.passing_score}%
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  Max tentativi: {quiz.max_attempts}
+                  {/* Course Filter */}
+                  {selectedCourseId && (
+                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                      <p className="text-sm text-blue-700">
+                        Filtrato per corso: <strong>{courses.find(c => c.id === selectedCourseId)?.title}</strong>
+                        <button 
+                          onClick={() => {
+                            setSelectedCourseId('');
+                            setSelectedCourseForQuiz('');
+                          }}
+                          className="ml-2 text-blue-600 hover:text-blue-800"
+                        >
+                          ✕ Rimuovi filtro
+                        </button>
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Hierarchical Quiz List */}
+                  <div className="space-y-6">
+                    {courses
+                      .filter(course => !selectedCourseForQuiz || course.id === selectedCourseForQuiz)
+                      .map((course) => {
+                        const courseModules = modules
+                          .filter(module => module.course_id === course.id)
+                          .sort((a, b) => (a.order_num || 0) - (b.order_num || 0));
+                        
+                        const courseQuizzes = quizzes.filter(quiz => {
+                          return (quiz as any).course_id === course.id;
+                        });
+                        
+                        if (courseQuizzes.length === 0) return null;
+                        
+                        return (
+                          <div key={course.id} className="border border-gray-300 rounded-lg overflow-hidden">
+                            {/* Course Header */}
+                            <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <BookOpen className="h-5 w-5 text-blue-600" />
+                                  <h3 className="font-semibold text-gray-900">{course.title}</h3>
+                                  <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                                    {courseQuizzes.length} quiz
+                                  </span>
+                                </div>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  course.level === 'beginner' ? 'bg-green-100 text-green-800' :
+                                  course.level === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {course.level}
                                 </span>
                               </div>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => handleViewQuizQuestions(quiz.id)}
-                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                title="Gestisci domande"
-                              >
-                                <FileText className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEditingQuiz(quiz);
-                                  setNewQuiz({
-                                    title: quiz.title,
-                                    description: quiz.description,
-                                    time_limit: quiz.time_limit,
-                                    passing_score: quiz.passing_score,
-                                    max_attempts: quiz.max_attempts
-                                  });
-                                }}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Modifica quiz"
-                              >
-                                <Edit3 className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteQuiz(quiz.id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Elimina quiz"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                            
+                            {/* Course Modules with Quizzes */}
+                            <div className="divide-y divide-gray-100">
+                              {courseModules.map((module) => {
+                                const moduleQuizzes = quizzes.filter(quiz => quiz.module_id === module.id);
+                                if (moduleQuizzes.length === 0) return null;
+                                
+                                return (
+                                  <div key={module.id} className="px-4 py-3">
+                                    {/* Module Header */}
+                                    <div className="flex items-center space-x-3 mb-3">
+                                      <span className="text-gray-400">├─</span>
+                                      <span className="text-lg">
+                                        {module.type === 'lesson' ? '📖' :
+                                         module.type === 'video' ? '🎥' :
+                                         module.type === 'document' ? '📄' :
+                                         module.type === 'quiz' ? '📝' : '📋'}
+                                      </span>
+                                      <h4 className="font-medium text-gray-900">{module.title}</h4>
+                                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                                        module.type === 'lesson' ? 'bg-blue-100 text-blue-800' :
+                                        module.type === 'video' ? 'bg-green-100 text-green-800' :
+                                        module.type === 'document' ? 'bg-yellow-100 text-yellow-800' :
+                                        module.type === 'quiz' ? 'bg-purple-100 text-purple-800' :
+                                        'bg-gray-100 text-gray-800'
+                                      }`}>
+                                        {module.type}
+                                      </span>
+                                    </div>
+                                    
+                                    {/* Module Quizzes */}
+                                    <div className="ml-8 space-y-2">
+                                      {moduleQuizzes.map((quiz) => (
+                                        <div key={quiz.id} className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100">
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center space-x-3">
+                                              <span className="text-gray-400">└─</span>
+                                              <span className="text-base">📝</span>
+                                              <div className="flex-1">
+                                                <h5 className="font-medium text-gray-900">{quiz.title}</h5>
+                                                <div className="flex items-center space-x-4 mt-1">
+                                                  <span className="text-xs text-gray-500">
+                                                    ⏱️ {quiz.time_limit} min
+                                                  </span>
+                                                  <span className="text-xs text-gray-500">
+                                                    🎯 {quiz.passing_score}% min
+                                                  </span>
+                                                  <span className="text-xs text-gray-500">
+                                                    🔄 {quiz.max_attempts} tentativi
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                              <button
+                                                onClick={() => handleViewQuizQuestions(quiz.id)}
+                                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                title="Gestisci domande"
+                                              >
+                                                <FileText className="h-4 w-4" />
+                                              </button>
+                                              <button
+                                                onClick={() => {
+                                                  setEditingQuiz(quiz);
+                                                  setNewQuiz({
+                                                    title: quiz.title,
+                                                    description: quiz.description,
+                                                    time_limit: quiz.time_limit,
+                                                    passing_score: quiz.passing_score,
+                                                    max_attempts: quiz.max_attempts
+                                                  });
+                                                }}
+                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="Modifica quiz"
+                                              >
+                                                <Edit3 className="h-4 w-4" />
+                                              </button>
+                                              <button
+                                                onClick={() => handleDeleteQuiz(quiz.id)}
+                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Elimina quiz"
+                                              >
+                                                <Trash2 className="h-4 w-4" />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                    
+                        );
+                      })}
+                      
                     {quizzes.length === 0 && (
                       <div className="text-center py-8 text-gray-500">
                         <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
@@ -1688,17 +2164,9 @@ export default function Admin() {
                   Sei sicuro di voler annullare questa iscrizione al corso?
                 </p>
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm text-amber-800">
-                      <p className="font-medium mb-1">Attenzione:</p>
-                      <ul className="list-disc list-inside space-y-1">
-                        <li>L&apos;iscrizione verrà rimossa definitivamente</li>
-                        <li>L&apos;utente perderà l&apos;accesso al corso</li>
-                        <li>I progressi del corso verranno mantenuti per eventuali future iscrizioni</li>
-                      </ul>
-                    </div>
-                  </div>
+                  <p className="text-sm text-amber-800">
+                    <strong>⚠️ Attenzione:</strong> Questa azione eliminerà l'iscrizione dell'utente al corso.
+                  </p>
                 </div>
               </div>
               
@@ -1717,6 +2185,673 @@ export default function Admin() {
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                 >
                   Conferma Annullamento
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Creazione/Modifica Quiz */}
+        {(showCreateQuiz || editingQuiz) && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-lg">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {editingQuiz ? 'Modifica Quiz' : 'Nuovo Quiz'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowCreateQuiz(false);
+                    setEditingQuiz(null);
+                    setNewQuiz({
+                      title: '',
+                      description: '',
+                      time_limit: 30,
+                      passing_score: 70,
+                      max_attempts: 3
+                    });
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (editingQuiz) {
+                  handleUpdateQuiz();
+                } else {
+                  handleCreateQuiz();
+                }
+              }} className="space-y-4">
+                {!editingQuiz && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Corso
+                    </label>
+                    <select
+                      value={selectedCourseForQuiz}
+                      onChange={(e) => setSelectedCourseForQuiz(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    >
+                      <option value="">Seleziona un corso</option>
+                      {courses.map((course) => (
+                        <option key={course.id} value={course.id}>
+                          {course.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Titolo Quiz
+                  </label>
+                  <input
+                    type="text"
+                    value={newQuiz.title}
+                    onChange={(e) => setNewQuiz({...newQuiz, title: e.target.value})}
+                    placeholder="Inserisci il titolo del quiz"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descrizione
+                  </label>
+                  <textarea
+                    value={newQuiz.description}
+                    onChange={(e) => setNewQuiz({...newQuiz, description: e.target.value})}
+                    placeholder="Descrizione del quiz"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tempo (min)
+                    </label>
+                    <input
+                      type="number"
+                      value={newQuiz.time_limit}
+                      onChange={(e) => setNewQuiz({...newQuiz, time_limit: parseInt(e.target.value)})}
+                      min="1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Soglia (%)
+                    </label>
+                    <input
+                      type="number"
+                      value={newQuiz.passing_score}
+                      onChange={(e) => setNewQuiz({...newQuiz, passing_score: parseInt(e.target.value)})}
+                      min="1"
+                      max="100"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Max Tentativi
+                    </label>
+                    <input
+                      type="number"
+                      value={newQuiz.max_attempts}
+                      onChange={(e) => setNewQuiz({...newQuiz, max_attempts: parseInt(e.target.value)})}
+                      min="1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateQuiz(false);
+                      setEditingQuiz(null);
+                      setNewQuiz({
+                        title: '',
+                        description: '',
+                        time_limit: 30,
+                        passing_score: 70,
+                        max_attempts: 3
+                      });
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    {editingQuiz ? 'Aggiorna' : 'Crea'} Quiz
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Creazione/Modifica Domanda Quiz */}
+        {(showCreateQuestion || editingQuestion) && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {editingQuestion ? 'Modifica Domanda' : 'Nuova Domanda'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowCreateQuestion(false);
+                    setEditingQuestion(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                // Handle form submission here
+              }} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Domanda
+                  </label>
+                  <textarea
+                    placeholder="Inserisci il testo della domanda"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows={3}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Opzioni di Risposta
+                  </label>
+                  {[0, 1, 2, 3].map((index) => (
+                    <div key={index} className="flex items-center space-x-2 mb-2">
+                      <span className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-sm font-medium">
+                        {String.fromCharCode(65 + index)}
+                      </span>
+                      <input
+                        type="text"
+                        placeholder={`Opzione ${String.fromCharCode(65 + index)}`}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      />
+                      <input
+                        type="radio"
+                        name="correct_answer"
+                        value={index}
+                        className="w-4 h-4 text-blue-600"
+                        title="Seleziona come risposta corretta"
+                      />
+                    </div>
+                  ))}
+                  <p className="text-sm text-gray-500 mt-1">
+                    Seleziona il radio button per indicare la risposta corretta
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Spiegazione (opzionale)
+                  </label>
+                  <textarea
+                    placeholder="Spiegazione della risposta corretta"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows={2}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Punti
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      defaultValue="1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ordine
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      defaultValue={questions.length + 1}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateQuestion(false);
+                      setEditingQuestion(null);
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    {editingQuestion ? 'Aggiorna' : 'Crea'} Domanda
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Gestione Domande Quiz */}
+        {showQuestionsModal && selectedQuizForQuestions && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Gestione Domande - {selectedQuizForQuestions.title}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowQuestionsModal(false);
+                    setSelectedQuizForQuestions(null);
+                    setQuestions([]);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <button
+                  onClick={() => setShowCreateQuestion(true)}
+                  className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Nuova Domanda</span>
+                </button>
+              </div>
+
+              {/* Lista Domande */}
+              <div className="space-y-4">
+                {questions.map((question, index) => (
+                  <div key={question.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <h4 className="font-medium text-gray-900">
+                        Domanda {index + 1}
+                      </h4>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => setEditingQuestion(question)}
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                          title="Modifica domanda"
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteQuestion(question.id)}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded"
+                          title="Elimina domanda"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <p className="text-gray-700 mb-3">{question.question}</p>
+                    
+                    <div className="space-y-2">
+                      {question.options.map((option, optIndex) => (
+                        <div
+                          key={optIndex}
+                          className={`p-2 rounded ${
+                            optIndex === question.correct_answer
+                              ? 'bg-green-100 border border-green-300'
+                              : 'bg-gray-50'
+                          }`}
+                        >
+                          <span className="font-medium">
+                            {String.fromCharCode(65 + optIndex)}.
+                          </span>{' '}
+                          {option}
+                          {optIndex === question.correct_answer && (
+                            <span className="ml-2 text-green-600 text-sm font-medium">
+                              ✓ Corretta
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {question.explanation && (
+                      <div className="mt-3 p-2 bg-blue-50 rounded">
+                        <p className="text-sm text-blue-800">
+                          <strong>Spiegazione:</strong> {question.explanation}
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div className="mt-2 text-sm text-gray-500">
+                      Punti: {question.points}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Migration Modal */}
+        {showMigrationModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Migrazione Quiz Hardcoded
+              </h3>
+              
+              <div className="space-y-4">
+                <p className="text-gray-600">
+                  Questo strumento migrerà i quiz hardcoded dal CourseViewer al database Neon.
+                </p>
+                
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-sm text-amber-800">
+                    <strong>⚠️ Attenzione:</strong> Questa operazione creerà il quiz "Evoluzione Normativa 2024" 
+                    nel database con tutte le sue domande.
+                  </p>
+                </div>
+                
+                {migrationStatus && (
+                  <div className="bg-gray-50 border rounded-lg p-3">
+                    <p className="text-sm font-mono">{migrationStatus}</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowMigrationModal(false);
+                    setMigrationStatus('');
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleMigrateQuizzes}
+                  disabled={migrationStatus.includes('corso')}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+                >
+                  Avvia Migrazione
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create Module Modal */}
+        {showCreateModule && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Crea Nuovo Modulo
+              </h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Corso
+                  </label>
+                  <select 
+                    value={newModule.course_id}
+                    onChange={(e) => setNewModule({...newModule, course_id: e.target.value})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  >
+                    <option value="">Seleziona corso...</option>
+                    {courses.map(course => (
+                      <option key={course.id} value={course.id}>{course.title}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Titolo Modulo
+                  </label>
+                  <input
+                    type="text"
+                    value={newModule.title}
+                    onChange={(e) => setNewModule({...newModule, title: e.target.value})}
+                    placeholder="Es. Introduzione al Corso"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo
+                  </label>
+                  <select 
+                    value={newModule.type}
+                    onChange={(e) => setNewModule({...newModule, type: e.target.value as any})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  >
+                    <option value="lesson">Lezione</option>
+                    <option value="video">Video</option>
+                    <option value="document">Documento</option>
+                    <option value="quiz">Quiz</option>
+                    <option value="assignment">Compito</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Durata (minuti)
+                  </label>
+                  <input
+                    type="number"
+                    value={newModule.duration_minutes}
+                    onChange={(e) => setNewModule({...newModule, duration_minutes: parseInt(e.target.value) || 30})}
+                    placeholder="30"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Descrizione
+                  </label>
+                  <textarea
+                    value={newModule.description}
+                    onChange={(e) => setNewModule({...newModule, description: e.target.value})}
+                    placeholder="Descrizione del modulo..."
+                    rows={3}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowCreateModule(false)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleCreateModule}
+                  disabled={!newModule.course_id || !newModule.title}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  Crea Modulo
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Module Modal */}
+        {editingModule && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Modifica Modulo
+              </h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Corso
+                  </label>
+                  <select 
+                    value={editingModule.course_id}
+                    onChange={(e) => setEditingModule({...editingModule, course_id: e.target.value})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  >
+                    <option value="">Seleziona corso...</option>
+                    {courses.map(course => (
+                      <option key={course.id} value={course.id}>{course.title}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Titolo Modulo
+                  </label>
+                  <input
+                    type="text"
+                    value={editingModule.title}
+                    onChange={(e) => setEditingModule({...editingModule, title: e.target.value})}
+                    placeholder="Es. Introduzione al Corso"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo
+                  </label>
+                  <select 
+                    value={editingModule.type}
+                    onChange={(e) => setEditingModule({...editingModule, type: e.target.value as any})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  >
+                    <option value="lesson">Lezione</option>
+                    <option value="video">Video</option>
+                    <option value="document">Documento</option>
+                    <option value="quiz">Quiz</option>
+                    <option value="assignment">Compito</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Durata (minuti)
+                  </label>
+                  <input
+                    type="number"
+                    value={editingModule.duration_minutes || 30}
+                    onChange={(e) => setEditingModule({...editingModule, duration_minutes: parseInt(e.target.value) || 30})}
+                    placeholder="30"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Descrizione
+                  </label>
+                  <textarea
+                    value={editingModule.description || ''}
+                    onChange={(e) => setEditingModule({...editingModule, description: e.target.value})}
+                    placeholder="Descrizione del modulo..."
+                    rows={3}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ordine
+                  </label>
+                  <input
+                    type="number"
+                    value={editingModule.order_num || 1}
+                    onChange={(e) => setEditingModule({...editingModule, order_num: parseInt(e.target.value) || 1})}
+                    min="1"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Livello
+                  </label>
+                  <select 
+                    value={editingModule.level}
+                    onChange={(e) => setEditingModule({...editingModule, level: e.target.value as any})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  >
+                    <option value="beginner">Base</option>
+                    <option value="intermediate">Intermedio</option>
+                    <option value="advanced">Avanzato</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="is_required"
+                    checked={editingModule.is_required || false}
+                    onChange={(e) => setEditingModule({...editingModule, is_required: e.target.checked})}
+                    className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="is_required" className="ml-2 block text-sm text-gray-700">
+                    Modulo obbligatorio
+                  </label>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setEditingModule(null)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleUpdateModule}
+                  disabled={!editingModule.course_id || !editingModule.title}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  Aggiorna Modulo
                 </button>
               </div>
             </div>
