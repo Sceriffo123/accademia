@@ -729,7 +729,7 @@ export default function Admin() {
                     <Icon className={`h-4 w-4 lg:h-6 lg:w-6 text-white`} />
                   </div>
                 </div>
-                <h3 className={`text-sm lg:text-lg font-semibold mb-2 leading-tight text-gray-900`}>
+                <h3 className={`text-sm lg:text-lg font-semibold mb-2 leading-tight text-gray-900 text-wrap`}>
                   {stat.title}
                 </h3>
                 <p className={`text-xs lg:text-sm leading-tight text-gray-600`}>
@@ -892,7 +892,7 @@ export default function Admin() {
                       className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                     >
                       <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 mb-1">
+                        <h4 className="font-medium text-gray-900 mb-1 text-wrap">
                           {normative.title}
                         </h4>
                         <div className="flex items-center space-x-4 text-sm text-gray-600">
@@ -965,7 +965,7 @@ export default function Admin() {
                       className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors space-y-3 sm:space-y-0"
                     >
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 mb-1 truncate">
+                        <h4 className="font-medium text-gray-900 mb-1 truncate text-wrap">
                           {document.filename}
                         </h4>
                         <p className="text-sm text-gray-600 line-clamp-2">
