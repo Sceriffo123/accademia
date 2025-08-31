@@ -9,8 +9,9 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Normatives from './pages/Normatives';
-import NormativeDetail from './pages/NormativeDetail';
 import Education from './pages/Education';
+import CourseViewer from './pages/CourseViewer';
+import NormativeDetail from './pages/NormativeDetail';
 import Admin from './pages/Admin';
 import SuperAdmin from './pages/SuperAdmin';
 import Docx from './pages/Docx';
@@ -43,6 +44,11 @@ function App() {
             <Route path="/education" element={
               <ProtectedRoute>
                 <Education />
+              </ProtectedRoute>
+            } />
+            <Route path="/course/:courseId" element={
+              <ProtectedRoute>
+                <CourseViewer />
               </ProtectedRoute>
             } />
             <Route path="/docx" element={
