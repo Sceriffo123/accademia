@@ -2,6 +2,9 @@ import { neon } from '@neondatabase/serverless';
 
 const sql = neon(import.meta.env.VITE_DATABASE_URL!);
 
+// Export sql per uso in altri moduli
+export { sql };
+
 export interface User {
   id: string;
   email: string;
