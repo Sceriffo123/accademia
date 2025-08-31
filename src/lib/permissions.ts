@@ -3,7 +3,7 @@ export interface Permission {
   id: string;
   name: string;
   description: string;
-  category: 'users' | 'normatives' | 'system' | 'reports' | 'courses' | 'quizzes';
+  category: 'users' | 'normatives' | 'system' | 'reports';
   level: number; // 1=SuperAdmin, 2=Admin, 3=Operator, 4=User, 5=Guest
 }
 
@@ -39,23 +39,6 @@ export const PERMISSIONS: Permission[] = [
   // Report
   { id: 'reports.view', name: 'Visualizza Report', description: 'Può vedere i report', category: 'reports', level: 3 },
   { id: 'reports.export', name: 'Esporta Report', description: 'Può esportare i report', category: 'reports', level: 2 },
-  
-  // Gestione Corsi
-  { id: 'courses.view', name: 'Visualizza Corsi', description: 'Può vedere i corsi', category: 'courses', level: 4 },
-  { id: 'courses.create', name: 'Crea Corsi', description: 'Può creare nuovi corsi', category: 'courses', level: 2 },
-  { id: 'courses.edit', name: 'Modifica Corsi', description: 'Può modificare corsi esistenti', category: 'courses', level: 2 },
-  { id: 'courses.delete', name: 'Elimina Corsi', description: 'Può eliminare corsi', category: 'courses', level: 2 },
-  { id: 'courses.manage_modules', name: 'Gestisce Moduli', description: 'Può gestire i moduli dei corsi', category: 'courses', level: 2 },
-  { id: 'courses.manage_enrollments', name: 'Gestisce Iscrizioni', description: 'Può gestire le iscrizioni ai corsi', category: 'courses', level: 2 },
-  
-  // Gestione Quiz
-  { id: 'quizzes.view', name: 'Visualizza Quiz', description: 'Può vedere i quiz', category: 'quizzes', level: 4 },
-  { id: 'quizzes.create', name: 'Crea Quiz', description: 'Può creare nuovi quiz', category: 'quizzes', level: 2 },
-  { id: 'quizzes.edit', name: 'Modifica Quiz', description: 'Può modificare quiz esistenti', category: 'quizzes', level: 2 },
-  { id: 'quizzes.delete', name: 'Elimina Quiz', description: 'Può eliminare quiz', category: 'quizzes', level: 2 },
-  { id: 'quizzes.manage_questions', name: 'Gestisce Domande', description: 'Può gestire le domande dei quiz', category: 'quizzes', level: 2 },
-  { id: 'quizzes.view_results', name: 'Visualizza Risultati', description: 'Può vedere i risultati dei quiz', category: 'quizzes', level: 2 },
-  { id: 'quizzes.take', name: 'Esegue Quiz', description: 'Può eseguire i quiz', category: 'quizzes', level: 4 },
 ];
 
 // Configurazione ruoli di default (modificabile dal SuperAdmin)
@@ -73,8 +56,6 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     permissions: [
       'users.view', 'users.create', 'users.edit',
       'normatives.view', 'normatives.create', 'normatives.edit', 'normatives.delete', 'normatives.publish',
-      'courses.view', 'courses.create', 'courses.edit', 'courses.delete', 'courses.manage_modules', 'courses.manage_enrollments',
-      'quizzes.view', 'quizzes.create', 'quizzes.edit', 'quizzes.delete', 'quizzes.manage_questions', 'quizzes.view_results',
       'system.logs', 'reports.view', 'reports.export'
     ],
     canManageRoles: ['operator', 'user'],
@@ -85,7 +66,6 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
     level: 3,
     permissions: [
       'normatives.view', 'normatives.create',
-      'courses.view', 'quizzes.view', 'quizzes.take',
       'reports.view'
     ],
     canManageRoles: ['user'],
@@ -94,7 +74,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions[] = [
   {
     role: 'user',
     level: 4,
-    permissions: ['normatives.view', 'courses.view', 'quizzes.view', 'quizzes.take'],
+    permissions: ['normatives.view'],
     canManageRoles: [],
     visibleSections: ['dashboard', 'normatives', 'education']
   },
