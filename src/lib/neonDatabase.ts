@@ -273,6 +273,20 @@ export async function initializeTables() {
     await insertDefaultPermissions();
     await insertDefaultRoleConfiguration();
     
+    // Migrazione: Aggiungi colonne mancanti a courses se non esistono
+    console.log('🎓 ACCADEMIA: Verifica migrazione courses...');
+    try {
+      await sql`
+        ALTER TABLE courses 
+        ADD COLUMN IF NOT EXISTS is_free BOOLEAN DEFAULT true,
+        ADD COLUMN IF NOT EXISTS certificate_template TEXT,
+        ADD COLUMN IF NOT EXISTS passing_score INTEGER DEFAULT 70
+      `;
+      console.log('🎓 ACCADEMIA: Migrazione courses completata.');
+    } catch (migrationError) {
+      console.log('🎓 ACCADEMIA: Colonne courses già esistenti o errore migrazione:', migrationError);
+    }
+
     // Popola corsi reali dal frontend
     await insertRealCourses();
 
