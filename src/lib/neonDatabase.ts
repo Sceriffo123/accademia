@@ -1,12 +1,8 @@
 import { neon } from '@neondatabase/serverless';
 import { DEFAULT_ROLE_PERMISSIONS } from './permissions';
 
-// Inizializza connessione Neon solo in ambiente server
-const sql = typeof window === 'undefined' 
-  ? neon(import.meta.env.VITE_DATABASE_URL)
-  : (() => {
-      throw new Error('Database operations must be performed on the server side');
-    });
+// Inizializza connessione Neon
+const sql = neon(import.meta.env.VITE_DATABASE_URL || '');
 
 export interface User {
   id: string;
@@ -642,6 +638,12 @@ export async function getTableStructure(tableName: string): Promise<any[]> {
 
 export async function initializeDatabase(): Promise<boolean> {
   try {
+    // Verifica che la URL del database sia configurata
+    if (!import.meta.env.VITE_DATABASE_URL) {
+      console.error('🚨 NEON: VITE_DATABASE_URL non configurata');
+      return false;
+    }
+    
     console.log('🎓 NEON: Inizializzazione database...');
     
     // Crea tabella users
