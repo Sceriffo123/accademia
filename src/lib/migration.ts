@@ -52,93 +52,112 @@ const hardcodedQuizData = {
 
 export async function migrateHardcodedQuizzes(): Promise<{ success: boolean; message: string; quizId?: string }> {
   try {
-    console.log('🚀 Inizio migrazione quiz hardcoded...');
+    console.log('🚀 Inizio migrazione quiz per tutti i corsi...');
     
-    // 1. Trova il corso "Evoluzione Normativa 2024"
-    const courseResult = await sql`
-      SELECT id FROM courses 
-      WHERE title ILIKE '%Evoluzione Normativa 2024%'
-      LIMIT 1
-    `;
+    // 1. Ottieni tutti i corsi
+    const allCourses = await sql`SELECT * FROM courses`;
     
-    if (courseResult.length === 0) {
+    if (allCourses.length === 0) {
       return {
         success: false,
-        message: 'Corso "Evoluzione Normativa 2024" non trovato nel database'
+        message: 'Nessun corso trovato nel database'
       };
     }
     
-    const courseId = courseResult[0].id;
-    console.log(`✅ Corso trovato: ${courseId}`);
+    let migratedCount = 0;
+    let skippedCount = 0;
     
-    // 2. Trova o crea un modulo per il quiz
-    const moduleResult = await sql`
-      SELECT id FROM course_modules 
-      WHERE course_id = ${courseId} AND title ILIKE '%quiz%'
-      LIMIT 1
-    `;
-    
-    let moduleId;
-    if (moduleResult.length === 0) {
-      // Crea un modulo per il quiz con tutti i campi obbligatori
-      const newModuleResult = await sql`
-        INSERT INTO course_modules (course_id, title, description, type, level, order_num)
-        VALUES (${courseId}, 'Quiz Finale', 'Modulo di valutazione finale', 'quiz', 'intermediate', 999)
+    // 2. Per ogni corso, crea un quiz
+    for (const course of allCourses) {
+      console.log(`🔄 Elaborando corso: ${course.title}`);
+      
+      // Trova o crea un modulo per il quiz
+      const moduleResult = await sql`
+        SELECT id FROM course_modules 
+        WHERE course_id = ${course.id} AND title ILIKE '%quiz%'
+        LIMIT 1
+      `;
+      
+      let moduleId;
+      if (moduleResult.length === 0) {
+        // Crea un modulo per il quiz
+        const newModuleResult = await sql`
+          INSERT INTO course_modules (course_id, title, description, type, level, order_num)
+          VALUES (${course.id}, 'Quiz Finale', 'Modulo di valutazione finale', 'quiz', ${course.level}, 999)
+          RETURNING id
+        `;
+        moduleId = newModuleResult[0].id;
+        console.log(`✅ Modulo quiz creato per ${course.title}`);
+      } else {
+        moduleId = moduleResult[0].id;
+        console.log(`✅ Modulo quiz esistente per ${course.title}`);
+      }
+      
+      // Verifica se il quiz esiste già
+      const existingQuiz = await sql`
+        SELECT id FROM quizzes 
+        WHERE module_id = ${moduleId}
+        LIMIT 1
+      `;
+      
+      if (existingQuiz.length > 0) {
+        console.log(`⚠️ Quiz già esistente per ${course.title}`);
+        skippedCount++;
+        continue;
+      }
+      
+      // Crea il quiz specifico per il corso
+      let quizData, questions;
+      
+      if (course.title.includes('Evoluzione Normativa 2024')) {
+        // Usa i dati hardcoded specifici
+        quizData = hardcodedQuizData;
+        questions = hardcodedQuizData.questions;
+      } else {
+        // Genera quiz generico per altri corsi
+        quizData = {
+          title: `Quiz Finale - ${course.title}`,
+          description: `Verifica delle competenze acquisite nel corso "${course.title}"`,
+          time_limit: 30,
+          passing_score: course.passing_score || 70,
+          max_attempts: 3
+        };
+        questions = generateCourseQuestions(course);
+      }
+      
+      // Crea il quiz
+      const quizResult = await sql`
+        INSERT INTO quizzes (module_id, title, description, time_limit, passing_score, max_attempts)
+        VALUES (${moduleId}, ${quizData.title}, ${quizData.description}, 
+                ${quizData.time_limit}, ${quizData.passing_score}, ${quizData.max_attempts})
         RETURNING id
       `;
-      moduleId = newModuleResult[0].id;
-      console.log(`✅ Modulo quiz creato: ${moduleId}`);
-    } else {
-      moduleId = moduleResult[0].id;
-      console.log(`✅ Modulo quiz trovato: ${moduleId}`);
-    }
-    
-    // 3. Verifica se il quiz esiste già
-    const existingQuiz = await sql`
-      SELECT id FROM quizzes 
-      WHERE module_id = ${moduleId} AND title = ${hardcodedQuizData.title}
-    `;
-    
-    if (existingQuiz.length > 0) {
-      return {
-        success: false,
-        message: 'Quiz già esistente nel database',
-        quizId: existingQuiz[0].id
-      };
-    }
-    
-    // 4. Crea il quiz
-    const quizResult = await sql`
-      INSERT INTO quizzes (module_id, title, description, time_limit, passing_score, max_attempts)
-      VALUES (${moduleId}, ${hardcodedQuizData.title}, ${hardcodedQuizData.description}, 
-              ${hardcodedQuizData.time_limit}, ${hardcodedQuizData.passing_score}, ${hardcodedQuizData.max_attempts})
-      RETURNING id
-    `;
-    
-    const quizId = quizResult[0].id;
-    console.log(`✅ Quiz creato: ${quizId}`);
-    
-    // 4. Crea le domande
-    for (const question of hardcodedQuizData.questions) {
-      await sql`
-        INSERT INTO quiz_questions (quiz_id, question, options, correct_answer, explanation, points, order_num)
-        VALUES (
-          ${quizId}, 
-          ${question.question}, 
-          ${JSON.stringify(question.options)}, 
-          ${question.correct_answer}, 
-          ${question.explanation}, 
-          ${question.points}, 
-          ${question.order_num}
-        )
-      `;
-      console.log(`✅ Domanda ${question.order_num} creata`);
+      
+      const quizId = quizResult[0].id;
+      console.log(`✅ Quiz creato per ${course.title}: ${quizId}`);
+      
+      // Crea le domande
+      for (const question of questions) {
+        await sql`
+          INSERT INTO quiz_questions (quiz_id, question, options, correct_answer, explanation, points, order_num)
+          VALUES (
+            ${quizId}, 
+            ${question.question}, 
+            ${JSON.stringify(question.options)}, 
+            ${question.correct_answer}, 
+            ${question.explanation}, 
+            ${question.points}, 
+            ${question.order_num}
+          )
+        `;
+      }
+      
+      migratedCount++;
     }
     
     return {
       success: true,
-      message: `Quiz migrato con successo! Quiz ID: ${quizId}, Domande: ${hardcodedQuizData.questions.length}`,
-      quizId: quizId
+      message: `Migrazione completata! ${migratedCount} quiz creati, ${skippedCount} già esistenti`
     };
     
   } catch (error) {
@@ -148,6 +167,51 @@ export async function migrateHardcodedQuizzes(): Promise<{ success: boolean; mes
       message: `Errore migrazione: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`
     };
   }
+}
+
+// Genera domande generiche per un corso
+function generateCourseQuestions(course: any): any[] {
+  return [
+    {
+      question: `Qual è l'obiettivo principale del corso "${course.title}"?`,
+      options: [
+        'Fornire una formazione completa sugli argomenti trattati',
+        'Sostituire la formazione tradizionale',
+        'Ridurre i costi di formazione',
+        'Aumentare il numero di partecipanti'
+      ],
+      correct_answer: 0,
+      explanation: 'Il corso mira a fornire una formazione completa e aggiornata sugli argomenti specifici trattati.',
+      points: 1,
+      order_num: 1
+    },
+    {
+      question: `Quale livello di competenza è richiesto per il corso "${course.title}"?`,
+      options: [
+        course.level === 'beginner' ? 'Nessuna competenza specifica' : 'Competenze avanzate',
+        course.level === 'intermediate' ? 'Competenze di base' : 'Competenze specialistiche',
+        course.level === 'advanced' ? 'Esperienza consolidata' : 'Conoscenze teoriche',
+        'Certificazioni professionali'
+      ],
+      correct_answer: course.level === 'beginner' ? 0 : course.level === 'intermediate' ? 1 : 2,
+      explanation: `Questo corso è di livello ${course.level} e richiede competenze appropriate.`,
+      points: 1,
+      order_num: 2
+    },
+    {
+      question: `Qual è la durata stimata del corso "${course.title}"?`,
+      options: [
+        course.duration || '2 ore',
+        '30 minuti',
+        '1 ora',
+        '4 ore'
+      ],
+      correct_answer: 0,
+      explanation: `La durata del corso è di ${course.duration || '2 ore'} come indicato nelle specifiche.`,
+      points: 1,
+      order_num: 3
+    }
+  ];
 }
 
 export async function checkMigrationStatus(): Promise<{ hasHardcodedQuiz: boolean; hasDatabaseQuiz: boolean; courseId?: string }> {

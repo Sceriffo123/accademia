@@ -7,6 +7,7 @@ import {
   getAllCourses, createCourse, updateCourse, deleteCourse, getCourseEnrollments, deleteEnrollment,
   getQuizByCourseId, createQuiz, updateQuiz, deleteQuiz, getQuizQuestions, createQuizQuestion, updateQuizQuestion, deleteQuizQuestion,
   createCourseModule, getCourseModules, updateCourseModule, deleteCourseModule,
+  sql,
   type User, type Course, type Enrollment, type Quiz, type QuizQuestion, type CourseModule
 } from '../lib/neonDatabase';
 import { migrateHardcodedQuizzes, checkMigrationStatus } from '../lib/migration';
@@ -182,11 +183,26 @@ export default function Admin() {
 
   async function fetchQuizzes() {
     try {
-      // I quiz ora sono collegati ai moduli, quindi non possiamo più recuperarli direttamente dai corsi
-      // Per ora manteniamo vuoto l'array quiz finché non implementiamo la nuova logica
-      setQuizzes([]);
+      // Carica tutti i quiz dal database tramite i moduli
+      const allQuizzes: Quiz[] = [];
+      
+      // Prima carica tutti i moduli di tutti i corsi
+      for (const course of courses) {
+        const courseModules = await getCourseModules(course.id);
+        
+        // Per ogni modulo, carica i quiz associati
+        for (const module of courseModules) {
+          const moduleQuizzes = await sql`
+            SELECT * FROM quizzes WHERE module_id = ${module.id}
+          `;
+          allQuizzes.push(...(moduleQuizzes as Quiz[]));
+        }
+      }
+      
+      setQuizzes(allQuizzes);
     } catch (error) {
       console.error('Error fetching quizzes:', error);
+      setQuizzes([]);
     }
   }
 
@@ -483,7 +499,7 @@ export default function Admin() {
       if (result.success) {
         setMigrationStatus(`✅ ${result.message}`);
         // Ricarica i quiz dopo la migrazione
-        await loadQuizzes();
+        await fetchQuizzes();
       } else {
         setMigrationStatus(`❌ ${result.message}`);
       }

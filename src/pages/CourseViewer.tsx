@@ -15,8 +15,12 @@ import {
   getAllCourses, 
   checkUserEnrollment, 
   updateEnrollmentStatus,
+  getCourseModules,
+  getQuizzesByModuleId,
+  getQuizQuestions,
   type Course, 
-  type Enrollment
+  type Enrollment,
+  type CourseModule as DBCourseModule
 } from '../lib/neonDatabase';
 import { useAuth } from '../contexts/AuthContext';
 import QuizComponent, { type QuizData } from '../components/QuizComponent';
@@ -77,77 +81,126 @@ export default function CourseViewer() {
       setCourse(courseData);
       setEnrollment(enrollmentData);
       
-      // Genera moduli demo (in futuro verranno dal database)
-      const demoModules: CourseModule[] = [
-        {
-          id: '1',
-          title: 'Introduzione al Corso',
-          description: 'Panoramica generale degli argomenti trattati',
-          type: 'text',
-          content: `
-            <h2>Benvenuto nel corso: ${courseData.title}</h2>
-            <p>Questo corso ti fornirà una comprensione completa degli argomenti trattati.</p>
-            <h3>Obiettivi del corso:</h3>
-            <ul>
-              <li>Comprendere i concetti fondamentali</li>
-              <li>Applicare le conoscenze in contesti pratici</li>
-              <li>Superare il quiz finale con almeno ${courseData.passing_score}%</li>
-            </ul>
-            <p><strong>Durata stimata:</strong> ${courseData.duration}</p>
-            <p><strong>Livello:</strong> ${courseData.level === 'beginner' ? 'Base' : courseData.level === 'intermediate' ? 'Intermedio' : 'Avanzato'}</p>
-          `,
-          duration: '15 min',
-          completed: enrollmentData.status !== 'enrolled',
-          order: 1
-        },
-        {
-          id: '2',
-          title: 'Contenuti Principali',
-          description: 'Approfondimento degli argomenti del corso',
-          type: 'text',
-          content: `
-            <h2>Contenuti Principali</h2>
-            <p>${courseData.description}</p>
-            <h3>Argomenti trattati:</h3>
-            <div class="bg-blue-50 p-4 rounded-lg">
-              <p>📚 <strong>Materiali di studio</strong></p>
-              <p>🎯 <strong>Esercitazioni pratiche</strong></p>
-              <p>📊 <strong>Casi studio reali</strong></p>
-              <p>✅ <strong>Verifiche intermedie</strong></p>
-            </div>
-          `,
-          duration: '45 min',
-          completed: false,
-          order: 2
-        },
-        {
-          id: '3',
-          title: 'Quiz Finale',
-          description: 'Verifica delle competenze acquisite',
-          type: 'quiz',
-          content: `
-            <h2>Quiz di Valutazione</h2>
-            <p>Completa il quiz per ottenere il certificato del corso.</p>
-            <div class="bg-amber-50 p-4 rounded-lg">
-              <p><strong>⚠️ Punteggio minimo richiesto:</strong> ${courseData.passing_score}%</p>
-              <p><strong>🕒 Tempo disponibile:</strong> 30 minuti</p>
-              <p><strong>🔄 Tentativi:</strong> Massimo 3</p>
-            </div>
-          `,
-          duration: '30 min',
-          completed: false,
-          order: 3
-        }
-      ];
+      // Carica moduli reali dal database
+      const courseModules = await getCourseModules(courseData.id);
       
-      setModules(demoModules);
+      // Converti moduli database in formato UI
+      const uiModules: CourseModule[] = await Promise.all(
+        courseModules.map(async (dbModule: DBCourseModule) => {
+          let content = '';
+          
+          if (dbModule.type === 'lesson') {
+            content = `
+              <h2>${dbModule.title}</h2>
+              <p>${dbModule.description}</p>
+              <div class="bg-blue-50 p-4 rounded-lg">
+                <p>📚 <strong>Materiali di studio</strong></p>
+                <p>🎯 <strong>Esercitazioni pratiche</strong></p>
+                <p>📊 <strong>Casi studio reali</strong></p>
+              </div>
+            `;
+          } else if (dbModule.type === 'quiz') {
+            content = `
+              <h2>Quiz di Valutazione</h2>
+              <p>Completa il quiz per ottenere il certificato del corso.</p>
+              <div class="bg-amber-50 p-4 rounded-lg">
+                <p><strong>⚠️ Punteggio minimo richiesto:</strong> ${courseData.passing_score}%</p>
+                <p><strong>🕒 Tempo disponibile:</strong> 30 minuti</p>
+                <p><strong>🔄 Tentativi:</strong> Massimo 3</p>
+              </div>
+            `;
+          } else {
+            content = `<h2>${dbModule.title}</h2><p>${dbModule.description}</p>`;
+          }
+          
+          return {
+            id: dbModule.id,
+            title: dbModule.title,
+            description: dbModule.description,
+            type: dbModule.type as 'text' | 'video' | 'document' | 'quiz',
+            content,
+            duration: `${dbModule.duration_minutes || 30} min`,
+            completed: enrollmentData.status === 'completed',
+            order: dbModule.order_num
+          };
+        })
+      );
+      
+      // Se non ci sono moduli nel database, usa moduli demo
+      if (uiModules.length === 0) {
+        const demoModules: CourseModule[] = [
+          {
+            id: '1',
+            title: 'Introduzione al Corso',
+            description: 'Panoramica generale degli argomenti trattati',
+            type: 'text',
+            content: `
+              <h2>Benvenuto nel corso: ${courseData.title}</h2>
+              <p>Questo corso ti fornirà una comprensione completa degli argomenti trattati.</p>
+              <h3>Obiettivi del corso:</h3>
+              <ul>
+                <li>Comprendere i concetti fondamentali</li>
+                <li>Applicare le conoscenze in contesti pratici</li>
+                <li>Superare il quiz finale con almeno ${courseData.passing_score}%</li>
+              </ul>
+              <p><strong>Durata stimata:</strong> ${courseData.duration}</p>
+              <p><strong>Livello:</strong> ${courseData.level === 'beginner' ? 'Base' : courseData.level === 'intermediate' ? 'Intermedio' : 'Avanzato'}</p>
+            `,
+            duration: '15 min',
+            completed: enrollmentData.status !== 'enrolled',
+            order: 1
+          },
+          {
+            id: '2',
+            title: 'Contenuti Principali',
+            description: 'Approfondimento degli argomenti del corso',
+            type: 'text',
+            content: `
+              <h2>Contenuti Principali</h2>
+              <p>${courseData.description}</p>
+              <h3>Argomenti trattati:</h3>
+              <div class="bg-blue-50 p-4 rounded-lg">
+                <p>📚 <strong>Materiali di studio</strong></p>
+                <p>🎯 <strong>Esercitazioni pratiche</strong></p>
+                <p>📊 <strong>Casi studio reali</strong></p>
+                <p>✅ <strong>Verifiche intermedie</strong></p>
+              </div>
+            `,
+            duration: '45 min',
+            completed: false,
+            order: 2
+          },
+          {
+            id: '3',
+            title: 'Quiz Finale',
+            description: 'Verifica delle competenze acquisite',
+            type: 'quiz',
+            content: `
+              <h2>Quiz di Valutazione</h2>
+              <p>Completa il quiz per ottenere il certificato del corso.</p>
+              <div class="bg-amber-50 p-4 rounded-lg">
+                <p><strong>⚠️ Punteggio minimo richiesto:</strong> ${courseData.passing_score}%</p>
+                <p><strong>🕒 Tempo disponibile:</strong> 30 minuti</p>
+                <p><strong>🔄 Tentativi:</strong> Massimo 3</p>
+              </div>
+            `,
+            duration: '30 min',
+            completed: false,
+            order: 3
+          }
+        ];
+        setModules(demoModules);
+      } else {
+        setModules(uiModules.sort((a, b) => a.order - b.order));
+      }
       
       // Calcola progresso
-      const completedModules = demoModules.filter(m => m.completed).length;
-      setProgress((completedModules / demoModules.length) * 100);
+      const modulesToUse = uiModules.length > 0 ? uiModules : [];
+      const completedModules = modulesToUse.filter(m => m.completed).length;
+      setProgress(modulesToUse.length > 0 ? (completedModules / modulesToUse.length) * 100 : 0);
       
       // Carica quiz per il corso
-      await loadQuizData(courseData.id);
+      await loadQuizData(courseData.id, uiModules.length > 0 ? uiModules : []);
       
     } catch (error) {
       console.error('Errore caricamento corso:', error);
@@ -157,13 +210,54 @@ export default function CourseViewer() {
     }
   };
 
-  const loadQuizData = async (courseId: string) => {
+  const loadQuizData = async (courseId: string, courseModules: CourseModule[]) => {
     try {
-      // Quiz demo per ora - in futuro dal database
+      // Trova il modulo quiz
+      const quizModule = courseModules.find(m => m.type === 'quiz');
+      if (!quizModule) {
+        console.log('Nessun modulo quiz trovato per questo corso');
+        return;
+      }
+      
+      // Carica quiz dal database
+      const quizzes = await getQuizzesByModuleId(quizModule.id);
+      if (quizzes.length === 0) {
+        console.log('Nessun quiz trovato per il modulo');
+        return;
+      }
+      
+      const quiz = quizzes[0]; // Prendi il primo quiz del modulo
+      
+      // Carica domande del quiz
+      const questions = await getQuizQuestions(quiz.id);
+      
+      // Converti in formato QuizData
+      const quizData: QuizData = {
+        id: quiz.id,
+        course_id: courseId,
+        title: quiz.title,
+        description: quiz.description || 'Verifica delle competenze acquisite durante il corso',
+        time_limit: quiz.time_limit || 30,
+        passing_score: quiz.passing_score || 85,
+        max_attempts: quiz.max_attempts || 3,
+        questions: questions.map((q) => ({
+          id: q.id,
+          question: q.question,
+          options: Array.isArray(q.options) ? q.options : JSON.parse(q.options || '[]'),
+          correct_answer: q.correct_answer,
+          explanation: q.explanation || '',
+          points: q.points || 1
+        }))
+      };
+      
+      setQuizData(quizData);
+    } catch (error) {
+      console.error('Errore caricamento quiz:', error);
+      // Fallback a quiz demo se non riesce a caricare dal database
       const demoQuiz: QuizData = {
         id: `quiz-${courseId}`,
         course_id: courseId,
-        title: 'Quiz Finale - Evoluzione Normativa 2024',
+        title: 'Quiz Finale',
         description: 'Verifica delle competenze acquisite durante il corso',
         time_limit: 30,
         passing_score: 85,
@@ -171,49 +265,20 @@ export default function CourseViewer() {
         questions: [
           {
             id: 'q1',
-            question: 'Qual è la principale novità normativa introdotta nel 2024 per il trasporto pubblico locale?',
+            question: 'Domanda di esempio per questo corso',
             options: [
-              'Nuove regole per la sicurezza dei passeggeri',
-              'Modifiche ai contratti di servizio',
-              'Aggiornamenti sui controlli qualità',
-              'Tutte le precedenti'
+              'Opzione A',
+              'Opzione B',
+              'Opzione C',
+              'Opzione D'
             ],
-            correct_answer: 3,
-            explanation: 'Il 2024 ha introdotto aggiornamenti significativi in tutti questi ambiti per migliorare il servizio di trasporto pubblico.',
-            points: 1
-          },
-          {
-            id: 'q2',
-            question: 'Secondo le nuove normative, ogni quanto devono essere effettuati i controlli di qualità?',
-            options: [
-              'Ogni 6 mesi',
-              'Ogni 3 mesi', 
-              'Ogni anno',
-              'Ogni 2 anni'
-            ],
-            correct_answer: 1,
-            explanation: 'Le nuove disposizioni richiedono controlli trimestrali per garantire standard di qualità elevati.',
-            points: 1
-          },
-          {
-            id: 'q3',
-            question: 'Quale documentazione è obbligatoria per gli operatori del trasporto pubblico locale?',
-            options: [
-              'Solo la licenza di guida',
-              'Certificato di formazione professionale e attestato medico',
-              'Solo l\'attestato medico',
-              'Nessuna documentazione specifica'
-            ],
-            correct_answer: 1,
-            explanation: 'Gli operatori devono possedere sia il certificato di formazione che l\'attestato medico valido.',
+            correct_answer: 0,
+            explanation: 'Questa è una domanda di esempio.',
             points: 1
           }
         ]
       };
-      
       setQuizData(demoQuiz);
-    } catch (error) {
-      console.error('Errore caricamento quiz:', error);
     }
   };
 

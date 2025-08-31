@@ -2167,6 +2167,21 @@ export async function getQuizByCourseId(courseId: string): Promise<Quiz | null> 
   }
 }
 
+// Ottieni quiz per modulo
+export async function getQuizzesByModuleId(moduleId: string): Promise<Quiz[]> {
+  try {
+    const result = await sql`
+      SELECT * FROM quizzes 
+      WHERE module_id = ${moduleId}
+      ORDER BY created_at ASC
+    `;
+    return result as Quiz[];
+  } catch (error) {
+    console.error('Errore recupero quiz per modulo:', error);
+    return [];
+  }
+}
+
 // Ottieni domande quiz
 export async function getQuizQuestions(quizId: string): Promise<QuizQuestion[]> {
   try {
