@@ -1565,17 +1565,6 @@ export async function getTableRecords(
         // Prova a iterare sull'oggetto
         recordsData = Object.values(recordsResult).filter(Array.isArray)[0] || [];
         console.log(`🎓 ACCADEMIA: Estratto da Object.values`);
-      }
-    }
-    
-    console.log(`🎓 ACCADEMIA: countData estratto:`, countData);
-    console.log(`🎓 ACCADEMIA: recordsData estratto:`, recordsData);
-    console.log(`🎓 ACCADEMIA: === FINE DEBUG ===`);
-
-    const totalCount = parseInt(countData[0]?.count || '0');
-    const records = recordsData || [];
-    const hasMore = (offset + safeLimit) < totalCount;
-
     console.log(`🎓 ACCADEMIA: Trovati ${records.length} record di ${totalCount} totali`);
     if (hiddenColumns.length > 0) {
       console.log(`🎓 ACCADEMIA: Colonne nascoste per sicurezza: ${hiddenColumns.join(', ')}`);
@@ -1986,4 +1975,279 @@ async function insertRealCourses() {
   } catch (error) {
     console.error('🚨 ACCADEMIA: Errore popolamento corsi:', error);
   }
+}
+
+// ===== QUIZ SYSTEM =====
+
+export interface QuizQuestion {
+  id: string;
+  quiz_id: string;
+  question: string;
+  options: string[];
+  correct_answer: number;
+  explanation?: string;
+  points: number;
+  order: number;
+}
+
+export interface Quiz {
+  id: string;
+  course_id: string;
+  title: string;
+  description: string;
+  time_limit: number; // minuti
+  passing_score: number; // percentuale
+  max_attempts: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QuizAttempt {
+  id: string;
+  user_id: string;
+  quiz_id: string;
+  answers: { [questionId: string]: number };
+  score: number;
+  passed: boolean;
+  started_at: string;
+  completed_at?: string;
+  time_taken: number; // secondi
+}
+
+// Crea tabelle quiz
+export async function createQuizTables() {
+  try {
+    // Tabella quiz
+    await sql`
+      CREATE TABLE IF NOT EXISTS quizzes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        time_limit INTEGER DEFAULT 30,
+        passing_score INTEGER DEFAULT 70,
+        max_attempts INTEGER DEFAULT 3,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // Tabella domande quiz
+    await sql`
+      CREATE TABLE IF NOT EXISTS quiz_questions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        quiz_id UUID REFERENCES quizzes(id) ON DELETE CASCADE,
+        question TEXT NOT NULL,
+        options JSONB NOT NULL,
+        correct_answer INTEGER NOT NULL,
+        explanation TEXT,
+        points INTEGER DEFAULT 1,
+        order_num INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // Tabella tentativi quiz
+    await sql`
+      CREATE TABLE IF NOT EXISTS quiz_attempts (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        quiz_id UUID REFERENCES quizzes(id) ON DELETE CASCADE,
+        answers JSONB NOT NULL,
+        score INTEGER NOT NULL,
+        passed BOOLEAN NOT NULL,
+        started_at TIMESTAMP NOT NULL,
+        completed_at TIMESTAMP,
+        time_taken INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    console.log('✅ Tabelle quiz create con successo');
+  } catch (error) {
+    console.error('❌ Errore creazione tabelle quiz:', error);
+    throw error;
+  }
+}
+
+// Ottieni quiz per corso
+export async function getQuizByCourseId(courseId: string): Promise<Quiz | null> {
+  try {
+    const result = await sql`
+      SELECT * FROM quizzes 
+      WHERE course_id = ${courseId}
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+    return result[0] || null;
+  } catch (error) {
+    console.error('Errore recupero quiz:', error);
+    return null;
+  }
+}
+
+// Ottieni domande quiz
+export async function getQuizQuestions(quizId: string): Promise<QuizQuestion[]> {
+  try {
+    const result = await sql`
+      SELECT * FROM quiz_questions 
+      WHERE quiz_id = ${quizId}
+      ORDER BY order_num ASC
+    `;
+    return result.map(row => ({
+      ...row,
+      options: Array.isArray(row.options) ? row.options : JSON.parse(row.options)
+    }));
+  } catch (error) {
+    console.error('Errore recupero domande quiz:', error);
+    return [];
+  }
+}
+
+// Crea quiz
+export async function createQuiz(quiz: Omit<Quiz, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
+  try {
+    const result = await sql`
+      INSERT INTO quizzes (course_id, title, description, time_limit, passing_score, max_attempts)
+      VALUES (${quiz.course_id}, ${quiz.title}, ${quiz.description}, ${quiz.time_limit}, ${quiz.passing_score}, ${quiz.max_attempts})
+      RETURNING id
+    `;
+    return result[0].id;
+  } catch (error) {
+    console.error('Errore creazione quiz:', error);
+    throw error;
+  }
+}
+
+// Crea domanda quiz
+export async function createQuizQuestion(question: Omit<QuizQuestion, 'id'>): Promise<string> {
+  try {
+    const result = await sql`
+      INSERT INTO quiz_questions (quiz_id, question, options, correct_answer, explanation, points, order_num)
+      VALUES (${question.quiz_id}, ${question.question}, ${JSON.stringify(question.options)}, 
+              ${question.correct_answer}, ${question.explanation}, ${question.points}, ${question.order})
+      RETURNING id
+    `;
+    return result[0].id;
+  } catch (error) {
+    console.error('Errore creazione domanda quiz:', error);
+    throw error;
+  }
+}
+
+// Salva tentativo quiz
+export async function saveQuizAttempt(attempt: Omit<QuizAttempt, 'id'>): Promise<string> {
+  try {
+    const result = await sql`
+      INSERT INTO quiz_attempts (user_id, quiz_id, answers, score, passed, started_at, completed_at, time_taken)
+      VALUES (${attempt.user_id}, ${attempt.quiz_id}, ${JSON.stringify(attempt.answers)}, 
+              ${attempt.score}, ${attempt.passed}, ${attempt.started_at}, ${attempt.completed_at}, ${attempt.time_taken})
+      RETURNING id
+    `;
+    return result[0].id;
+  } catch (error) {
+    console.error('Errore salvataggio tentativo quiz:', error);
+    throw error;
+  }
+}
+
+// Ottieni tentativi utente per quiz
+export async function getUserQuizAttempts(userId: string, quizId: string): Promise<QuizAttempt[]> {
+  try {
+    const result = await sql`
+      SELECT * FROM quiz_attempts 
+      WHERE user_id = ${userId} AND quiz_id = ${quizId}
+      ORDER BY created_at DESC
+    `;
+    return result.map(row => ({
+      ...row,
+      answers: typeof row.answers === 'string' ? JSON.parse(row.answers) : row.answers
+    }));
+  } catch (error) {
+    console.error('Errore recupero tentativi quiz:', error);
+    return [];
+  }
+}
+
+// Popola quiz demo
+export async function populateDemoQuizzes() {
+  try {
+    // Ottieni tutti i corsi
+    const courses = await getAllCourses();
+    
+    for (const course of courses) {
+      // Verifica se esiste già un quiz per questo corso
+      const existingQuiz = await getQuizByCourseId(course.id);
+      if (existingQuiz) continue;
+      
+      // Crea quiz per il corso
+      const quizId = await createQuiz({
+        course_id: course.id,
+        title: `Quiz Finale - ${course.title}`,
+        description: `Verifica delle competenze acquisite nel corso "${course.title}"`,
+        time_limit: 30,
+        passing_score: course.passing_score,
+        max_attempts: 3
+      });
+      
+      // Crea domande demo basate sul corso
+      const demoQuestions = generateDemoQuestions(course);
+      
+      for (let i = 0; i < demoQuestions.length; i++) {
+        await createQuizQuestion({
+          quiz_id: quizId,
+          question: demoQuestions[i].question,
+          options: demoQuestions[i].options,
+          correct_answer: demoQuestions[i].correct_answer,
+          explanation: demoQuestions[i].explanation,
+          points: 1,
+          order: i + 1
+        });
+      }
+    }
+    
+    console.log('🎯 Quiz demo popolati con successo');
+  } catch (error) {
+    console.error('❌ Errore popolamento quiz demo:', error);
+  }
+}
+
+function generateDemoQuestions(course: Course) {
+  const baseQuestions = [
+    {
+      question: `Qual è l'obiettivo principale del corso "${course.title}"?`,
+      options: [
+        'Fornire una formazione completa sugli argomenti trattati',
+        'Sostituire la formazione tradizionale',
+        'Ridurre i costi di formazione',
+        'Aumentare il numero di partecipanti'
+      ],
+      correct_answer: 0,
+      explanation: 'Il corso mira a fornire una formazione completa e aggiornata sugli argomenti specifici trattati.'
+    },
+    {
+      question: `Quale livello di competenza è richiesto per il corso "${course.title}"?`,
+      options: [
+        course.level === 'beginner' ? 'Nessuna competenza specifica' : 'Competenze avanzate',
+        course.level === 'intermediate' ? 'Competenze di base' : 'Competenze specialistiche',
+        course.level === 'advanced' ? 'Esperienza consolidata' : 'Conoscenze teoriche',
+        'Certificazioni professionali'
+      ],
+      correct_answer: course.level === 'beginner' ? 0 : course.level === 'intermediate' ? 1 : 2,
+      explanation: `Questo corso è di livello ${course.level} e richiede competenze appropriate.`
+    },
+    {
+      question: `Qual è la durata stimata del corso "${course.title}"?`,
+      options: [
+        course.duration,
+        '2 ore',
+        '30 minuti',
+        '3 ore'
+      ],
+      correct_answer: 0,
+      explanation: `La durata del corso è di ${course.duration} come indicato nelle specifiche.`
+    }
+  ];
+  
+  return baseQuestions;
 }

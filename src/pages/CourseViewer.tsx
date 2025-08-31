@@ -4,12 +4,10 @@ import {
   BookOpen, 
   PlayCircle, 
   CheckCircle, 
-  Clock, 
   Award, 
   ArrowLeft,
   FileText,
   Video,
-  Download,
   BarChart3,
   AlertCircle
 } from 'lucide-react';
@@ -18,9 +16,10 @@ import {
   checkUserEnrollment, 
   updateEnrollmentStatus,
   type Course, 
-  type Enrollment 
+  type Enrollment
 } from '../lib/neonDatabase';
 import { useAuth } from '../contexts/AuthContext';
+import QuizComponent, { type QuizData } from '../components/QuizComponent';
 
 interface CourseModule {
   id: string;
@@ -44,6 +43,8 @@ export default function CourseViewer() {
   const [currentModule, setCurrentModule] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [quizData, setQuizData] = useState<QuizData | null>(null);
 
   useEffect(() => {
     if (courseId && user) {
@@ -59,7 +60,7 @@ export default function CourseViewer() {
       
       // Carica dati corso
       const coursesData = await getAllCourses();
-      const courseData = coursesData.find(c => c.id === courseId);
+      const courseData = coursesData.find((c: Course) => c.id === courseId);
       
       if (!courseData) {
         navigate('/education');
@@ -145,11 +146,74 @@ export default function CourseViewer() {
       const completedModules = demoModules.filter(m => m.completed).length;
       setProgress((completedModules / demoModules.length) * 100);
       
+      // Carica quiz per il corso
+      await loadQuizData(courseData.id);
+      
     } catch (error) {
       console.error('Errore caricamento corso:', error);
       navigate('/education');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadQuizData = async (courseId: string) => {
+    try {
+      // Quiz demo per ora - in futuro dal database
+      const demoQuiz: QuizData = {
+        id: `quiz-${courseId}`,
+        course_id: courseId,
+        title: 'Quiz Finale - Evoluzione Normativa 2024',
+        description: 'Verifica delle competenze acquisite durante il corso',
+        time_limit: 30,
+        passing_score: 85,
+        max_attempts: 3,
+        questions: [
+          {
+            id: 'q1',
+            question: 'Qual è la principale novità normativa introdotta nel 2024 per il trasporto pubblico locale?',
+            options: [
+              'Nuove regole per la sicurezza dei passeggeri',
+              'Modifiche ai contratti di servizio',
+              'Aggiornamenti sui controlli qualità',
+              'Tutte le precedenti'
+            ],
+            correct_answer: 3,
+            explanation: 'Il 2024 ha introdotto aggiornamenti significativi in tutti questi ambiti per migliorare il servizio di trasporto pubblico.',
+            points: 1
+          },
+          {
+            id: 'q2',
+            question: 'Secondo le nuove normative, ogni quanto devono essere effettuati i controlli di qualità?',
+            options: [
+              'Ogni 6 mesi',
+              'Ogni 3 mesi', 
+              'Ogni anno',
+              'Ogni 2 anni'
+            ],
+            correct_answer: 1,
+            explanation: 'Le nuove disposizioni richiedono controlli trimestrali per garantire standard di qualità elevati.',
+            points: 1
+          },
+          {
+            id: 'q3',
+            question: 'Quale documentazione è obbligatoria per gli operatori del trasporto pubblico locale?',
+            options: [
+              'Solo la licenza di guida',
+              'Certificato di formazione professionale e attestato medico',
+              'Solo l\'attestato medico',
+              'Nessuna documentazione specifica'
+            ],
+            correct_answer: 1,
+            explanation: 'Gli operatori devono possedere sia il certificato di formazione che l\'attestato medico valido.',
+            points: 1
+          }
+        ]
+      };
+      
+      setQuizData(demoQuiz);
+    } catch (error) {
+      console.error('Errore caricamento quiz:', error);
     }
   };
 
@@ -312,31 +376,56 @@ export default function CourseViewer() {
                     <h2 className="text-xl font-semibold text-gray-900">{currentModuleData.title}</h2>
                     <p className="text-gray-600 mt-1">{currentModuleData.description}</p>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-gray-600">{currentModuleData.duration}</span>
-                  </div>
                 </div>
               </div>
               
               <div className="p-6">
-                {currentModuleData.type === 'quiz' ? (
-                  <div className="text-center py-8">
-                    <BarChart3 className="h-16 w-16 text-blue-600 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Quiz di Valutazione</h3>
-                    <p className="text-gray-600 mb-6">Testa le tue conoscenze acquisite durante il corso</p>
-                    <button className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
-                      Inizia Quiz
-                    </button>
+                {currentModuleData.type === 'video' ? (
+                  <div className="bg-gray-100 rounded-lg p-8">
+                    <p className="text-gray-500">Player video sarà disponibile nella prossima versione</p>
                   </div>
-                ) : currentModuleData.type === 'video' ? (
-                  <div className="text-center py-8">
-                    <Video className="h-16 w-16 text-blue-600 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Video Lezione</h3>
-                    <p className="text-gray-600 mb-6">Contenuto video non ancora implementato</p>
-                    <div className="bg-gray-100 rounded-lg p-8">
-                      <p className="text-gray-500">Player video sarà disponibile nella prossima versione</p>
-                    </div>
+                ) : currentModuleData.type === 'quiz' ? (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                    {!showQuiz ? (
+                      <>
+                        <div className="flex items-center gap-3 mb-4">
+                          <BarChart3 className="w-6 h-6 text-yellow-600" />
+                          <h3 className="text-lg font-semibold text-yellow-800">Quiz di Valutazione</h3>
+                        </div>
+                        <p className="text-yellow-700 mb-4">
+                          Completa questo quiz per verificare le tue competenze acquisite.
+                        </p>
+                        {quizData && (
+                          <div className="mb-4 text-sm text-yellow-700">
+                            <p><strong>Tempo limite:</strong> {quizData.time_limit} minuti</p>
+                            <p><strong>Punteggio minimo:</strong> {quizData.passing_score}%</p>
+                            <p><strong>Tentativi disponibili:</strong> {quizData.max_attempts}</p>
+                          </div>
+                        )}
+                        <button 
+                          onClick={() => setShowQuiz(true)}
+                          className="bg-yellow-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+                        >
+                          Inizia Quiz
+                        </button>
+                      </>
+                    ) : (
+                      <div>
+                        {quizData && (
+                          <QuizComponent
+                            quiz={quizData}
+                            onComplete={(result) => {
+                              console.log('Quiz completato:', result);
+                              setShowQuiz(false);
+                              if (result.passed) {
+                                handleModuleComplete(currentModule);
+                              }
+                            }}
+                            onCancel={() => setShowQuiz(false)}
+                          />
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="prose max-w-none">
