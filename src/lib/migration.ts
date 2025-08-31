@@ -69,29 +69,55 @@ export async function migrateHardcodedQuizzes(): Promise<{ success: boolean; mes
     
     // 2. Per ogni corso, crea un quiz
     for (const course of allCourses) {
-      console.log(`🔄 Elaborando corso: ${course.title}`);
+      console.log(`🔄 Migrazione moduli completi per corso: ${course.title}`);
       
-      // Trova o crea un modulo per il quiz
-      const moduleResult = await sql`
-        SELECT id FROM course_modules 
-        WHERE course_id = ${course.id} AND title ILIKE '%quiz%'
-        LIMIT 1
+      // 1. Modulo Introduzione
+      const introModule = await sql`
+        INSERT INTO course_modules (course_id, title, type, content, duration, order_num, level)
+        VALUES (
+          ${course.id}, 
+          'Introduzione al Corso', 
+          'lesson', 
+          'Panoramica generale degli argomenti che verranno trattati nel corso', 
+          15, 
+          1,
+          ${course.level}
+        )
+        RETURNING id
       `;
       
-      let moduleId;
-      if (moduleResult.length === 0) {
-        // Crea un modulo per il quiz
-        const newModuleResult = await sql`
-          INSERT INTO course_modules (course_id, title, description, type, level, order_num)
-          VALUES (${course.id}, 'Quiz Finale', 'Modulo di valutazione finale', 'quiz', ${course.level}, 999)
-          RETURNING id
-        `;
-        moduleId = newModuleResult[0].id;
-        console.log(`✅ Modulo quiz creato per ${course.title}`);
-      } else {
-        moduleId = moduleResult[0].id;
-        console.log(`✅ Modulo quiz esistente per ${course.title}`);
-      }
+      // 2. Modulo Contenuti Principali
+      const contentModule = await sql`
+        INSERT INTO course_modules (course_id, title, type, content, duration, order_num, level)
+        VALUES (
+          ${course.id}, 
+          'Contenuti Principali', 
+          'lesson', 
+          'Approfondimento dettagliato degli argomenti del corso con esempi pratici e casi studio', 
+          45, 
+          2,
+          ${course.level}
+        )
+        RETURNING id
+      `;
+      
+      // 3. Modulo Quiz Finale
+      const quizModule = await sql`
+        INSERT INTO course_modules (course_id, title, type, content, duration, order_num, level)
+        VALUES (
+          ${course.id}, 
+          'Quiz Finale', 
+          'quiz', 
+          'Modulo di valutazione finale per verificare le competenze acquisite', 
+          30, 
+          3,
+          ${course.level}
+        )
+        RETURNING id
+      `;
+      
+      const moduleId = quizModule[0].id;
+      console.log(`✅ Modulo quiz creato per ${course.title}`);
       
       // Verifica se il quiz esiste già
       const existingQuiz = await sql`
