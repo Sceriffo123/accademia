@@ -4,7 +4,7 @@ import {
   getAllUsers, createUser, updateUser, deleteUser,
   getAllNormatives,
   getAllDocuments,
-  getAllCourses, createCourse, updateCourse, deleteCourse,
+  getAllCourses, createCourse, updateCourse, deleteCourse, getCourseEnrollments,
   type User, type Course
 } from '../lib/neonDatabase';
 import { 
@@ -59,6 +59,7 @@ export default function Admin() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [courseEnrollments, setCourseEnrollments] = useState<{[courseId: string]: number}>({});
   const [showCreateCourse, setShowCreateCourse] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [newCourse, setNewCourse] = useState({
@@ -92,6 +93,14 @@ export default function Admin() {
       setNormatives(normativesData);
       setDocuments(documentsData);
       setCourses(coursesData);
+      
+      // Carica il conteggio degli iscritti per ogni corso
+      const enrollmentCounts: {[courseId: string]: number} = {};
+      for (const course of coursesData) {
+        const enrollments = await getCourseEnrollments(course.id);
+        enrollmentCounts[course.id] = enrollments.length;
+      }
+      setCourseEnrollments(enrollmentCounts);
       
       setStats({
         totalUsers: usersData.length,
@@ -684,7 +693,7 @@ export default function Admin() {
                             {course.is_free ? 'Gratuito' : `€${course.price}`}
                           </span>
                           <span className="text-xs text-gray-500">
-                            0 iscritti
+                            {courseEnrollments[course.id] || 0} iscritti
                           </span>
                           <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
                             course.status === 'active' ? 'bg-green-100 text-green-800' :
