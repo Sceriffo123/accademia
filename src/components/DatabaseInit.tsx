@@ -1,6 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { initializeDatabase } from '../lib/neonDatabase';
 
 export default function DatabaseInit() {
-  // Componente vuoto - inizializzazione rimossa per permettere caricamento app
+  useEffect(() => {
+    initializeDatabase().catch(console.error);
+  }, []);
+
   return null;
 }
