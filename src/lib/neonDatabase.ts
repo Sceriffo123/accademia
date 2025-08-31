@@ -392,6 +392,138 @@ export async function getUserSections(role: string): Promise<string[]> {
   }
 }
 
+export async function createNormative(data: Omit<Normative, 'id' | 'created_at' | 'updated_at'>): Promise<Normative | null> {
+  try {
+    console.log('🎓 NEON: Creazione normativa:', data.title);
+    const result = await sql`
+      INSERT INTO normatives (
+        title, content, category, type, reference_number, 
+        publication_date, effective_date, tags, file_path
+      )
+      VALUES (
+        ${data.title}, ${data.content}, ${data.category}, ${data.type}, 
+        ${data.reference_number}, ${data.publication_date}, ${data.effective_date}, 
+        ${data.tags}, ${data.file_path}
+      )
+      RETURNING *
+    `;
+    return result[0] as Normative;
+  } catch (error) {
+    console.error('🚨 NEON: Errore creazione normativa:', error);
+    return null;
+  }
+}
+
+export async function updateNormative(id: string, data: Partial<Normative>): Promise<Normative | null> {
+  try {
+    console.log('🎓 NEON: Aggiornamento normativa:', id);
+    const result = await sql`
+      UPDATE normatives 
+      SET 
+        title = COALESCE(${data.title}, title),
+        content = COALESCE(${data.content}, content),
+        category = COALESCE(${data.category}, category),
+        type = COALESCE(${data.type}, type),
+        reference_number = COALESCE(${data.reference_number}, reference_number),
+        publication_date = COALESCE(${data.publication_date}, publication_date),
+        effective_date = COALESCE(${data.effective_date}, effective_date),
+        tags = COALESCE(${data.tags}, tags),
+        file_path = COALESCE(${data.file_path}, file_path),
+        updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    return result[0] as Normative || null;
+  } catch (error) {
+    console.error('🚨 NEON: Errore aggiornamento normativa:', error);
+    return null;
+  }
+}
+
+export async function deleteNormative(id: string): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Eliminazione normativa:', id);
+    await sql`DELETE FROM normatives WHERE id = ${id}`;
+    return true;
+  } catch (error) {
+    console.error('🚨 NEON: Errore eliminazione normativa:', error);
+    return false;
+  }
+}
+
+export async function searchNormatives(query: string): Promise<Normative[]> {
+  try {
+    console.log('🎓 NEON: Ricerca normative:', query);
+    const result = await sql`
+      SELECT * FROM normatives
+      WHERE 
+        title ILIKE ${'%' + query + '%'} OR
+        content ILIKE ${'%' + query + '%'} OR
+        category ILIKE ${'%' + query + '%'} OR
+        reference_number ILIKE ${'%' + query + '%'}
+      ORDER BY publication_date DESC
+    `;
+    return result as Normative[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore ricerca normative:', error);
+    return [];
+  }
+}
+
+export async function getNormativesByCategory(category: string): Promise<Normative[]> {
+  try {
+    console.log('🎓 NEON: Recupero normative per categoria:', category);
+    const result = await sql`
+      SELECT * FROM normatives
+      WHERE category = ${category}
+      ORDER BY publication_date DESC
+    `;
+    return result as Normative[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero normative per categoria:', error);
+    return [];
+  }
+}
+
+export async function getDocumentById(id: string): Promise<Document | null> {
+  try {
+    console.log('🎓 NEON: Ricerca documento per ID:', id);
+    const result = await sql`
+      SELECT * FROM documents
+      WHERE id = ${id}
+    `;
+    return result[0] as Document || null;
+  } catch (error) {
+    console.error('🚨 NEON: Errore ricerca documento:', error);
+    return null;
+  }
+}
+
+export async function deleteDocument(id: string): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Eliminazione documento:', id);
+    await sql`DELETE FROM documents WHERE id = ${id}`;
+    return true;
+  } catch (error) {
+    console.error('🚨 NEON: Errore eliminazione documento:', error);
+    return false;
+  }
+}
+
+export async function incrementDownloadCount(id: string): Promise<boolean> {
+  try {
+    await sql`
+      UPDATE documents 
+      SET download_count = COALESCE(download_count, 0) + 1
+      WHERE id = ${id}
+    `;
+    return true;
+  } catch (error) {
+    console.error('🚨 NEON: Errore incremento download:', error);
+    return false;
+  }
+}
+
 // === INIZIALIZZAZIONE DATABASE ===
 
 export async function initializeDatabase(): Promise<boolean> {
