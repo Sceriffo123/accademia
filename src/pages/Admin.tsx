@@ -185,7 +185,7 @@ export default function Admin() {
     try {
       // Carica tutti i quiz direttamente dal database
       const allQuizzes = await sql`
-        SELECT q.*, cm.title as module_title, c.title as course_title
+        SELECT q.*, cm.title as module_title, c.title as course_title, c.id as course_id
         FROM quizzes q
         JOIN course_modules cm ON q.module_id = cm.id
         JOIN courses c ON cm.course_id = c.id
@@ -1206,14 +1206,12 @@ export default function Admin() {
                         return (quiz as any).course_id === selectedCourseForQuiz;
                       })
                       .map((quiz) => {
-                      const module = modules.find(m => m.id === quiz.module_id);
-                      const course = courses.find(c => c.id === module?.course_id);
                       return (
                         <div key={quiz.id} className="border border-gray-200 rounded-lg p-4">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
                             <div className="flex-1">
                               <h3 className="font-semibold text-gray-900">{quiz.title}</h3>
-                              <p className="text-gray-600 text-sm">{course?.title || 'Corso non trovato'}</p>
+                              <p className="text-gray-600 text-sm">{(quiz as any).course_title || 'Corso non trovato'}</p>
                               <div className="flex items-center space-x-4 mt-2">
                                 <span className="text-xs text-gray-500">
                                   {quiz.time_limit} min
