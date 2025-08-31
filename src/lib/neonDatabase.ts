@@ -27,6 +27,26 @@ export interface Normative {
   updated_at: string;
 }
 
+export interface Course {
+  id: string;
+  title: string;
+  description?: string;
+  duration: string;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  instructor?: string;
+  category: string;
+  status: 'active' | 'draft' | 'archived';
+  modules_count: number;
+  enrollment_count: number;
+  rating: number;
+  tags: string[];
+  file_path?: string;
+  thumbnail_path?: string;
+  price: number;
+  created_at: string;
+  updated_at: string;
+}
+
 // Interfacce per Database Tables
 export interface DatabaseTable {
   name: string;
@@ -152,6 +172,54 @@ export async function initializeTables() {
         visible BOOLEAN DEFAULT true,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         UNIQUE(role, section)
+      )
+    `;
+
+    // Crea tabella documents
+    console.log('🎓 ACCADEMIA: Configurazione sistema documenti...');
+    await sql`
+      CREATE TABLE IF NOT EXISTS documents (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        filename VARCHAR(255) NOT NULL,
+        file_path VARCHAR(500),
+        file_size BIGINT,
+        mime_type VARCHAR(100),
+        type VARCHAR(20) NOT NULL CHECK (type IN ('template', 'form', 'guide', 'report')),
+        category VARCHAR(100) NOT NULL,
+        tags TEXT[] DEFAULT '{}',
+        version VARCHAR(20) DEFAULT '1.0',
+        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'pending', 'rejected')),
+        uploaded_by UUID REFERENCES users(id),
+        approved_by UUID REFERENCES users(id),
+        download_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+
+    // Crea tabella courses
+    console.log('🎓 ACCADEMIA: Configurazione sistema formazione...');
+    await sql`
+      CREATE TABLE IF NOT EXISTS courses (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        duration VARCHAR(50) NOT NULL,
+        level VARCHAR(20) NOT NULL CHECK (level IN ('beginner', 'intermediate', 'advanced')),
+        instructor VARCHAR(255),
+        category VARCHAR(100) NOT NULL,
+        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'draft', 'archived')),
+        modules_count INTEGER DEFAULT 0,
+        enrollment_count INTEGER DEFAULT 0,
+        rating DECIMAL(2,1) DEFAULT 0.0,
+        tags TEXT[] DEFAULT '{}',
+        file_path VARCHAR(500),
+        thumbnail_path VARCHAR(500),
+        price DECIMAL(10,2) DEFAULT 0.00,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
     `;
 
@@ -883,7 +951,15 @@ async function insertDefaultPermissions() {
       { id: 'documents.create', name: 'Crea Documenti', description: 'Può creare nuovi documenti', category: 'documents', level: 3 },
       { id: 'documents.edit', name: 'Modifica Documenti', description: 'Può modificare documenti', category: 'documents', level: 2 },
       { id: 'documents.delete', name: 'Elimina Documenti', description: 'Può eliminare documenti', category: 'documents', level: 2 },
-      { id: 'documents.upload', name: 'Carica Documenti', description: 'Può caricare nuovi documenti', category: 'documents', level: 3 }
+      { id: 'documents.upload', name: 'Carica Documenti', description: 'Può caricare nuovi documenti', category: 'documents', level: 3 },
+      
+      // Courses/Formazione
+      { id: 'courses.view', name: 'Visualizza Corsi', description: 'Può vedere i corsi di formazione', category: 'courses', level: 4 },
+      { id: 'courses.create', name: 'Crea Corsi', description: 'Può creare nuovi corsi', category: 'courses', level: 2 },
+      { id: 'courses.edit', name: 'Modifica Corsi', description: 'Può modificare corsi esistenti', category: 'courses', level: 2 },
+      { id: 'courses.delete', name: 'Elimina Corsi', description: 'Può eliminare corsi', category: 'courses', level: 1 },
+      { id: 'courses.publish', name: 'Pubblica Corsi', description: 'Può pubblicare corsi', category: 'courses', level: 2 },
+      { id: 'courses.enroll', name: 'Iscrizione Corsi', description: 'Può iscriversi ai corsi', category: 'courses', level: 3 }
     ];
 
     for (const perm of permissions) {
@@ -903,35 +979,39 @@ async function insertDefaultPermissions() {
 export async function insertDefaultRoleConfiguration() {
   try {
     const roleConfigs = [
-      {
-        role: 'superadmin',
-        permissions: ['users.view', 'users.create', 'users.edit', 'users.delete', 'users.manage_roles', 
-                     'normatives.view', 'normatives.create', 'normatives.edit', 'normatives.delete', 'normatives.publish',
-                     'system.settings', 'system.permissions', 'system.logs', 'reports.view', 'reports.export',
-                     'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.upload'],
-        sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'superadmin', 'reports', 'settings', 'documents']
+      // Super Admin - tutti i permessi
+      { 
+        role: 'superadmin', 
+        permissions: ['users.view', 'users.create', 'users.edit', 'users.delete', 'users.manage_roles', 'normatives.view', 'normatives.create', 'normatives.edit', 'normatives.delete', 'normatives.publish', 'admin.access', 'admin.settings', 'admin.logs', 'dev.tools', 'dev.database', 'reports.view', 'reports.export', 'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.upload', 'courses.view', 'courses.create', 'courses.edit', 'courses.delete', 'courses.publish', 'courses.enroll'],
+        sections: ['users', 'normatives', 'admin', 'documents', 'courses']
       },
-      {
-        role: 'admin',
-        permissions: ['users.view', 'users.create', 'users.edit', 'normatives.view', 'normatives.create', 
-                     'normatives.edit', 'normatives.delete', 'normatives.publish', 'system.logs', 'reports.view', 'reports.export',
-                     'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.upload'],
-        sections: ['dashboard', 'users', 'normatives', 'education', 'admin', 'reports', 'documents']
+      
+      // Admin - gestione completa tranne dev tools avanzati
+      { 
+        role: 'admin', 
+        permissions: ['users.view', 'users.create', 'users.edit', 'users.delete', 'users.manage_roles', 'normatives.view', 'normatives.create', 'normatives.edit', 'normatives.delete', 'normatives.publish', 'admin.access', 'admin.settings', 'admin.logs', 'reports.view', 'reports.export', 'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.upload', 'courses.view', 'courses.create', 'courses.edit', 'courses.delete', 'courses.publish', 'courses.enroll'],
+        sections: ['users', 'normatives', 'admin', 'documents', 'courses']
       },
-      {
-        role: 'operator',
-        permissions: ['normatives.view', 'normatives.create', 'reports.view'],
-        sections: ['dashboard', 'normatives', 'education', 'reports']
+      
+      // Operator - gestione normative e lettura utenti
+      { 
+        role: 'operator', 
+        permissions: ['users.view', 'normatives.view', 'normatives.create', 'normatives.edit', 'normatives.delete', 'normatives.publish', 'admin.access', 'courses.view', 'courses.enroll'],
+        sections: ['normatives', 'admin', 'courses']
       },
-      {
-        role: 'user',
-        permissions: ['normatives.view', 'documents.view'],
-        sections: ['dashboard', 'normatives', 'education', 'documents']
+      
+      // User - solo lettura normative e gestione profilo
+      { 
+        role: 'user', 
+        permissions: ['normatives.view', 'documents.view', 'courses.view', 'courses.enroll'],
+        sections: ['normatives', 'documents', 'courses']
       },
-      {
-        role: 'guest',
-        permissions: [],
-        sections: ['dashboard']
+      
+      // Guest - solo lettura limitata
+      { 
+        role: 'guest', 
+        permissions: ['normatives.view', 'courses.view'],
+        sections: ['normatives', 'courses']
       }
     ];
 
@@ -1454,5 +1534,154 @@ export async function getTableRecords(
   } catch (error) {
     console.error(`🚨 ACCADEMIA: Errore esplorazione ${tableName}:`, error?.message);
     return null;
+  }
+}
+
+// === METODI PER CORSI DI FORMAZIONE ===
+export async function getAllCourses(): Promise<Course[]> {
+  try {
+    const result = await sql`
+      SELECT * FROM courses
+      ORDER BY created_at DESC
+    `;
+    return result as Course[];
+  } catch (error) {
+    console.error('Errore recupero corsi:', error);
+    return [];
+  }
+}
+
+export async function getCourseById(id: string): Promise<Course | null> {
+  try {
+    const result = await sql`
+      SELECT * FROM courses
+      WHERE id = ${id}
+    `;
+    return result[0] as Course;
+  } catch (error) {
+    console.error('Errore recupero corso per ID:', error);
+    return null;
+  }
+}
+
+export async function getCoursesCount(): Promise<number> {
+  try {
+    const result = await sql`SELECT COUNT(*) as count FROM courses`;
+    return parseInt(result[0].count);
+  } catch (error) {
+    console.error('Errore conteggio corsi:', error);
+    return 0;
+  }
+}
+
+export async function createCourse(data: {
+  title: string;
+  description?: string;
+  duration: string;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  instructor?: string;
+  category: string;
+  status?: 'active' | 'draft' | 'archived';
+  modules_count?: number;
+  enrollment_count?: number;
+  rating?: number;
+  tags?: string[];
+  file_path?: string;
+  thumbnail_path?: string;
+  price?: number;
+}): Promise<Course | null> {
+  try {
+    console.log('🎓 ACCADEMIA: Creazione nuovo corso...');
+    
+    const result = await sql`
+      INSERT INTO courses (
+        title, description, duration, level, instructor, category, 
+        status, modules_count, enrollment_count, rating, tags, 
+        file_path, thumbnail_path, price, updated_at
+      )
+      VALUES (
+        ${data.title}, ${data.description}, ${data.duration}, ${data.level}, 
+        ${data.instructor}, ${data.category}, ${data.status || 'active'}, 
+        ${data.modules_count || 0}, ${data.enrollment_count || 0}, 
+        ${data.rating || 0.0}, ${data.tags || []}, ${data.file_path}, 
+        ${data.thumbnail_path}, ${data.price || 0.00}, NOW()
+      )
+      RETURNING *
+    `;
+    
+    console.log('🎓 ACCADEMIA: Corso creato con successo:', result[0]?.title);
+    return result[0] as Course;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore creazione corso:', error);
+    throw error;
+  }
+}
+
+export async function updateCourse(id: string, data: {
+  title?: string;
+  description?: string;
+  duration?: string;
+  level?: 'beginner' | 'intermediate' | 'advanced';
+  instructor?: string;
+  category?: string;
+  status?: 'active' | 'draft' | 'archived';
+  modules_count?: number;
+  enrollment_count?: number;
+  rating?: number;
+  tags?: string[];
+  file_path?: string;
+  thumbnail_path?: string;
+  price?: number;
+}): Promise<Course | null> {
+  try {
+    console.log('🎓 ACCADEMIA: Aggiornamento corso:', id);
+    
+    const result = await sql`
+      UPDATE courses
+      SET title = ${data.title}, description = ${data.description}, 
+          duration = ${data.duration}, level = ${data.level}, 
+          instructor = ${data.instructor}, category = ${data.category},
+          status = ${data.status}, modules_count = ${data.modules_count},
+          enrollment_count = ${data.enrollment_count}, rating = ${data.rating},
+          tags = ${data.tags}, file_path = ${data.file_path},
+          thumbnail_path = ${data.thumbnail_path}, price = ${data.price},
+          updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    if (result && result.length > 0) {
+      console.log('🎓 ACCADEMIA: Corso aggiornato:', result[0]?.title);
+      return result[0] as Course;
+    } else {
+      console.log('🎓 ACCADEMIA: Nessun corso aggiornato');
+      return null;
+    }
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore aggiornamento corso:', error);
+    throw error;
+  }
+}
+
+export async function deleteCourse(id: string): Promise<boolean> {
+  try {
+    console.log('🎓 ACCADEMIA: Eliminazione corso:', id);
+    
+    const result = await sql`
+      DELETE FROM courses 
+      WHERE id = ${id}
+      RETURNING id, title
+    `;
+    
+    if (result.length > 0) {
+      console.log('🎓 ACCADEMIA: Corso eliminato:', result[0].title);
+      return true;
+    } else {
+      console.log('🎓 ACCADEMIA: Corso non trovato per eliminazione');
+      return false;
+    }
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore eliminazione corso:', error);
+    throw error;
   }
 }
