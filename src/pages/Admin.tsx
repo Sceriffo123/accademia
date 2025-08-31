@@ -6,7 +6,8 @@ import {
   getAllDocuments,
   getAllCourses, createCourse, updateCourse, deleteCourse, getCourseEnrollments, deleteEnrollment,
   getQuizByCourseId, createQuiz, updateQuiz, deleteQuiz, getQuizQuestions, createQuizQuestion, updateQuizQuestion, deleteQuizQuestion,
-  type User, type Course, type Enrollment, type Quiz, type QuizQuestion
+  createCourseModule, getCourseModules, updateCourseModule, deleteCourseModule,
+  type User, type Course, type Enrollment, type Quiz, type QuizQuestion, type CourseModule
 } from '../lib/neonDatabase';
 import { 
   Users, 
@@ -68,15 +69,22 @@ export default function Admin() {
   const [showCreateCourse, setShowCreateCourse] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   
-  // Quiz states
+  // Stati per quiz
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [selectedCourseForQuiz, setSelectedCourseForQuiz] = useState<string>('');
+  const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [showCreateQuiz, setShowCreateQuiz] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
-  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
-  const [showQuizQuestions, setShowQuizQuestions] = useState<string>('');
+  
+  // Stati per domande quiz
+  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [showCreateQuestion, setShowCreateQuestion] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<QuizQuestion | null>(null);
+
+  // Stati per moduli corso
+  const [modules, setModules] = useState<CourseModule[]>([]);
+  const [selectedModule, setSelectedModule] = useState<CourseModule | null>(null);
+  const [showCreateModule, setShowCreateModule] = useState(false);
+  const [editingModule, setEditingModule] = useState<CourseModule | null>(null);
   const [selectedCourseEnrollments, setSelectedCourseEnrollments] = useState<Enrollment[]>([]);
   const [showEnrollmentsModal, setShowEnrollmentsModal] = useState(false);
   const [selectedCourseTitle, setSelectedCourseTitle] = useState('');
@@ -155,16 +163,20 @@ export default function Admin() {
 
   async function fetchQuizzes() {
     try {
-      const allQuizzes: Quiz[] = [];
-      for (const course of courses) {
-        const quiz = await getQuizByCourseId(course.id);
-        if (quiz) {
-          allQuizzes.push(quiz);
-        }
-      }
-      setQuizzes(allQuizzes);
+      // I quiz ora sono collegati ai moduli, quindi non possiamo più recuperarli direttamente dai corsi
+      // Per ora manteniamo vuoto l'array quiz finché non implementiamo la nuova logica
+      setQuizzes([]);
     } catch (error) {
       console.error('Error fetching quizzes:', error);
+    }
+  }
+
+  async function fetchModules(courseId: string) {
+    try {
+      const modulesData = await getCourseModules(courseId);
+      setModules(modulesData);
+    } catch (error) {
+      console.error('Error fetching modules:', error);
     }
   }
 

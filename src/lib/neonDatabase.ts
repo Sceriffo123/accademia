@@ -247,24 +247,43 @@ export async function initializeTables() {
       )
     `;
 
-    // Crea tabella enrollments
-    console.log('🎓 ACCADEMIA: Configurazione sistema iscrizioni...');
+    // Crea tabella course_enrollments
+    console.log('🎓 ACCADEMIA: Configurazione iscrizioni corsi...');
     await sql`
-      CREATE TABLE IF NOT EXISTS enrollments (
+      CREATE TABLE IF NOT EXISTS course_enrollments (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
         course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
-        status VARCHAR(20) DEFAULT 'enrolled' CHECK (status IN ('enrolled', 'in_progress', 'completed', 'failed')),
-        enrolled_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        completed_at TIMESTAMP WITH TIME ZONE,
-        score INTEGER,
-        payment_status VARCHAR(20) DEFAULT 'free' CHECK (payment_status IN ('free', 'paid', 'pending')),
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        enrolled_at TIMESTAMP DEFAULT NOW(),
+        status VARCHAR(20) DEFAULT 'enrolled' CHECK (status IN ('enrolled', 'in_progress', 'completed', 'cancelled', 'failed')),
+        progress INTEGER DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
+        completed_at TIMESTAMP,
         UNIQUE(user_id, course_id)
       )
     `;
 
+    // Crea tabella course_modules
+    console.log('🎓 ACCADEMIA: Configurazione moduli corso...');
+    await sql`
+      CREATE TABLE IF NOT EXISTS course_modules (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        type VARCHAR(20) NOT NULL CHECK (type IN ('lesson', 'video', 'document', 'quiz', 'assignment')),
+        content TEXT,
+        video_url VARCHAR(500),
+        document_url VARCHAR(500),
+        order_num INTEGER NOT NULL,
+        duration_minutes INTEGER,
+        is_required BOOLEAN DEFAULT true,
+        level VARCHAR(20) NOT NULL CHECK (level IN ('beginner', 'intermediate', 'advanced')),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `;
+
+    // Inserisci configurazione ruoli di default se non esiste
     // Inserisci dati di esempio
     console.log('🎓 ACCADEMIA: Popolamento archivio con dati iniziali...');
     await insertSampleData(); // RIABILITATO: Serve per creare utenti amministrativi
@@ -1987,6 +2006,25 @@ async function insertRealCourses() {
   }
 }
 
+// ===== COURSE MODULES SYSTEM =====
+
+export interface CourseModule {
+  id: string;
+  course_id: string;
+  title: string;
+  description: string;
+  type: 'lesson' | 'video' | 'document' | 'quiz' | 'assignment';
+  content?: string; // Per lezioni testuali
+  video_url?: string; // Per video
+  document_url?: string; // Per documenti
+  order_num: number;
+  duration_minutes?: number;
+  is_required: boolean;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  created_at: string;
+  updated_at: string;
+}
+
 // ===== QUIZ SYSTEM =====
 
 export interface QuizQuestion {
@@ -2002,7 +2040,7 @@ export interface QuizQuestion {
 
 export interface Quiz {
   id: string;
-  course_id: string;
+  module_id: string; // Collegato al modulo invece che al corso
   title: string;
   description: string;
   time_limit: number; // minuti
@@ -2024,21 +2062,50 @@ export interface QuizAttempt {
   time_taken: number; // secondi
 }
 
+// Crea tabelle moduli corso
+export async function createCourseModuleTables() {
+  try {
+    // Tabella moduli corso
+    await sql`
+      CREATE TABLE IF NOT EXISTS course_modules (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        type VARCHAR(20) NOT NULL CHECK (type IN ('lesson', 'video', 'document', 'quiz', 'assignment')),
+        content TEXT,
+        video_url VARCHAR(500),
+        document_url VARCHAR(500),
+        order_num INTEGER NOT NULL,
+        duration_minutes INTEGER,
+        is_required BOOLEAN DEFAULT true,
+        level VARCHAR(20) NOT NULL CHECK (level IN ('beginner', 'intermediate', 'advanced')),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `;
+
+    console.log('✅ Tabella course_modules creata con successo');
+  } catch (error) {
+    console.error('❌ Errore creazione tabella course_modules:', error);
+  }
+}
+
 // Crea tabelle quiz
 export async function createQuizTables() {
   try {
-    // Tabella quiz
+    // Crea tabella quiz (collegata ai moduli)
     await sql`
       CREATE TABLE IF NOT EXISTS quizzes (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
+        module_id UUID REFERENCES course_modules(id) ON DELETE CASCADE,
         title VARCHAR(255) NOT NULL,
         description TEXT,
         time_limit INTEGER DEFAULT 30,
         passing_score INTEGER DEFAULT 70,
         max_attempts INTEGER DEFAULT 3,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
       )
     `;
 
@@ -2114,12 +2181,79 @@ export async function getQuizQuestions(quizId: string): Promise<QuizQuestion[]> 
   }
 }
 
-// Crea quiz
+// Funzioni CRUD per moduli corso
+export async function createCourseModule(module: Omit<CourseModule, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
+  try {
+    const result = await sql`
+      INSERT INTO course_modules (course_id, title, description, type, content, video_url, document_url, order_num, duration_minutes, is_required, level)
+      VALUES (${module.course_id}, ${module.title}, ${module.description}, ${module.type}, ${module.content}, ${module.video_url}, ${module.document_url}, ${module.order_num}, ${module.duration_minutes}, ${module.is_required}, ${module.level})
+      RETURNING id
+    `;
+    return result[0].id;
+  } catch (error) {
+    console.error('Errore creazione modulo corso:', error);
+    throw error;
+  }
+}
+
+export async function getCourseModules(courseId: string): Promise<CourseModule[]> {
+  try {
+    const result = await sql`
+      SELECT * FROM course_modules 
+      WHERE course_id = ${courseId}
+      ORDER BY order_num ASC
+    `;
+    return result as CourseModule[];
+  } catch (error) {
+    console.error('Errore recupero moduli corso:', error);
+    throw error;
+  }
+}
+
+export async function updateCourseModule(moduleId: string, module: Partial<Omit<CourseModule, 'id' | 'created_at' | 'updated_at'>>): Promise<void> {
+  try {
+    const updates = [];
+    const values = [];
+    
+    if (module.title !== undefined) { updates.push('title = $' + (values.length + 1)); values.push(module.title); }
+    if (module.description !== undefined) { updates.push('description = $' + (values.length + 1)); values.push(module.description); }
+    if (module.type !== undefined) { updates.push('type = $' + (values.length + 1)); values.push(module.type); }
+    if (module.content !== undefined) { updates.push('content = $' + (values.length + 1)); values.push(module.content); }
+    if (module.video_url !== undefined) { updates.push('video_url = $' + (values.length + 1)); values.push(module.video_url); }
+    if (module.document_url !== undefined) { updates.push('document_url = $' + (values.length + 1)); values.push(module.document_url); }
+    if (module.order_num !== undefined) { updates.push('order_num = $' + (values.length + 1)); values.push(module.order_num); }
+    if (module.duration_minutes !== undefined) { updates.push('duration_minutes = $' + (values.length + 1)); values.push(module.duration_minutes); }
+    if (module.is_required !== undefined) { updates.push('is_required = $' + (values.length + 1)); values.push(module.is_required); }
+    if (module.level !== undefined) { updates.push('level = $' + (values.length + 1)); values.push(module.level); }
+    
+    updates.push('updated_at = NOW()');
+    values.push(moduleId);
+    
+    if (updates.length > 1) { // Almeno un campo da aggiornare oltre a updated_at
+      const query = `UPDATE course_modules SET ${updates.join(', ')} WHERE id = $${values.length}`;
+      await sql.unsafe(query, values);
+    }
+  } catch (error) {
+    console.error('Errore aggiornamento modulo corso:', error);
+    throw error;
+  }
+}
+
+export async function deleteCourseModule(moduleId: string): Promise<void> {
+  try {
+    await sql`DELETE FROM course_modules WHERE id = ${moduleId}`;
+  } catch (error) {
+    console.error('Errore eliminazione modulo corso:', error);
+    throw error;
+  }
+}
+
+// Funzioni CRUD per quiz
 export async function createQuiz(quiz: Omit<Quiz, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
   try {
     const result = await sql`
-      INSERT INTO quizzes (course_id, title, description, time_limit, passing_score, max_attempts)
-      VALUES (${quiz.course_id}, ${quiz.title}, ${quiz.description}, ${quiz.time_limit}, ${quiz.passing_score}, ${quiz.max_attempts})
+      INSERT INTO quizzes (module_id, title, description, time_limit, passing_score, max_attempts)
+      VALUES (${quiz.module_id}, ${quiz.title}, ${quiz.description}, ${quiz.time_limit}, ${quiz.passing_score}, ${quiz.max_attempts})
       RETURNING id
     `;
     return result[0].id;
@@ -2278,6 +2412,7 @@ export async function populateDemoQuizzes() {
     console.error('❌ Errore popolamento quiz demo:', error);
   }
 }
+
 
 function generateDemoQuestions(course: Course) {
   const baseQuestions = [
