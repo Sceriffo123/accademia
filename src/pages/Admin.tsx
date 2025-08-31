@@ -285,11 +285,13 @@ export default function Admin() {
       setEditingModule(null);
       
       // Mostra toast di successo
+      console.log('Chiamando showToast per successo modulo...');
       showToast({ 
         type: 'success', 
         title: 'Successo!', 
         message: '✅ Modulo aggiornato con successo!' 
       });
+      console.log('showToast chiamato');
     } catch (error) {
       console.error('Error updating module:', error);
       const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
