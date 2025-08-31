@@ -2066,6 +2066,20 @@ export interface QuizAttempt {
   time_taken: number; // secondi
 }
 
+export interface UserModuleProgress {
+  id: string;
+  user_id: string;
+  module_id: string;
+  enrollment_id: string;
+  status: 'not_started' | 'in_progress' | 'completed';
+  started_at?: string;
+  completed_at?: string;
+  time_spent: number; // secondi
+  score?: number; // per moduli quiz
+  created_at: string;
+  updated_at: string;
+}
+
 // Crea tabelle moduli corso
 export async function createCourseModuleTables() {
   try {
@@ -2089,9 +2103,27 @@ export async function createCourseModuleTables() {
       )
     `;
 
-    console.log('✅ Tabella course_modules creata con successo');
+    // Tabella progresso utente moduli
+    await sql`
+      CREATE TABLE IF NOT EXISTS user_module_progress (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        module_id UUID REFERENCES course_modules(id) ON DELETE CASCADE,
+        enrollment_id UUID REFERENCES enrollments(id) ON DELETE CASCADE,
+        status VARCHAR(20) NOT NULL CHECK (status IN ('not_started', 'in_progress', 'completed')) DEFAULT 'not_started',
+        started_at TIMESTAMP,
+        completed_at TIMESTAMP,
+        time_spent INTEGER DEFAULT 0,
+        score INTEGER,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(user_id, module_id, enrollment_id)
+      )
+    `;
+
+    console.log('✅ Tabelle course_modules e user_module_progress create con successo');
   } catch (error) {
-    console.error('❌ Errore creazione tabella course_modules:', error);
+    console.error('❌ Errore creazione tabelle moduli corso:', error);
   }
 }
 
@@ -2263,6 +2295,127 @@ export async function deleteCourseModule(moduleId: string): Promise<void> {
     await sql`DELETE FROM course_modules WHERE id = ${moduleId}`;
   } catch (error) {
     console.error('Errore eliminazione modulo corso:', error);
+    throw error;
+  }
+}
+
+// ===== USER MODULE PROGRESS TRACKING =====
+
+// Inizializza il progresso per tutti i moduli di un corso quando un utente si iscrive
+export async function initializeUserProgress(userId: string, courseId: string, enrollmentId: string): Promise<void> {
+  try {
+    const modules = await getCourseModules(courseId);
+    
+    for (const module of modules) {
+      await sql`
+        INSERT INTO user_module_progress (user_id, module_id, enrollment_id, status)
+        VALUES (${userId}, ${module.id}, ${enrollmentId}, 'not_started')
+        ON CONFLICT (user_id, module_id, enrollment_id) DO NOTHING
+      `;
+    }
+  } catch (error) {
+    console.error('Errore inizializzazione progresso utente:', error);
+    throw error;
+  }
+}
+
+// Aggiorna il progresso di un modulo per un utente
+export async function updateModuleProgress(
+  userId: string, 
+  moduleId: string, 
+  status: 'not_started' | 'in_progress' | 'completed',
+  timeSpent?: number,
+  score?: number
+): Promise<void> {
+  try {
+    const updateData: any = {
+      status,
+      updated_at: new Date().toISOString()
+    };
+
+    if (status === 'in_progress' && !await getModuleProgress(userId, moduleId)) {
+      updateData.started_at = new Date().toISOString();
+    }
+
+    if (status === 'completed') {
+      updateData.completed_at = new Date().toISOString();
+    }
+
+    if (timeSpent !== undefined) {
+      updateData.time_spent = timeSpent;
+    }
+
+    if (score !== undefined) {
+      updateData.score = score;
+    }
+
+    const updates = [];
+    const values = [];
+    
+    Object.keys(updateData).forEach(key => {
+      updates.push(`${key} = $${values.length + 1}`);
+      values.push(updateData[key]);
+    });
+
+    values.push(userId, moduleId);
+
+    await sql.unsafe(`
+      UPDATE user_module_progress 
+      SET ${updates.join(', ')}
+      WHERE user_id = $${values.length - 1} AND module_id = $${values.length}
+    `, values);
+
+  } catch (error) {
+    console.error('Errore aggiornamento progresso modulo:', error);
+    throw error;
+  }
+}
+
+// Ottiene il progresso di un modulo per un utente
+export async function getModuleProgress(userId: string, moduleId: string): Promise<UserModuleProgress | null> {
+  try {
+    const result = await sql`
+      SELECT * FROM user_module_progress 
+      WHERE user_id = ${userId} AND module_id = ${moduleId}
+    `;
+    return result[0] as UserModuleProgress || null;
+  } catch (error) {
+    console.error('Errore recupero progresso modulo:', error);
+    return null;
+  }
+}
+
+// Ottiene il progresso completo di un corso per un utente
+export async function getCourseProgress(userId: string, courseId: string): Promise<{
+  modules: (CourseModule & { progress?: UserModuleProgress })[];
+  completedModules: number;
+  totalModules: number;
+  progressPercentage: number;
+}> {
+  try {
+    const modules = await getCourseModules(courseId);
+    const modulesWithProgress = await Promise.all(
+      modules.map(async (module) => {
+        const progress = await getModuleProgress(userId, module.id);
+        return {
+          ...module,
+          progress
+        };
+      })
+    );
+
+    const completedModules = modulesWithProgress.filter(m => m.progress?.status === 'completed').length;
+    const totalModules = modules.length;
+    const progressPercentage = totalModules > 0 ? (completedModules / totalModules) * 100 : 0;
+
+    return {
+      modules: modulesWithProgress,
+      completedModules,
+      totalModules,
+      progressPercentage
+    };
+  } catch (error) {
+    console.error('Errore recupero progresso corso:', error);
     throw error;
   }
 }
