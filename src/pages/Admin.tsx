@@ -1,47 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { 
-  getUsers, 
-  getUsersCount, 
-  updateUser, 
-  deleteUser, 
-  createNewUser, 
-  updateUserPassword,
-  getNormatives,
-  getNormativesCount,
-  getDocuments,
-  getDocumentsCount,
-  getUserById
-} from '../lib/api';
+  getAllUsers, createUser, updateUser, deleteUser,
+  getAllNormatives,
+  getAllDocuments,
+  getAllCourses, createCourse, updateCourse, deleteCourse,
+  type User, type Course
+} from '../lib/neonDatabase';
 import { 
   Users, 
   FileText, 
+  BookOpen,
   Database, 
   TrendingUp, 
   Plus, 
   Edit3, 
+  Edit,
   Trash2, 
-  Save, 
   X, 
   Eye, 
   EyeOff,
   Search,
-  Filter,
-  Download,
-  Upload,
-  Settings,
-  BarChart3,
-  Activity,
-  Calendar,
-  User,
-  Crown,
-  Shield,
-  AlertTriangle,
   CheckCircle,
-  Clock,
-  RefreshCw,
-  GraduationCap,
-  Wrench
+  Upload,
+  BarChart3
 } from 'lucide-react';
 
 interface AdminStats {
@@ -62,21 +44,36 @@ export default function Admin() {
     totalDocuments: 0,
     completionRate: 85
   });
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [normatives, setNormatives] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateUser, setShowCreateUser] = useState(false);
-  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newUser, setNewUser] = useState({
     email: '',
     fullName: '',
     password: '',
-    role: 'user' as 'user' | 'admin' | 'superadmin' | 'operator'
+    role: 'user' as 'user' | 'admin' | 'operator'
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [courses, setCourses] = useState<any[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [showCreateCourse, setShowCreateCourse] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [newCourse, setNewCourse] = useState({
+    title: '',
+    description: '',
+    duration: '',
+    level: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
+    category: '',
+    instructor: '',
+    modules_count: 1,
+    price: 0,
+    is_free: true,
+    passing_score: 70,
+    tags: ''
+  });
 
   useEffect(() => {
     fetchData();
@@ -84,15 +81,17 @@ export default function Admin() {
 
   async function fetchData() {
     try {
-      const [usersData, normativesData, documentsData] = await Promise.all([
-        getUsers(true, profile?.id),
-        getNormatives(),
-        getDocuments()
+      const [usersData, normativesData, documentsData, coursesData] = await Promise.all([
+        getAllUsers(true, profile?.id),
+        getAllNormatives(),
+        getAllDocuments(),
+        getAllCourses()
       ]);
 
       setUsers(usersData);
       setNormatives(normativesData);
       setDocuments(documentsData);
+      setCourses(coursesData);
       
       setStats({
         totalUsers: usersData.length,
@@ -109,7 +108,7 @@ export default function Admin() {
 
   async function handleCreateUser() {
     try {
-      await createNewUser(newUser.email, newUser.fullName, newUser.password, newUser.role);
+      await createUser(newUser.email, newUser.fullName, newUser.password, newUser.role);
       setNewUser({ email: '', fullName: '', password: '', role: 'user' });
       setShowCreateUser(false);
       fetchData();
@@ -118,21 +117,87 @@ export default function Admin() {
     }
   }
 
-  async function handleUpdateUser() {
+  const handleUpdateUser = async () => {
     if (!editingUser) return;
     
     try {
       await updateUser(editingUser.id, {
-        email: editingUser.email,
         full_name: editingUser.full_name,
+        email: editingUser.email,
         role: editingUser.role
       });
+      
+      setUsers(users.map(user => 
+        user.id === editingUser.id ? editingUser : user
+      ));
       setEditingUser(null);
-      fetchData();
     } catch (error) {
       console.error('Error updating user:', error);
     }
-  }
+  };
+
+  const handleCreateCourse = async () => {
+    try {
+      const courseData = {
+        ...newCourse,
+        status: 'active' as const,
+        rating: 0,
+        tags: newCourse.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+      };
+      
+      const createdCourse = await createCourse(courseData);
+      if (!createdCourse) throw new Error('Failed to create course');
+      setCourses([...courses, createdCourse]);
+      setNewCourse({
+        title: '',
+        description: '',
+        duration: '',
+        level: 'beginner',
+        category: '',
+        instructor: '',
+        modules_count: 1,
+        price: 0,
+        is_free: true,
+        passing_score: 70,
+        tags: ''
+      });
+      setShowCreateCourse(false);
+    } catch (error) {
+      console.error('Error creating course:', error);
+    }
+  };
+
+  const handleUpdateCourse = async () => {
+    if (!editingCourse) return;
+    
+    try {
+      const courseData = {
+        ...editingCourse,
+        tags: Array.isArray(editingCourse.tags) 
+          ? editingCourse.tags 
+          : editingCourse.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0)
+      };
+      
+      await updateCourse(editingCourse.id, courseData);
+      setCourses(courses.map(course => 
+        course.id === editingCourse.id ? {...editingCourse, tags: courseData.tags} : course
+      ));
+      setEditingCourse(null);
+    } catch (error) {
+      console.error('Error updating course:', error);
+    }
+  };
+
+  const handleDeleteCourse = async (courseId: string) => {
+    if (!confirm('Sei sicuro di voler eliminare questo corso?')) return;
+    
+    try {
+      await deleteCourse(courseId);
+      setCourses(courses.filter(course => course.id !== courseId));
+    } catch (error) {
+      console.error('Error deleting course:', error);
+    }
+  };
 
   async function handleDeleteUser(userId: string) {
     if (confirm('Sei sicuro di voler eliminare questo utente?')) {
@@ -197,7 +262,7 @@ export default function Admin() {
     { id: 'users', label: 'Utenti', icon: Users },
     { id: 'normatives', label: 'Normative', icon: FileText },
     { id: 'documents', label: 'Documenti', icon: Database },
-    { id: 'courses', label: 'Formazione', icon: GraduationCap }
+    { id: 'courses', label: 'Formazione', icon: BookOpen },
   ];
 
   if (loading) {
@@ -273,7 +338,7 @@ export default function Admin() {
         {/* Desktop Tab Navigation */}
         <div className="hidden lg:block mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-2">
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-5 gap-2">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isTabActive = activeTab === tab.id;
@@ -569,8 +634,8 @@ export default function Admin() {
                           <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors">
-                            <Download className="h-4 w-4" />
+                          <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Scarica documento">
+                            <Upload className="h-4 w-4" />
                           </button>
                           <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                             <Trash2 className="h-4 w-4" />
@@ -580,6 +645,72 @@ export default function Admin() {
                       <div className="text-xs text-gray-500">
                         Caricato: {new Date(doc.created_at).toLocaleDateString('it-IT')} • 
                         Dimensione: {doc.file_size ? `${doc.file_size} KB` : 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Courses Tab */}
+          {activeTab === 'courses' && (
+            <div className="p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-4 sm:space-y-0">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Gestione Corsi ({courses.length})
+                </h2>
+                <button
+                  onClick={() => setShowCreateCourse(true)}
+                  className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Nuovo Corso</span>
+                </button>
+              </div>
+
+              {/* Courses List */}
+              <div className="space-y-4">
+                {courses.map((course) => (
+                  <div key={course.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900">{course.title}</h3>
+                        <p className="text-gray-600 text-sm">{course.category}</p>
+                        <div className="flex items-center space-x-4 mt-2">
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                            course.is_free ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {course.is_free ? 'Gratuito' : `€${course.price}`}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            0 iscritti
+                          </span>
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                            course.status === 'active' ? 'bg-green-100 text-green-800' :
+                            course.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {course.status === 'active' ? 'Attivo' :
+                             course.status === 'draft' ? 'Bozza' : 'Archiviato'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => setEditingCourse(course)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Modifica corso"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCourse(course.id)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Elimina corso"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -647,7 +778,7 @@ export default function Admin() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo</label>
                   <select
                     value={newUser.role}
-                    onChange={(e) => setNewUser({...newUser, role: e.target.value as any})}
+                    onChange={(e) => setNewUser({...newUser, role: e.target.value as 'user' | 'admin' | 'operator'})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="user">Utente</option>
@@ -671,23 +802,6 @@ export default function Admin() {
                   Crea Utente
                 </button>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Edit User Modal */}
-        {editingUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Modifica Utente</h3>
-                <button
-                  onClick={() => setEditingUser(null)}
-                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
               
               <div className="p-6 space-y-4">
                 <div>
@@ -695,8 +809,10 @@ export default function Admin() {
                   <input
                     type="text"
                     value={editingUser.full_name}
-                    onChange={(e) => setEditingUser({...editingUser, full_name: e.target.value})}
+                    onChange={(e) => editingUser && setEditingUser({...editingUser, full_name: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nome Cognome"
+                    title="Nome completo dell'utente"
                   />
                 </div>
                 
@@ -705,8 +821,10 @@ export default function Admin() {
                   <input
                     type="email"
                     value={editingUser.email}
-                    onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
+                    onChange={(e) => editingUser && setEditingUser({...editingUser, email: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="email@esempio.com"
+                    title="Indirizzo email utente"
                   />
                 </div>
                 
@@ -714,8 +832,9 @@ export default function Admin() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo</label>
                   <select
                     value={editingUser.role}
-                    onChange={(e) => setEditingUser({...editingUser, role: e.target.value})}
+                    onChange={(e) => editingUser && setEditingUser({...editingUser, role: e.target.value as 'user' | 'admin' | 'operator' | 'superadmin'})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    title="Seleziona ruolo utente"
                   >
                     <option value="user">Utente</option>
                     <option value="operator">Operatore</option>
@@ -733,6 +852,365 @@ export default function Admin() {
                 </button>
                 <button
                   onClick={handleUpdateUser}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Salva Modifiche
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create Course Modal */}
+        {showCreateCourse && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Nuovo Corso di Formazione</h3>
+                <button
+                  onClick={() => setShowCreateCourse(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Chiudi"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Titolo Corso</label>
+                    <input
+                      type="text"
+                      value={newCourse.title}
+                      onChange={(e) => setNewCourse({...newCourse, title: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Es. Evoluzione Normativa 2024"
+                      title="Titolo del corso"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                    <input
+                      type="text"
+                      value={newCourse.category}
+                      onChange={(e) => setNewCourse({...newCourse, category: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Es. Normativa, Sicurezza, Management"
+                      title="Categoria del corso"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione</label>
+                  <textarea
+                    value={newCourse.description}
+                    onChange={(e) => setNewCourse({...newCourse, description: e.target.value})}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Descrizione dettagliata del corso..."
+                    title="Descrizione del corso"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Durata</label>
+                    <input
+                      type="text"
+                      value={newCourse.duration}
+                      onChange={(e) => setNewCourse({...newCourse, duration: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Es. 8 ore"
+                      title="Durata del corso"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Livello</label>
+                    <select
+                      value={newCourse.level}
+                      onChange={(e) => setNewCourse({...newCourse, level: e.target.value as 'beginner' | 'intermediate' | 'advanced'})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      title="Seleziona livello corso"
+                    >
+                      <option value="beginner">Base</option>
+                      <option value="intermediate">Intermedio</option>
+                      <option value="advanced">Avanzato</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Moduli</label>
+                    <input
+                      type="number"
+                      value={newCourse.modules_count}
+                      onChange={(e) => setNewCourse({...newCourse, modules_count: parseInt(e.target.value) || 1})}
+                      min="1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="1"
+                      title="Numero di moduli del corso"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Istruttore</label>
+                  <input
+                    type="text"
+                    value={newCourse.instructor}
+                    onChange={(e) => setNewCourse({...newCourse, instructor: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nome Cognome"
+                    title="Nome dell'istruttore del corso"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Punteggio Minimo (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={newCourse.passing_score}
+                    onChange={(e) => setNewCourse({...newCourse, passing_score: parseInt(e.target.value) || 70})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="70"
+                    title="Punteggio minimo per superare il corso"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tags (separati da virgola)</label>
+                  <input
+                    type="text"
+                    value={newCourse.tags}
+                    onChange={(e) => setNewCourse({...newCourse, tags: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="normativa, aggiornamento, obbligatorio"
+                    title="Tags del corso separati da virgola"
+                  />
+                </div>
+
+                <div className="border-t border-gray-200 pt-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="is_free"
+                        checked={newCourse.is_free}
+                        onChange={(e) => setNewCourse({...newCourse, is_free: e.target.checked, price: e.target.checked ? 0 : newCourse.price})}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="is_free" className="ml-2 text-sm text-gray-700">
+                        Corso Gratuito
+                      </label>
+                    </div>
+                    
+                    {!newCourse.is_free && (
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Prezzo (€)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={newCourse.price}
+                          onChange={(e) => setNewCourse({...newCourse, price: parseFloat(e.target.value) || 0})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="299.00"
+                          title="Prezzo del corso in euro"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+                <button
+                  onClick={() => setShowCreateCourse(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleCreateCourse}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Crea Corso
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Course Modal */}
+        {editingCourse && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Modifica Corso</h3>
+                <button
+                  onClick={() => setEditingCourse(null)}
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Chiudi"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Titolo Corso</label>
+                    <input
+                      type="text"
+                      value={editingCourse.title}
+                      onChange={(e) => setEditingCourse({...editingCourse, title: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Titolo del corso"
+                      title="Titolo del corso"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                    <input
+                      type="text"
+                      value={editingCourse.category}
+                      onChange={(e) => setEditingCourse({...editingCourse, category: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Categoria del corso"
+                      title="Categoria del corso"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione</label>
+                  <textarea
+                    value={editingCourse.description}
+                    onChange={(e) => setEditingCourse({...editingCourse, description: e.target.value})}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Durata</label>
+                    <input
+                      type="text"
+                      value={editingCourse.duration}
+                      onChange={(e) => setEditingCourse({...editingCourse, duration: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Livello</label>
+                    <select
+                      value={editingCourse.level}
+                      onChange={(e) => setEditingCourse({...editingCourse, level: e.target.value as 'beginner' | 'intermediate' | 'advanced'})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="beginner">Base</option>
+                      <option value="intermediate">Intermedio</option>
+                      <option value="advanced">Avanzato</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Moduli</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editingCourse.modules_count}
+                      onChange={(e) => setEditingCourse({...editingCourse, modules_count: parseInt(e.target.value) || 1})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Istruttore</label>
+                    <input
+                      type="text"
+                      value={editingCourse.instructor}
+                      onChange={(e) => setEditingCourse({...editingCourse, instructor: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Punteggio Minimo (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={editingCourse.passing_score}
+                      onChange={(e) => setEditingCourse({...editingCourse, passing_score: parseInt(e.target.value) || 70})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tags (separati da virgola)</label>
+                  <input
+                    type="text"
+                    value={Array.isArray(editingCourse.tags) ? editingCourse.tags.join(', ') : editingCourse.tags || ''}
+                    onChange={(e) => setEditingCourse({...editingCourse, tags: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="normativa, aggiornamento, obbligatorio"
+                    title="Tags del corso separati da virgola"
+                  />
+                </div>
+
+                <div className="border-t border-gray-200 pt-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="edit_is_free"
+                        checked={editingCourse.is_free}
+                        onChange={(e) => setEditingCourse({...editingCourse, is_free: e.target.checked, price: e.target.checked ? 0 : editingCourse.price})}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="edit_is_free" className="ml-2 text-sm text-gray-700">
+                        Corso Gratuito
+                      </label>
+                    </div>
+                    
+                    {!editingCourse.is_free && (
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Prezzo (€)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={editingCourse.price}
+                          onChange={(e) => setEditingCourse({...editingCourse, price: parseFloat(e.target.value) || 0})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+                <button
+                  onClick={() => setEditingCourse(null)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleUpdateCourse}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Salva Modifiche
