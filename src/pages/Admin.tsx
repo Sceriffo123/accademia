@@ -1211,7 +1211,12 @@ export default function Admin() {
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
                             <div className="flex-1">
                               <h3 className="font-semibold text-gray-900">{quiz.title}</h3>
-                              <p className="text-gray-600 text-sm">{(quiz as any).course_title || 'Corso non trovato'}</p>
+                              <p className="text-blue-600 text-sm font-medium">
+                                📚 Corso: {(quiz as any).course_title || 'Corso non trovato'}
+                              </p>
+                              <p className="text-gray-500 text-xs">
+                                📁 Modulo: {(quiz as any).module_title}
+                              </p>
                               <div className="flex items-center space-x-4 mt-2">
                                 <span className="text-xs text-gray-500">
                                   {quiz.time_limit} min
