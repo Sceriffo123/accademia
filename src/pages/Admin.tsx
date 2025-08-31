@@ -183,23 +183,17 @@ export default function Admin() {
 
   async function fetchQuizzes() {
     try {
-      // Carica tutti i quiz dal database tramite i moduli
-      const allQuizzes: Quiz[] = [];
+      // Carica tutti i quiz direttamente dal database
+      const allQuizzes = await sql`
+        SELECT q.*, cm.title as module_title, c.title as course_title
+        FROM quizzes q
+        JOIN course_modules cm ON q.module_id = cm.id
+        JOIN courses c ON cm.course_id = c.id
+        ORDER BY c.title, q.title
+      `;
       
-      // Prima carica tutti i moduli di tutti i corsi
-      for (const course of courses) {
-        const courseModules = await getCourseModules(course.id);
-        
-        // Per ogni modulo, carica i quiz associati
-        for (const module of courseModules) {
-          const moduleQuizzes = await sql`
-            SELECT * FROM quizzes WHERE module_id = ${module.id}
-          `;
-          allQuizzes.push(...(moduleQuizzes as Quiz[]));
-        }
-      }
-      
-      setQuizzes(allQuizzes);
+      setQuizzes(allQuizzes as Quiz[]);
+      console.log('Quiz caricati:', allQuizzes.length);
     } catch (error) {
       console.error('Error fetching quizzes:', error);
       setQuizzes([]);
@@ -1168,9 +1162,8 @@ export default function Admin() {
                       <h2 className="text-xl font-semibold text-gray-900">
                         Gestione Quiz ({quizzes.filter(quiz => {
                           if (!selectedCourseForQuiz) return true;
-                          // Trova il modulo del quiz e verifica se appartiene al corso selezionato
-                          const module = modules.find(m => m.id === quiz.module_id);
-                          return module?.course_id === selectedCourseForQuiz;
+                          // Usa i dati della JOIN per filtrare per corso
+                          return (quiz as any).course_id === selectedCourseForQuiz;
                         }).length})
                       </h2>
                       {selectedCourseForQuiz && (
@@ -1209,9 +1202,8 @@ export default function Admin() {
                     {quizzes
                       .filter(quiz => {
                         if (!selectedCourseForQuiz) return true;
-                        // Trova il modulo del quiz e verifica se appartiene al corso selezionato
-                        const module = modules.find(m => m.id === quiz.module_id);
-                        return module?.course_id === selectedCourseForQuiz;
+                        // Usa i dati della JOIN per filtrare per corso
+                        return (quiz as any).course_id === selectedCourseForQuiz;
                       })
                       .map((quiz) => {
                       const module = modules.find(m => m.id === quiz.module_id);
