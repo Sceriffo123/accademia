@@ -1127,10 +1127,10 @@ export default function Admin() {
                     </h2>
                     <button
                       onClick={() => setShowCreateModule(true)}
-                      className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                      className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                     >
-                      <Plus className="h-4 w-4" />
-                      <span>Nuovo Modulo</span>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nuovo Modulo
                     </button>
                   </div>
 
@@ -1143,71 +1143,111 @@ export default function Admin() {
                           onClick={() => setSelectedCourseId('')}
                           className="ml-2 text-blue-600 hover:text-blue-800"
                         >
-                          ✕ Rimuovi filtro
+                          (rimuovi filtro)
                         </button>
                       </p>
                     </div>
                   )}
 
-                  {/* Modules List */}
-                  <div className="space-y-4">
-                    {modules
-                      .filter(module => !selectedCourseId || module.course_id === selectedCourseId)
-                      .map((module) => {
-                      const course = courses.find(c => c.id === module.course_id);
-                      return (
-                        <div key={module.id} className="border border-gray-200 rounded-lg p-4">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-gray-900">{module.title}</h3>
-                              <p className="text-gray-600 text-sm">Corso: {course?.title || 'N/A'}</p>
-                              <div className="flex items-center space-x-4 mt-2">
-                                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                                  module.type === 'lesson' ? 'bg-blue-100 text-blue-800' :
-                                  module.type === 'video' ? 'bg-green-100 text-green-800' :
-                                  module.type === 'document' ? 'bg-yellow-100 text-yellow-800' :
-                                  module.type === 'quiz' ? 'bg-purple-100 text-purple-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {module.type}
-                                </span>
-                                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                                  module.level === 'beginner' ? 'bg-green-100 text-green-800' :
-                                  module.level === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                  {/* Hierarchical Modules List */}
+                  <div className="space-y-6">
+                    {courses
+                      .filter(course => !selectedCourseId || course.id === selectedCourseId)
+                      .map((course) => {
+                        const courseModules = modules
+                          .filter(module => module.course_id === course.id)
+                          .sort((a, b) => (a.order_num || 0) - (b.order_num || 0));
+                        
+                        if (courseModules.length === 0) return null;
+                        
+                        return (
+                          <div key={course.id} className="border border-gray-300 rounded-lg overflow-hidden">
+                            {/* Course Header */}
+                            <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <BookOpen className="h-5 w-5 text-blue-600" />
+                                  <h3 className="font-semibold text-gray-900">{course.title}</h3>
+                                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                    {courseModules.length} moduli
+                                  </span>
+                                </div>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  course.level === 'beginner' ? 'bg-green-100 text-green-800' :
+                                  course.level === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
                                   'bg-red-100 text-red-800'
                                 }`}>
-                                  {module.level}
+                                  {course.level}
                                 </span>
-                                <span className="text-xs text-gray-500">
-                                  Ordine: {module.order_num}
-                                </span>
-                                {module.duration_minutes && (
-                                  <span className="text-xs text-gray-500">
-                                    {module.duration_minutes} min
-                                  </span>
-                                )}
                               </div>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => setEditingModule(module)}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Modifica modulo"
-                              >
-                                <Edit3 className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteModule(module.id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Elimina modulo"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                            
+                            {/* Course Modules */}
+                            <div className="divide-y divide-gray-100">
+                              {courseModules.map((module, index) => (
+                                <div key={module.id} className="px-4 py-3 hover:bg-gray-50">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-gray-400">├─</span>
+                                        <span className="text-lg">
+                                          {module.type === 'lesson' ? '📖' :
+                                           module.type === 'video' ? '🎥' :
+                                           module.type === 'document' ? '📄' :
+                                           module.type === 'quiz' ? '📝' : '📋'}
+                                        </span>
+                                      </div>
+                                      <div className="flex-1">
+                                        <h4 className="font-medium text-gray-900">{module.title}</h4>
+                                        <div className="flex items-center space-x-4 mt-1">
+                                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                                            module.type === 'lesson' ? 'bg-blue-100 text-blue-800' :
+                                            module.type === 'video' ? 'bg-green-100 text-green-800' :
+                                            module.type === 'document' ? 'bg-yellow-100 text-yellow-800' :
+                                            module.type === 'quiz' ? 'bg-purple-100 text-purple-800' :
+                                            'bg-gray-100 text-gray-800'
+                                          }`}>
+                                            {module.type}
+                                          </span>
+                                          <span className="text-xs text-gray-500">
+                                            #{module.order_num}
+                                          </span>
+                                          {module.duration_minutes && (
+                                            <span className="text-xs text-gray-500">
+                                              {module.duration_minutes} min
+                                            </span>
+                                          )}
+                                          {module.is_required && (
+                                            <span className="text-xs text-red-600 font-medium">
+                                              Obbligatorio
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <button
+                                        onClick={() => setEditingModule(module)}
+                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                        title="Modifica modulo"
+                                      >
+                                        <Edit3 className="h-4 w-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteModule(module.id)}
+                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Elimina modulo"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
                   </div>
                 </>
               )}
@@ -1273,75 +1313,139 @@ export default function Admin() {
                     </div>
                   )}
 
-                  {/* Quizzes List */}
-                  <div className="space-y-4">
-                    {quizzes
-                      .filter(quiz => {
-                        if (!selectedCourseForQuiz) return true;
-                        // Usa i dati della JOIN per filtrare per corso
-                        return (quiz as any).course_id === selectedCourseForQuiz;
-                      })
-                      .map((quiz) => {
-                      return (
-                        <div key={quiz.id} className="border border-gray-200 rounded-lg p-4">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-gray-900">{quiz.title}</h3>
-                              <p className="text-blue-600 text-sm font-medium">
-                                📚 Corso: {(quiz as any).course_title || 'Corso non trovato'}
-                              </p>
-                              <p className="text-gray-500 text-xs">
-                                📁 Modulo: {(quiz as any).module_title}
-                              </p>
-                              <div className="flex items-center space-x-4 mt-2">
-                                <span className="text-xs text-gray-500">
-                                  {quiz.time_limit} min
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  Soglia: {quiz.passing_score}%
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  Max tentativi: {quiz.max_attempts}
+                  {/* Hierarchical Quiz List */}
+                  <div className="space-y-6">
+                    {courses
+                      .filter(course => !selectedCourseForQuiz || course.id === selectedCourseForQuiz)
+                      .map((course) => {
+                        const courseModules = modules
+                          .filter(module => module.course_id === course.id)
+                          .sort((a, b) => (a.order_num || 0) - (b.order_num || 0));
+                        
+                        const courseQuizzes = quizzes.filter(quiz => {
+                          return (quiz as any).course_id === course.id;
+                        });
+                        
+                        if (courseQuizzes.length === 0) return null;
+                        
+                        return (
+                          <div key={course.id} className="border border-gray-300 rounded-lg overflow-hidden">
+                            {/* Course Header */}
+                            <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <BookOpen className="h-5 w-5 text-blue-600" />
+                                  <h3 className="font-semibold text-gray-900">{course.title}</h3>
+                                  <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                                    {courseQuizzes.length} quiz
+                                  </span>
+                                </div>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  course.level === 'beginner' ? 'bg-green-100 text-green-800' :
+                                  course.level === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {course.level}
                                 </span>
                               </div>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => handleViewQuizQuestions(quiz.id)}
-                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                title="Gestisci domande"
-                              >
-                                <FileText className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEditingQuiz(quiz);
-                                  setNewQuiz({
-                                    title: quiz.title,
-                                    description: quiz.description,
-                                    time_limit: quiz.time_limit,
-                                    passing_score: quiz.passing_score,
-                                    max_attempts: quiz.max_attempts
-                                  });
-                                }}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Modifica quiz"
-                              >
-                                <Edit3 className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteQuiz(quiz.id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Elimina quiz"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                            
+                            {/* Course Modules with Quizzes */}
+                            <div className="divide-y divide-gray-100">
+                              {courseModules.map((module) => {
+                                const moduleQuizzes = quizzes.filter(quiz => quiz.module_id === module.id);
+                                if (moduleQuizzes.length === 0) return null;
+                                
+                                return (
+                                  <div key={module.id} className="px-4 py-3">
+                                    {/* Module Header */}
+                                    <div className="flex items-center space-x-3 mb-3">
+                                      <span className="text-gray-400">├─</span>
+                                      <span className="text-lg">
+                                        {module.type === 'lesson' ? '📖' :
+                                         module.type === 'video' ? '🎥' :
+                                         module.type === 'document' ? '📄' :
+                                         module.type === 'quiz' ? '📝' : '📋'}
+                                      </span>
+                                      <h4 className="font-medium text-gray-900">{module.title}</h4>
+                                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                                        module.type === 'lesson' ? 'bg-blue-100 text-blue-800' :
+                                        module.type === 'video' ? 'bg-green-100 text-green-800' :
+                                        module.type === 'document' ? 'bg-yellow-100 text-yellow-800' :
+                                        module.type === 'quiz' ? 'bg-purple-100 text-purple-800' :
+                                        'bg-gray-100 text-gray-800'
+                                      }`}>
+                                        {module.type}
+                                      </span>
+                                    </div>
+                                    
+                                    {/* Module Quizzes */}
+                                    <div className="ml-8 space-y-2">
+                                      {moduleQuizzes.map((quiz) => (
+                                        <div key={quiz.id} className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100">
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center space-x-3">
+                                              <span className="text-gray-400">└─</span>
+                                              <span className="text-base">📝</span>
+                                              <div className="flex-1">
+                                                <h5 className="font-medium text-gray-900">{quiz.title}</h5>
+                                                <div className="flex items-center space-x-4 mt-1">
+                                                  <span className="text-xs text-gray-500">
+                                                    ⏱️ {quiz.time_limit} min
+                                                  </span>
+                                                  <span className="text-xs text-gray-500">
+                                                    🎯 {quiz.passing_score}% min
+                                                  </span>
+                                                  <span className="text-xs text-gray-500">
+                                                    🔄 {quiz.max_attempts} tentativi
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                              <button
+                                                onClick={() => handleViewQuizQuestions(quiz.id)}
+                                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                title="Gestisci domande"
+                                              >
+                                                <FileText className="h-4 w-4" />
+                                              </button>
+                                              <button
+                                                onClick={() => {
+                                                  setEditingQuiz(quiz);
+                                                  setNewQuiz({
+                                                    title: quiz.title,
+                                                    description: quiz.description,
+                                                    time_limit: quiz.time_limit,
+                                                    passing_score: quiz.passing_score,
+                                                    max_attempts: quiz.max_attempts
+                                                  });
+                                                }}
+                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="Modifica quiz"
+                                              >
+                                                <Edit3 className="h-4 w-4" />
+                                              </button>
+                                              <button
+                                                onClick={() => handleDeleteQuiz(quiz.id)}
+                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Elimina quiz"
+                                              >
+                                                <Trash2 className="h-4 w-4" />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                    
+                        );
+                      })}
+                      
                     {quizzes.length === 0 && (
                       <div className="text-center py-8 text-gray-500">
                         <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
