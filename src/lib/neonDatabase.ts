@@ -1565,6 +1565,16 @@ export async function getTableRecords(
         // Prova a iterare sull'oggetto
         recordsData = Object.values(recordsResult).filter(Array.isArray)[0] || [];
         console.log(`🎓 ACCADEMIA: Estratto da Object.values`);
+      }
+    }
+
+    console.log(`🎓 ACCADEMIA: countData:`, countData);
+    console.log(`🎓 ACCADEMIA: recordsData:`, recordsData);
+
+    const totalCount = parseInt(countData[0]?.count || '0');
+    const records = recordsData;
+    const hasMore = (safePage * safeLimit) < totalCount;
+
     console.log(`🎓 ACCADEMIA: Trovati ${records.length} record di ${totalCount} totali`);
     if (hiddenColumns.length > 0) {
       console.log(`🎓 ACCADEMIA: Colonne nascoste per sicurezza: ${hiddenColumns.join(', ')}`);
