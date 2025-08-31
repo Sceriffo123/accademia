@@ -21,7 +21,9 @@ import {
   AlertTriangle,
   Info,
   FolderOpen,
-  Download
+  Download,
+  Lock,
+  Unlock
 } from 'lucide-react';
 
 interface AdminStats {
@@ -797,135 +799,73 @@ export default function Admin() {
 
             {activeTab === 'users' && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Gestione Utenti ({users.length})
-                  </h3>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Gestione Utenti ({users.length})</h3>
                   <button
-                    onClick={() => setShowAddUser(true)}
-                    className="flex items-center space-x-2 bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors"
+                    onClick={() => {
+                      setUserForm({ email: '', full_name: '', password: '', role: 'user' });
+                      setShowAddUser(true);
+                    }}
+                    className="flex items-center justify-center space-x-2 bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors w-full sm:w-auto"
                   >
                     <Plus className="h-5 w-5" />
                     <span>Aggiungi Utente</span>
                   </button>
                 </div>
-                
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">Nome</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">Email</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">Ruolo</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">Registrato</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">Azioni</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users.map((user) => (
-                        <tr key={user.id} className="border-b border-gray-100">
-                          <td className="py-3 px-4">
-                            {editingUser?.id === user.id ? (
-                              <input
-                                type="text"
-                                value={editingUser.full_name}
-                                onChange={(e) => setEditingUser({...editingUser, full_name: e.target.value})}
-                                className="w-full px-2 py-1 border border-gray-300 rounded"
-                              />
-                            ) : (
-                              user.full_name
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">
-                            {editingUser?.id === user.id ? (
-                              <input
-                                type="email"
-                                value={editingUser.email}
-                                onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              />
-                            ) : (
-                              user.email
-                            )}
-                          </td>
-                          <td className="py-3 px-4">
-                            {editingUser?.id === user.id ? (
-                              <select
-                                value={editingUser.role}
-                                onChange={(e) => setEditingUser({...editingUser, role: e.target.value as 'user' | 'admin' | 'superadmin' | 'operator'})}
-                                className="px-2 py-1 border border-gray-300 rounded text-xs"
-                              >
-                                <option value="user">Utente</option>
-                                <option value="operator">Operatore</option>
-                                <option value="admin">Admin</option>
-                                {profile?.role === 'superadmin' && (
-                                  <option value="superadmin">SuperAdmin</option>
-                                )}
-                              </select>
-                            ) : (
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                user.role === 'superadmin' ? 'bg-purple-100 text-purple-800' :
-                                user.role === 'admin' ? 'bg-red-100 text-red-800' : 
-                                user.role === 'operator' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-blue-100 text-blue-800'
-                              }`}>
-                                {user.role === 'superadmin' ? 'SuperAdmin' :
-                                 user.role === 'admin' ? 'Admin' : 
-                                 user.role === 'operator' ? 'Operatore' : 'Utente'}
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">
-                            {new Date(user.created_at).toLocaleDateString('it-IT')}
-                          </td>
-                          <td className="py-3 px-4">
-                            {editingUser?.id === user.id ? (
-                              <div className="flex items-center space-x-2">
-                                <button
-                                  onClick={handleUpdateUser}
-                                  className="p-1 text-gray-400 hover:text-green-600 transition-colors"
-                                  title="Salva"
-                                >
-                                  <Save className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => setEditingUser(null)}
-                                  className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                                  title="Annulla"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-2">
-                                <button
-                                  onClick={() => setEditingUser({...user})}
-                                  className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                                  title="Modifica"
-                                >
-                                  <Edit3 className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => setShowPasswordModal(user)}
-                                  className="p-1 text-gray-400 hover:text-yellow-600 transition-colors"
-                                  title="Cambia Password"
-                                >
-                                  <Key className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteUser(user.id, user.email)}
-                                  className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                                  title="Elimina"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+
+                <div className="space-y-4">
+                  {users.map((user) => (
+                    <div
+                      key={user.id}
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors space-y-3 sm:space-y-0"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 truncate">{user.full_name}</h4>
+                        <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                        <div className="flex items-center flex-wrap gap-2 mt-1">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              user.role === 'superadmin' ? 'bg-purple-100 text-purple-800' :
+                              user.role === 'admin' ? 'bg-blue-100 text-blue-800' :
+                              user.role === 'operator' ? 'bg-green-100 text-green-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {user.role === 'superadmin' ? 'Super Admin' :
+                             user.role === 'admin' ? 'Amministratore' :
+                             user.role === 'operator' ? 'Operatore' : 'Utente'}
+                          </span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}> 
+                            {user.status === 'active' ? 'Attivo' : 'Inattivo'}
+                          </span>
+                          <span className="text-xs text-gray-500">Ultimo accesso: {user.last_login ? new Date(user.last_login).toLocaleDateString('it-IT') : 'Mai'}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-end space-x-2 flex-shrink-0">
+                        <button
+                          onClick={() => handleStatusToggle(user)}
+                          className={`p-2 rounded-full transition-colors ${user.status === 'active' ? 'text-green-500 hover:bg-green-100' : 'text-red-500 hover:bg-red-100'}`}
+                          title={user.status === 'active' ? 'Disattiva utente' : 'Attiva utente'}
+                        >
+                          {user.status === 'active' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                        </button>
+                        <button
+                          onClick={() => setShowPasswordModal(user)}
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-100 transition-colors"
+                          title="Cambia password"
+                        >
+                          <Key className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.full_name)}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-100 transition-colors"
+                          title="Elimina utente"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -1028,7 +968,7 @@ export default function Admin() {
                         <h4 className="font-medium text-gray-900 mb-1 truncate">
                           {document.filename}
                         </h4>
-                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                        <p className="text-sm text-gray-600 line-clamp-2">
                           {document.title}
                         </p>
                         <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
@@ -2050,8 +1990,8 @@ export default function Admin() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Dimensione (KB)</label>
                     <input
                       type="number"
-                      value={editingDocument.file_size || ''}
-                      onChange={(e) => setEditingDocument({...editingDocument, file_size: e.target.value ? parseInt(e.target.value) : undefined})}
+                      value={editingDocument.file_size || 0}
+                      onChange={(e) => setEditingDocument({...editingDocument, file_size: parseInt(e.target.value) || 0})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
