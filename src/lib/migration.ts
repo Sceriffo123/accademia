@@ -78,6 +78,7 @@ export async function migrateHardcodedQuizzes(): Promise<{ success: boolean; mes
       `;
       
       const existingTitles = existingModules.map(m => m.title);
+      console.log(`📋 Moduli esistenti per ${course.title}:`, existingTitles);
       let moduleId;
       
       // 1. Crea Modulo Introduzione se non esiste
