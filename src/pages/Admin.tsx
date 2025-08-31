@@ -1,31 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { 
-  getAllUsers, createUser, updateUser, deleteUser,
-  getAllNormatives,
-  getAllDocuments,
-  getAllCourses, createCourse, updateCourse, deleteCourse, getCourseEnrollments, deleteEnrollment,
-  type User, type Course, type Enrollment
-} from '../lib/neonDatabase';
+  getUsers, 
+  getUsersCount, 
+  updateUser, 
+  deleteUser, 
+  createNewUser, 
+  updateUserPassword,
+  getNormatives,
+  getNormativesCount,
+  getDocuments,
+  getDocumentsCount,
+  getUserById
+} from '../lib/api';
 import { 
   Users, 
   FileText, 
-  BookOpen,
   Database, 
   TrendingUp, 
   Plus, 
   Edit3, 
-  Edit,
   Trash2, 
+  Save, 
+  X, 
   Eye, 
-  EyeOff, 
-  Upload,
-  X,
-  AlertTriangle,
-  UserMinus,
+  EyeOff,
   Search,
+  Filter,
+  Download,
+  Upload,
+  Settings,
+  BarChart3,
+  Activity,
+  Calendar,
+  User,
+  Crown,
+  Shield,
+  AlertTriangle,
   CheckCircle,
-  BarChart3
+  Clock,
+  RefreshCw,
+  GraduationCap,
+  Wrench
 } from 'lucide-react';
 
 interface AdminStats {
@@ -46,40 +62,21 @@ export default function Admin() {
     totalDocuments: 0,
     completionRate: 85
   });
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [normatives, setNormatives] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateUser, setShowCreateUser] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<any>(null);
   const [newUser, setNewUser] = useState({
     email: '',
     fullName: '',
     password: '',
-    role: 'user' as 'user' | 'admin' | 'operator'
+    role: 'user' as 'user' | 'admin' | 'superadmin' | 'operator'
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [courseEnrollments, setCourseEnrollments] = useState<{[courseId: string]: number}>({});
-  const [showCreateCourse, setShowCreateCourse] = useState(false);
-  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
-  const [selectedCourseEnrollments, setSelectedCourseEnrollments] = useState<Enrollment[]>([]);
-  const [showEnrollmentsModal, setShowEnrollmentsModal] = useState(false);
-  const [selectedCourseTitle, setSelectedCourseTitle] = useState('');
-  const [newCourse, setNewCourse] = useState({
-    title: '',
-    description: '',
-    duration: '',
-    level: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
-    category: '',
-    instructor: '',
-    modules_count: 1,
-    price: 0,
-    is_free: true,
-    passing_score: 70,
-    tags: ''
-  });
+  const [courses, setCourses] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -87,25 +84,15 @@ export default function Admin() {
 
   async function fetchData() {
     try {
-      const [usersData, normativesData, documentsData, coursesData] = await Promise.all([
-        getAllUsers(true, profile?.id),
-        getAllNormatives(),
-        getAllDocuments(),
-        getAllCourses()
+      const [usersData, normativesData, documentsData] = await Promise.all([
+        getUsers(true, profile?.id),
+        getNormatives(),
+        getDocuments()
       ]);
 
       setUsers(usersData);
       setNormatives(normativesData);
       setDocuments(documentsData);
-      setCourses(coursesData);
-      
-      // Carica il conteggio degli iscritti per ogni corso
-      const enrollmentCounts: {[courseId: string]: number} = {};
-      for (const course of coursesData) {
-        const enrollments = await getCourseEnrollments(course.id);
-        enrollmentCounts[course.id] = enrollments.length;
-      }
-      setCourseEnrollments(enrollmentCounts);
       
       setStats({
         totalUsers: usersData.length,
@@ -122,7 +109,7 @@ export default function Admin() {
 
   async function handleCreateUser() {
     try {
-      await createUser(newUser.email, newUser.fullName, newUser.password, newUser.role);
+      await createNewUser(newUser.email, newUser.fullName, newUser.password, newUser.role);
       setNewUser({ email: '', fullName: '', password: '', role: 'user' });
       setShowCreateUser(false);
       fetchData();
@@ -131,131 +118,21 @@ export default function Admin() {
     }
   }
 
-  const handleUpdateUser = async () => {
+  async function handleUpdateUser() {
     if (!editingUser) return;
     
     try {
       await updateUser(editingUser.id, {
-        full_name: editingUser.full_name,
         email: editingUser.email,
+        full_name: editingUser.full_name,
         role: editingUser.role
       });
-      
-      setUsers(users.map(user => 
-        user.id === editingUser.id ? editingUser : user
-      ));
       setEditingUser(null);
+      fetchData();
     } catch (error) {
       console.error('Error updating user:', error);
     }
-  };
-
-  const handleCreateCourse = async () => {
-    try {
-      const courseData = {
-        ...newCourse,
-        status: 'active' as const,
-        rating: 0,
-        tags: newCourse.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
-      };
-      
-      const createdCourse = await createCourse(courseData);
-      if (!createdCourse) throw new Error('Failed to create course');
-      setCourses([...courses, createdCourse]);
-      setNewCourse({
-        title: '',
-        description: '',
-        duration: '',
-        level: 'beginner',
-        category: '',
-        instructor: '',
-        modules_count: 1,
-        price: 0,
-        is_free: true,
-        passing_score: 70,
-        tags: ''
-      });
-      setShowCreateCourse(false);
-    } catch (error) {
-      console.error('Error creating course:', error);
-    }
-  };
-
-  const handleUpdateCourse = async () => {
-    if (!editingCourse) return;
-    
-    try {
-      const courseData = {
-        ...editingCourse,
-        tags: Array.isArray(editingCourse.tags) 
-          ? editingCourse.tags 
-          : editingCourse.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0)
-      };
-      
-      await updateCourse(editingCourse.id, courseData);
-      setCourses(courses.map(course => 
-        course.id === editingCourse.id ? {...editingCourse, tags: courseData.tags} : course
-      ));
-      setEditingCourse(null);
-    } catch (error) {
-      console.error('Error updating course:', error);
-    }
-  };
-
-  const handleDeleteCourse = async (courseId: string) => {
-    if (!confirm('Sei sicuro di voler eliminare questo corso?')) return;
-    
-    try {
-      await deleteCourse(courseId);
-      setCourses(courses.filter(course => course.id !== courseId));
-    } catch (error) {
-      console.error('Error deleting course:', error);
-    }
-  };
-
-  const handleViewEnrollments = async (course: Course) => {
-    try {
-      const enrollments = await getCourseEnrollments(course.id);
-      setSelectedCourseEnrollments(enrollments);
-      setSelectedCourseTitle(course.title);
-      setShowEnrollmentsModal(true);
-    } catch (error) {
-      console.error('Error fetching enrollments:', error);
-    }
-  };
-
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [enrollmentToCancel, setEnrollmentToCancel] = useState<string | null>(null);
-
-  const handleCancelEnrollment = async (enrollmentId: string) => {
-    setEnrollmentToCancel(enrollmentId);
-    setShowCancelConfirm(true);
-  };
-
-  const confirmCancelEnrollment = async () => {
-    if (!enrollmentToCancel) return;
-    
-    try {
-      await deleteEnrollment(enrollmentToCancel);
-      // Ricarica le iscrizioni del corso corrente
-      const updatedEnrollments = selectedCourseEnrollments.filter(e => e.id !== enrollmentToCancel);
-      setSelectedCourseEnrollments(updatedEnrollments);
-      
-      // Aggiorna il conteggio degli iscritti
-      const courseId = selectedCourseEnrollments.find(e => e.id === enrollmentToCancel)?.course_id;
-      if (courseId) {
-        setCourseEnrollments(prev => ({
-          ...prev,
-          [courseId]: (prev[courseId] || 1) - 1
-        }));
-      }
-      
-      setShowCancelConfirm(false);
-      setEnrollmentToCancel(null);
-    } catch (error) {
-      console.error('Error canceling enrollment:', error);
-    }
-  };
+  }
 
   async function handleDeleteUser(userId: string) {
     if (confirm('Sei sicuro di voler eliminare questo utente?')) {
@@ -320,7 +197,7 @@ export default function Admin() {
     { id: 'users', label: 'Utenti', icon: Users },
     { id: 'normatives', label: 'Normative', icon: FileText },
     { id: 'documents', label: 'Documenti', icon: Database },
-    { id: 'courses', label: 'Formazione', icon: BookOpen },
+    { id: 'courses', label: 'Formazione', icon: GraduationCap }
   ];
 
   if (loading) {
@@ -396,7 +273,7 @@ export default function Admin() {
         {/* Desktop Tab Navigation */}
         <div className="hidden lg:block mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-2">
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isTabActive = activeTab === tab.id;
@@ -692,8 +569,8 @@ export default function Admin() {
                           <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Scarica documento">
-                            <Upload className="h-4 w-4" />
+                          <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                            <Download className="h-4 w-4" />
                           </button>
                           <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                             <Trash2 className="h-4 w-4" />
@@ -703,79 +580,6 @@ export default function Admin() {
                       <div className="text-xs text-gray-500">
                         Caricato: {new Date(doc.created_at).toLocaleDateString('it-IT')} • 
                         Dimensione: {doc.file_size ? `${doc.file_size} KB` : 'N/A'}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Courses Tab */}
-          {activeTab === 'courses' && (
-            <div className="p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-4 sm:space-y-0">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Gestione Corsi ({courses.length})
-                </h2>
-                <button
-                  onClick={() => setShowCreateCourse(true)}
-                  className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Nuovo Corso</span>
-                </button>
-              </div>
-
-              {/* Courses List */}
-              <div className="space-y-4">
-                {courses.map((course) => (
-                  <div key={course.id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">{course.title}</h3>
-                        <p className="text-gray-600 text-sm">{course.category}</p>
-                        <div className="flex items-center space-x-4 mt-2">
-                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                            course.is_free ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {course.is_free ? 'Gratuito' : `€${course.price}`}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {courseEnrollments[course.id] || 0} iscritti
-                          </span>
-                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                            course.status === 'active' ? 'bg-green-100 text-green-800' :
-                            course.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {course.status === 'active' ? 'Attivo' :
-                             course.status === 'draft' ? 'Bozza' : 'Archiviato'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleViewEnrollments(course)}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                          title="Visualizza iscritti"
-                        >
-                          <Users className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setEditingCourse(course)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Modifica corso"
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteCourse(course.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Elimina corso"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -843,7 +647,7 @@ export default function Admin() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo</label>
                   <select
                     value={newUser.role}
-                    onChange={(e) => setNewUser({...newUser, role: e.target.value as 'user' | 'admin' | 'operator'})}
+                    onChange={(e) => setNewUser({...newUser, role: e.target.value as any})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="user">Utente</option>
@@ -867,6 +671,23 @@ export default function Admin() {
                   Crea Utente
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit User Modal */}
+        {editingUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Modifica Utente</h3>
+                <button
+                  onClick={() => setEditingUser(null)}
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
               
               <div className="p-6 space-y-4">
                 <div>
@@ -874,10 +695,8 @@ export default function Admin() {
                   <input
                     type="text"
                     value={editingUser.full_name}
-                    onChange={(e) => editingUser && setEditingUser({...editingUser, full_name: e.target.value})}
+                    onChange={(e) => setEditingUser({...editingUser, full_name: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Nome Cognome"
-                    title="Nome completo dell'utente"
                   />
                 </div>
                 
@@ -886,10 +705,8 @@ export default function Admin() {
                   <input
                     type="email"
                     value={editingUser.email}
-                    onChange={(e) => editingUser && setEditingUser({...editingUser, email: e.target.value})}
+                    onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="email@esempio.com"
-                    title="Indirizzo email utente"
                   />
                 </div>
                 
@@ -897,9 +714,8 @@ export default function Admin() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo</label>
                   <select
                     value={editingUser.role}
-                    onChange={(e) => editingUser && setEditingUser({...editingUser, role: e.target.value as 'user' | 'admin' | 'operator' | 'superadmin'})}
+                    onChange={(e) => setEditingUser({...editingUser, role: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    title="Seleziona ruolo utente"
                   >
                     <option value="user">Utente</option>
                     <option value="operator">Operatore</option>
@@ -920,507 +736,6 @@ export default function Admin() {
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Salva Modifiche
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Create Course Modal */}
-        {showCreateCourse && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Nuovo Corso di Formazione</h3>
-                <button
-                  onClick={() => setShowCreateCourse(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Chiudi"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Titolo Corso</label>
-                    <input
-                      type="text"
-                      value={newCourse.title}
-                      onChange={(e) => setNewCourse({...newCourse, title: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Es. Evoluzione Normativa 2024"
-                      title="Titolo del corso"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-                    <input
-                      type="text"
-                      value={newCourse.category}
-                      onChange={(e) => setNewCourse({...newCourse, category: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Es. Normativa, Sicurezza, Management"
-                      title="Categoria del corso"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione</label>
-                  <textarea
-                    value={newCourse.description}
-                    onChange={(e) => setNewCourse({...newCourse, description: e.target.value})}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Descrizione dettagliata del corso..."
-                    title="Descrizione del corso"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Durata</label>
-                    <input
-                      type="text"
-                      value={newCourse.duration}
-                      onChange={(e) => setNewCourse({...newCourse, duration: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Es. 8 ore"
-                      title="Durata del corso"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Livello</label>
-                    <select
-                      value={newCourse.level}
-                      onChange={(e) => setNewCourse({...newCourse, level: e.target.value as 'beginner' | 'intermediate' | 'advanced'})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      title="Seleziona livello corso"
-                    >
-                      <option value="beginner">Base</option>
-                      <option value="intermediate">Intermedio</option>
-                      <option value="advanced">Avanzato</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Moduli</label>
-                    <input
-                      type="number"
-                      value={newCourse.modules_count}
-                      onChange={(e) => setNewCourse({...newCourse, modules_count: parseInt(e.target.value) || 1})}
-                      min="1"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="1"
-                      title="Numero di moduli del corso"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Istruttore</label>
-                  <input
-                    type="text"
-                    value={newCourse.instructor}
-                    onChange={(e) => setNewCourse({...newCourse, instructor: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Nome Cognome"
-                    title="Nome dell'istruttore del corso"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Punteggio Minimo (%)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={newCourse.passing_score}
-                    onChange={(e) => setNewCourse({...newCourse, passing_score: parseInt(e.target.value) || 70})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="70"
-                    title="Punteggio minimo per superare il corso"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tags (separati da virgola)</label>
-                  <input
-                    type="text"
-                    value={newCourse.tags}
-                    onChange={(e) => setNewCourse({...newCourse, tags: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="normativa, aggiornamento, obbligatorio"
-                    title="Tags del corso separati da virgola"
-                  />
-                </div>
-
-                <div className="border-t border-gray-200 pt-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="is_free"
-                        checked={newCourse.is_free}
-                        onChange={(e) => setNewCourse({...newCourse, is_free: e.target.checked, price: e.target.checked ? 0 : newCourse.price})}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor="is_free" className="ml-2 text-sm text-gray-700">
-                        Corso Gratuito
-                      </label>
-                    </div>
-                    
-                    {!newCourse.is_free && (
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Prezzo (€)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={newCourse.price}
-                          onChange={(e) => setNewCourse({...newCourse, price: parseFloat(e.target.value) || 0})}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="299.00"
-                          title="Prezzo del corso in euro"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-                <button
-                  onClick={() => setShowCreateCourse(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Annulla
-                </button>
-                <button
-                  onClick={handleCreateCourse}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Crea Corso
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Edit Course Modal */}
-        {editingCourse && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Modifica Corso</h3>
-                <button
-                  onClick={() => setEditingCourse(null)}
-                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Chiudi"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Titolo Corso</label>
-                    <input
-                      type="text"
-                      value={editingCourse.title}
-                      onChange={(e) => setEditingCourse({...editingCourse, title: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Titolo del corso"
-                      title="Titolo del corso"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-                    <input
-                      type="text"
-                      value={editingCourse.category}
-                      onChange={(e) => setEditingCourse({...editingCourse, category: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Categoria del corso"
-                      title="Categoria del corso"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione</label>
-                  <textarea
-                    value={editingCourse.description}
-                    onChange={(e) => setEditingCourse({...editingCourse, description: e.target.value})}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Durata</label>
-                    <input
-                      type="text"
-                      value={editingCourse.duration}
-                      onChange={(e) => setEditingCourse({...editingCourse, duration: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Livello</label>
-                    <select
-                      value={editingCourse.level}
-                      onChange={(e) => setEditingCourse({...editingCourse, level: e.target.value as 'beginner' | 'intermediate' | 'advanced'})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="beginner">Base</option>
-                      <option value="intermediate">Intermedio</option>
-                      <option value="advanced">Avanzato</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Moduli</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={editingCourse.modules_count}
-                      onChange={(e) => setEditingCourse({...editingCourse, modules_count: parseInt(e.target.value) || 1})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Istruttore</label>
-                    <input
-                      type="text"
-                      value={editingCourse.instructor}
-                      onChange={(e) => setEditingCourse({...editingCourse, instructor: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Punteggio Minimo (%)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={editingCourse.passing_score}
-                      onChange={(e) => setEditingCourse({...editingCourse, passing_score: parseInt(e.target.value) || 70})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tags (separati da virgola)</label>
-                  <input
-                    type="text"
-                    value={Array.isArray(editingCourse.tags) ? editingCourse.tags.join(', ') : editingCourse.tags || ''}
-                    onChange={(e) => setEditingCourse({...editingCourse, tags: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="normativa, aggiornamento, obbligatorio"
-                    title="Tags del corso separati da virgola"
-                  />
-                </div>
-
-                <div className="border-t border-gray-200 pt-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="edit_is_free"
-                        checked={editingCourse.is_free}
-                        onChange={(e) => setEditingCourse({...editingCourse, is_free: e.target.checked, price: e.target.checked ? 0 : editingCourse.price})}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor="edit_is_free" className="ml-2 text-sm text-gray-700">
-                        Corso Gratuito
-                      </label>
-                    </div>
-                    
-                    {!editingCourse.is_free && (
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Prezzo (€)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={editingCourse.price}
-                          onChange={(e) => setEditingCourse({...editingCourse, price: parseFloat(e.target.value) || 0})}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-                <button
-                  onClick={() => setEditingCourse(null)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Annulla
-                </button>
-                <button
-                  onClick={handleUpdateCourse}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Salva Modifiche
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal Gestione Iscrizioni */}
-        {showEnrollmentsModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Iscritti al corso: {selectedCourseTitle}
-                </h3>
-                <button
-                  onClick={() => setShowEnrollmentsModal(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Chiudi"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              
-              <div className="p-6 overflow-y-auto max-h-[70vh]">
-                {selectedCourseEnrollments.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">Nessun iscritto per questo corso</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {selectedCourseEnrollments.map((enrollment) => (
-                      <div key={enrollment.id} className="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-4">
-                            <div className="flex-1">
-                              <h4 className="font-medium text-gray-900">
-                                {(enrollment as any).user_name || 'Nome non disponibile'}
-                              </h4>
-                              <p className="text-sm text-gray-600">
-                                {(enrollment as any).user_email || 'Email non disponibile'}
-                              </p>
-                              <div className="flex items-center space-x-4 mt-2">
-                                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                                  enrollment.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                  enrollment.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                  {enrollment.status === 'completed' ? 'Completato' :
-                                   enrollment.status === 'in_progress' ? 'In corso' : 'Iscritto'}
-                                </span>
-                                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                                  enrollment.payment_status === 'paid' ? 'bg-green-100 text-green-800' :
-                                  enrollment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {enrollment.payment_status === 'paid' ? 'Pagato' :
-                                   enrollment.payment_status === 'pending' ? 'Pagamento pendente' : 'Gratuito'}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  Iscritto: {new Date(enrollment.enrolled_at).toLocaleDateString('it-IT')}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => handleCancelEnrollment(enrollment.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Annulla iscrizione"
-                          >
-                            <UserMinus className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-                <button
-                  onClick={() => setShowEnrollmentsModal(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Chiudi
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal Conferma Annullamento Iscrizione */}
-        {showCancelConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <div className="flex items-center space-x-3">
-                  <div className="flex-shrink-0">
-                    <AlertTriangle className="h-6 w-6 text-amber-500" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Conferma Annullamento
-                  </h3>
-                </div>
-              </div>
-              
-              <div className="p-6">
-                <p className="text-gray-600 mb-4">
-                  Sei sicuro di voler annullare questa iscrizione al corso?
-                </p>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm text-amber-800">
-                      <p className="font-medium mb-1">Attenzione:</p>
-                      <ul className="list-disc list-inside space-y-1">
-                        <li>L&apos;iscrizione verrà rimossa definitivamente</li>
-                        <li>L&apos;utente perderà l&apos;accesso al corso</li>
-                        <li>I progressi del corso verranno mantenuti per eventuali future iscrizioni</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-                <button
-                  onClick={() => {
-                    setShowCancelConfirm(false);
-                    setEnrollmentToCancel(null);
-                  }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Annulla
-                </button>
-                <button
-                  onClick={confirmCancelEnrollment}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  Conferma Annullamento
                 </button>
               </div>
             </div>
