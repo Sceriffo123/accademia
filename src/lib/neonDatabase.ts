@@ -582,6 +582,36 @@ export async function getTableRecords(tableName: string, limit: number = 100): P
   }
 }
 
+export async function getTableStructure(tableName: string): Promise<any[]> {
+  try {
+    console.log('🎓 NEON: Recupero struttura tabella:', tableName);
+    
+    // Validazione nome tabella per sicurezza
+    const allowedTables = ['users', 'normatives', 'documents'];
+    if (!allowedTables.includes(tableName)) {
+      throw new Error(`Tabella non consentita: ${tableName}`);
+    }
+    
+    const result = await sql`
+      SELECT 
+        column_name,
+        data_type,
+        is_nullable,
+        column_default,
+        character_maximum_length
+      FROM information_schema.columns
+      WHERE table_name = ${tableName}
+      AND table_schema = 'public'
+      ORDER BY ordinal_position
+    `;
+    
+    return result;
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero struttura tabella:', error);
+    return [];
+  }
+}
+
 // === INIZIALIZZAZIONE DATABASE ===
 
 export async function initializeDatabase(): Promise<boolean> {
