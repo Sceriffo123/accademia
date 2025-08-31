@@ -157,6 +157,14 @@ export default function Admin() {
       setDocuments(documentsData);
       setCourses(coursesData);
       
+      // Carica tutti i moduli
+      const allModules = [];
+      for (const course of coursesData) {
+        const courseModules = await getCourseModules(course.id);
+        allModules.push(...courseModules);
+      }
+      setModules(allModules);
+      
       // Carica il conteggio degli iscritti per ogni corso
       const enrollmentCounts: {[courseId: string]: number} = {};
       for (const course of coursesData) {
