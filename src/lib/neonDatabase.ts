@@ -570,6 +570,17 @@ export async function updateRolePermission(role: string, permission: string, gra
   }
 }
 
+export async function updateRoleSection(role: string, section: string, granted: boolean): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Aggiornamento sezione ruolo:', { role, section, granted });
+    // Placeholder function - implementazione da completare
+    return true;
+  } catch (error) {
+    console.error('🚨 NEON: Errore aggiornamento sezione ruolo:', error);
+    return false;
+  }
+}
+
 export async function getTableRecords(tableName: string, limit: number = 100): Promise<any[]> {
   try {
     console.log('🎓 NEON: Recupero record da tabella:', tableName);
