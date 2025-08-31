@@ -589,8 +589,8 @@ export default function Docx() {
               <div className="space-y-6">
                 {/* Document Header */}
                 <div className="bg-gray-50 rounded-xl p-6">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
-                    <div className="flex items-center space-x-4 mb-4 md:mb-0">
+                  <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center justify-between mb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
                       <div className="p-4 bg-blue-100 rounded-xl">
                         <FileText className="h-6 w-6 text-blue-600" />
                       </div>
@@ -598,22 +598,22 @@ export default function Docx() {
                         <h2 className="text-2xl font-bold text-gray-900 mb-1">
                           {selectedDocument.title}
                         </h2>
-                        <div className="flex items-center space-x-3">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                           <span className={`px-3 py-1 rounded-full text-sm font-medium ${getTypeColor(selectedDocument.type)}`}>
                             {getTypeLabel(selectedDocument.type)}
                           </span>
-                          <span className="text-sm text-gray-600">
+                          <span className="text-xs sm:text-sm text-gray-600">
                             Categoria: {selectedDocument.category}
                           </span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {canView && (
                         <>
                           <button
                             onClick={() => handleDownloadDocument(selectedDocument)}
-                            className="flex items-center space-x-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                            className="flex items-center space-x-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                             title="Scarica PDF"
                           >
                             <Download className="h-4 w-4" />
@@ -622,7 +622,7 @@ export default function Docx() {
                           {selectedDocument.file_path && (
                             <button
                               onClick={() => handleDownloadOriginalFile(selectedDocument)}
-                              className="flex items-center space-x-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                              className="flex items-center space-x-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
                               title={isGoogleDriveUrl(selectedDocument.file_path) ? "Scarica da Google Drive" : "Scarica file originale"}
                             >
                               {isGoogleDriveUrl(selectedDocument.file_path) ? (
@@ -645,7 +645,7 @@ export default function Docx() {
                       {canEdit && (
                         <button
                           onClick={() => handleEditDocument(selectedDocument)}
-                          className="flex items-center space-x-1 px-3 py-1.5 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                          className="flex items-center space-x-1 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm"
                         >
                           <Edit3 className="h-4 w-4" />
                           <span>Modifica</span>
@@ -743,32 +743,32 @@ export default function Docx() {
                 )}
 
                 {/* Document Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="bg-white border border-gray-200 rounded-xl p-6">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                       <Info className="h-5 w-5 text-blue-600 mr-2" />
                       Dettagli Documento
                     </h4>
                     <div className="space-y-3">
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Nome file:</span>
-                        <span className="font-medium text-gray-900">{selectedDocument.filename || 'N/A'}</span>
+                        <span className="font-medium text-gray-900 break-all">{selectedDocument.filename || 'N/A'}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Dimensione:</span>
                         <span className="font-medium text-gray-900">
                           {selectedDocument.file_size ? `${selectedDocument.file_size} KB` : 'N/A'}
                         </span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Tipo MIME:</span>
-                        <span className="font-medium text-gray-900">{selectedDocument.mime_type || 'N/A'}</span>
+                        <span className="font-medium text-gray-900 break-all text-xs sm:text-sm">{selectedDocument.mime_type || 'N/A'}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Versione:</span>
                         <span className="font-medium text-gray-900">{selectedDocument.version || 'N/A'}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Stato:</span>
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                           selectedDocument.status === 'active' ? 'bg-green-100 text-green-800' :
@@ -789,13 +789,13 @@ export default function Docx() {
                       Informazioni Upload
                     </h4>
                     <div className="space-y-3">
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Caricato da:</span>
                         <span className="font-medium text-gray-900">{uploaderName || 'Caricamento...'}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Data upload:</span>
-                        <span className="font-medium text-gray-900">
+                        <span className="font-medium text-gray-900 text-sm">
                           {new Date(selectedDocument.created_at).toLocaleDateString('it-IT', {
                             year: 'numeric',
                             month: 'long',
@@ -805,22 +805,14 @@ export default function Docx() {
                           })}
                         </span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Ultima modifica:</span>
-                        <span className="font-medium text-gray-900">
+                        <span className="font-medium text-gray-900 text-sm">
                           {new Date(selectedDocument.updated_at).toLocaleDateString('it-IT', {
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric',
                             hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Download:</span>
-                        <span className="font-medium text-gray-900">{selectedDocument.download_count || 0}</span>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -856,7 +848,7 @@ export default function Docx() {
                       {selectedDocument.tags.map((tag, index) => (
                         <span
                           key={index}
-                          className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                          className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs sm:text-sm font-medium"
                         >
                           {tag}
                         </span>
