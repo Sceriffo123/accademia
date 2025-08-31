@@ -5,6 +5,8 @@ const sql = neon(import.meta.env.VITE_DATABASE_URL!);
 // Export sql per uso in altri moduli
 export { sql };
 
+// BACKUP CREATO: neonDatabase.ts.backup prima delle modifiche per sistema corsi professionali
+
 export interface User {
   id: string;
   email: string;
@@ -46,6 +48,22 @@ export interface Course {
   file_path?: string;
   thumbnail_path?: string;
   price: number;
+  is_free: boolean;
+  certificate_template?: string;
+  passing_score: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Enrollment {
+  id: string;
+  user_id: string;
+  course_id: string;
+  status: 'enrolled' | 'in_progress' | 'completed' | 'failed';
+  enrolled_at: string;
+  completed_at?: string;
+  score?: number;
+  payment_status: 'free' | 'paid' | 'pending';
   created_at: string;
   updated_at: string;
 }
@@ -221,8 +239,29 @@ export async function initializeTables() {
         file_path VARCHAR(500),
         thumbnail_path VARCHAR(500),
         price DECIMAL(10,2) DEFAULT 0.00,
+        is_free BOOLEAN DEFAULT true,
+        certificate_template TEXT,
+        passing_score INTEGER DEFAULT 70,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+
+    // Crea tabella enrollments
+    console.log('🎓 ACCADEMIA: Configurazione sistema iscrizioni...');
+    await sql`
+      CREATE TABLE IF NOT EXISTS enrollments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
+        status VARCHAR(20) DEFAULT 'enrolled' CHECK (status IN ('enrolled', 'in_progress', 'completed', 'failed')),
+        enrolled_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        completed_at TIMESTAMP WITH TIME ZONE,
+        score INTEGER,
+        payment_status VARCHAR(20) DEFAULT 'free' CHECK (payment_status IN ('free', 'paid', 'pending')),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(user_id, course_id)
       )
     `;
 
@@ -233,6 +272,9 @@ export async function initializeTables() {
     // Inserisci permessi e configurazioni di default
     await insertDefaultPermissions();
     await insertDefaultRoleConfiguration();
+    
+    // Popola corsi reali dal frontend
+    await insertRealCourses();
 
     // Migrazione: Aggiungi colonne filename e file_path a normatives se non esistono
     console.log('🎓 ACCADEMIA: Verifica migrazione normatives...');
@@ -1592,6 +1634,9 @@ export async function createCourse(data: {
   file_path?: string;
   thumbnail_path?: string;
   price?: number;
+  is_free?: boolean;
+  certificate_template?: string;
+  passing_score?: number;
 }): Promise<Course | null> {
   try {
     console.log('🎓 ACCADEMIA: Creazione nuovo corso...');
@@ -1600,14 +1645,16 @@ export async function createCourse(data: {
       INSERT INTO courses (
         title, description, duration, level, instructor, category, 
         status, modules_count, enrollment_count, rating, tags, 
-        file_path, thumbnail_path, price, updated_at
+        file_path, thumbnail_path, price, is_free, certificate_template, 
+        passing_score, updated_at
       )
       VALUES (
         ${data.title}, ${data.description}, ${data.duration}, ${data.level}, 
         ${data.instructor}, ${data.category}, ${data.status || 'active'}, 
         ${data.modules_count || 0}, ${data.enrollment_count || 0}, 
         ${data.rating || 0.0}, ${data.tags || []}, ${data.file_path}, 
-        ${data.thumbnail_path}, ${data.price || 0.00}, NOW()
+        ${data.thumbnail_path}, ${data.price || 0.00}, ${data.is_free ?? true}, 
+        ${data.certificate_template}, ${data.passing_score || 70}, NOW()
       )
       RETURNING *
     `;
@@ -1635,6 +1682,9 @@ export async function updateCourse(id: string, data: {
   file_path?: string;
   thumbnail_path?: string;
   price?: number;
+  is_free?: boolean;
+  certificate_template?: string;
+  passing_score?: number;
 }): Promise<Course | null> {
   try {
     console.log('🎓 ACCADEMIA: Aggiornamento corso:', id);
@@ -1648,6 +1698,8 @@ export async function updateCourse(id: string, data: {
           enrollment_count = ${data.enrollment_count}, rating = ${data.rating},
           tags = ${data.tags}, file_path = ${data.file_path},
           thumbnail_path = ${data.thumbnail_path}, price = ${data.price},
+          is_free = ${data.is_free}, certificate_template = ${data.certificate_template},
+          passing_score = ${data.passing_score},
           updated_at = NOW()
       WHERE id = ${id}
       RETURNING *
@@ -1686,5 +1738,238 @@ export async function deleteCourse(id: string): Promise<boolean> {
   } catch (error) {
     console.error('🚨 ACCADEMIA: Errore eliminazione corso:', error);
     throw error;
+  }
+}
+
+// === METODI CRUD PER ENROLLMENTS ===
+export async function createEnrollment(data: {
+  user_id: string;
+  course_id: string;
+  payment_status?: 'free' | 'paid' | 'pending';
+}): Promise<Enrollment | null> {
+  try {
+    console.log('🎓 ACCADEMIA: Creazione nuova iscrizione...');
+    
+    const result = await sql`
+      INSERT INTO enrollments (user_id, course_id, payment_status)
+      VALUES (${data.user_id}, ${data.course_id}, ${data.payment_status || 'free'})
+      RETURNING *
+    `;
+    
+    console.log('🎓 ACCADEMIA: Iscrizione creata con successo');
+    return result[0] as Enrollment;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore creazione iscrizione:', error);
+    throw error;
+  }
+}
+
+export async function getUserEnrollments(userId: string): Promise<Enrollment[]> {
+  try {
+    const result = await sql`
+      SELECT e.*, c.title as course_title, c.description as course_description,
+             c.duration, c.level, c.rating, c.price, c.is_free
+      FROM enrollments e
+      JOIN courses c ON e.course_id = c.id
+      WHERE e.user_id = ${userId}
+      ORDER BY e.enrolled_at DESC
+    `;
+    return result as Enrollment[];
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore recupero iscrizioni utente:', error);
+    return [];
+  }
+}
+
+export async function getCourseEnrollments(courseId: string): Promise<Enrollment[]> {
+  try {
+    const result = await sql`
+      SELECT e.*, u.full_name as user_name, u.email as user_email
+      FROM enrollments e
+      JOIN users u ON e.user_id = u.id
+      WHERE e.course_id = ${courseId}
+      ORDER BY e.enrolled_at DESC
+    `;
+    return result as Enrollment[];
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore recupero iscrizioni corso:', error);
+    return [];
+  }
+}
+
+export async function updateEnrollmentStatus(id: string, data: {
+  status?: 'enrolled' | 'in_progress' | 'completed' | 'failed';
+  score?: number;
+  completed_at?: string;
+}): Promise<Enrollment | null> {
+  try {
+    console.log('🎓 ACCADEMIA: Aggiornamento stato iscrizione:', id);
+    
+    const result = await sql`
+      UPDATE enrollments
+      SET status = ${data.status}, score = ${data.score}, 
+          completed_at = ${data.completed_at}, updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    if (result && result.length > 0) {
+      console.log('🎓 ACCADEMIA: Iscrizione aggiornata');
+      return result[0] as Enrollment;
+    }
+    return null;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore aggiornamento iscrizione:', error);
+    throw error;
+  }
+}
+
+export async function deleteEnrollment(id: string): Promise<boolean> {
+  try {
+    console.log('🎓 ACCADEMIA: Eliminazione iscrizione:', id);
+    
+    const result = await sql`
+      DELETE FROM enrollments 
+      WHERE id = ${id}
+      RETURNING id
+    `;
+    
+    return result.length > 0;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore eliminazione iscrizione:', error);
+    throw error;
+  }
+}
+
+export async function checkUserEnrollment(userId: string, courseId: string): Promise<Enrollment | null> {
+  try {
+    const result = await sql`
+      SELECT * FROM enrollments
+      WHERE user_id = ${userId} AND course_id = ${courseId}
+    `;
+    return result[0] as Enrollment || null;
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore verifica iscrizione:', error);
+    return null;
+  }
+}
+
+// Popola corsi reali dal frontend Education.tsx
+async function insertRealCourses() {
+  try {
+    console.log('🎓 ACCADEMIA: Popolamento corsi reali...');
+    
+    // Verifica se esistono già corsi
+    const existingCourses = await sql`SELECT COUNT(*) as count FROM courses`;
+    if (parseInt(existingCourses[0].count) > 0) {
+      console.log('🎓 ACCADEMIA: Corsi già presenti, skip popolamento');
+      return;
+    }
+
+    const realCourses = [
+      {
+        title: 'Normative di Base del Trasporto Locale',
+        description: 'Introduzione alle principali normative che regolano il trasporto pubblico locale non di linea',
+        duration: '2 ore',
+        level: 'beginner',
+        category: 'Normative',
+        instructor: 'Dott. Marco Rossi',
+        modules_count: 6,
+        rating: 4.8,
+        price: 0.00,
+        is_free: true,
+        passing_score: 70,
+        tags: ['normative', 'base', 'trasporto', 'locale']
+      },
+      {
+        title: 'Licenze e Autorizzazioni',
+        description: 'Procedure per ottenere e mantenere le licenze necessarie per operare nel settore',
+        duration: '3 ore',
+        level: 'intermediate',
+        category: 'Licenze',
+        instructor: 'Avv. Laura Bianchi',
+        modules_count: 8,
+        rating: 4.9,
+        price: 49.99,
+        is_free: false,
+        passing_score: 75,
+        tags: ['licenze', 'autorizzazioni', 'procedure']
+      },
+      {
+        title: 'Sicurezza e Responsabilità',
+        description: 'Normative sulla sicurezza, responsabilità civile e penale degli operatori',
+        duration: '2.5 ore',
+        level: 'intermediate',
+        category: 'Sicurezza',
+        instructor: 'Ing. Giuseppe Verdi',
+        modules_count: 7,
+        rating: 4.7,
+        price: 39.99,
+        is_free: false,
+        passing_score: 80,
+        tags: ['sicurezza', 'responsabilità', 'civile', 'penale']
+      },
+      {
+        title: 'Gestione Documenti e Adempimenti',
+        description: 'Come gestire correttamente documenti, registri e adempimenti obbligatori',
+        duration: '1.5 ore',
+        level: 'beginner',
+        category: 'Amministrazione',
+        instructor: 'Dott.ssa Anna Neri',
+        modules_count: 5,
+        rating: 4.6,
+        price: 0.00,
+        is_free: true,
+        passing_score: 70,
+        tags: ['documenti', 'adempimenti', 'registri']
+      },
+      {
+        title: 'Controlli e Sanzioni',
+        description: 'Normative sui controlli, procedure sanzionatorie e ricorsi',
+        duration: '2 ore',
+        level: 'advanced',
+        category: 'Controlli',
+        instructor: 'Avv. Roberto Blu',
+        modules_count: 6,
+        rating: 4.9,
+        price: 59.99,
+        is_free: false,
+        passing_score: 85,
+        tags: ['controlli', 'sanzioni', 'ricorsi']
+      },
+      {
+        title: 'Evoluzione Normativa 2024',
+        description: 'Aggiornamenti e novità normative introdotte nel 2024',
+        duration: '1 ora',
+        level: 'advanced',
+        category: 'Aggiornamenti',
+        instructor: 'Prof. Claudio Gialli',
+        modules_count: 4,
+        rating: 5.0,
+        price: 29.99,
+        is_free: false,
+        passing_score: 90,
+        tags: ['2024', 'aggiornamenti', 'novità']
+      }
+    ];
+
+    for (const course of realCourses) {
+      await sql`
+        INSERT INTO courses (
+          title, description, duration, level, category, instructor,
+          modules_count, rating, price, is_free, passing_score, tags, status
+        )
+        VALUES (
+          ${course.title}, ${course.description}, ${course.duration}, 
+          ${course.level}, ${course.category}, ${course.instructor},
+          ${course.modules_count}, ${course.rating}, ${course.price},
+          ${course.is_free}, ${course.passing_score}, ${course.tags}, 'active'
+        )
+      `;
+    }
+
+    console.log('🎓 ACCADEMIA: 6 corsi reali inseriti con successo!');
+  } catch (error) {
+    console.error('🚨 ACCADEMIA: Errore popolamento corsi:', error);
   }
 }
