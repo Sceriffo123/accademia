@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/useToast';
 import { 
   getAllUsers, createUser, updateUser, deleteUser,
   getAllNormatives,
@@ -44,6 +45,7 @@ type CourseSubTabType = 'courses' | 'modules' | 'quizzes';
 
 export default function Admin() {
   const { profile } = useAuth();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [courseSubTab, setCourseSubTab] = useState<CourseSubTabType>('courses');
   const [stats, setStats] = useState<AdminStats>({
@@ -133,15 +135,6 @@ export default function Admin() {
     time_limit: 30,
     passing_score: 70,
     max_attempts: 3
-  });
-  
-  const [newQuestion, setNewQuestion] = useState({
-    question: '',
-    options: ['', '', '', ''],
-    correct_answer: 0,
-    explanation: '',
-    points: 1,
-    order: 1
   });
 
   useEffect(() => {
@@ -270,17 +263,16 @@ export default function Admin() {
       await updateCourseModule(editingModule.id, editingModule);
       console.log('Module updated successfully');
       
-      // Ricarica tutti i moduli invece di solo quelli del corso
-      const allModules = await getCourseModules();
-      setModules(allModules);
+      // Ricarica tutti i dati per mantenere sincronizzazione completa
+      await fetchData();
       
       setEditingModule(null);
       
-      // Mostra notifica di successo
-      alert('Modulo aggiornato con successo!');
+      // Mostra toast di successo
+      showToast('Modulo aggiornato con successo!');
     } catch (error) {
       console.error('Error updating module:', error);
-      alert('Errore durante l\'aggiornamento del modulo: ' + error.message);
+      showToast('Errore durante l\'aggiornamento del modulo: ' + (error as Error).message);
     }
   }
 
@@ -289,9 +281,14 @@ export default function Admin() {
     
     try {
       await deleteCourseModule(moduleId);
-      setModules(modules.filter(m => m.id !== moduleId));
+      
+      // Ricarica tutti i dati per mantenere sincronizzazione completa
+      await fetchData();
+      
+      showToast('Modulo eliminato con successo!');
     } catch (error) {
       console.error('Error deleting module:', error);
+      showToast('Errore durante l\'eliminazione del modulo: ' + (error as Error).message);
     }
   }
 
@@ -304,7 +301,7 @@ export default function Admin() {
       setShowQuestionsModal(true);
     } catch (error) {
       console.error('Errore caricamento domande quiz:', error);
-      alert('Errore nel caricamento delle domande del quiz');
+      showToast('Errore nel caricamento delle domande del quiz');
     }
   };
 
@@ -314,10 +311,10 @@ export default function Admin() {
     try {
       await deleteQuizQuestion(questionId);
       setQuestions(questions.filter(q => q.id !== questionId));
-      alert('Domanda eliminata con successo!');
+      showToast('Domanda eliminata con successo!');
     } catch (error) {
       console.error('Errore eliminazione domanda:', error);
-      alert('Errore nell\'eliminazione della domanda');
+      showToast('Errore nell\'eliminazione della domanda');
     }
   };
 
