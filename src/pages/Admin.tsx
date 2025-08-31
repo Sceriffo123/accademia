@@ -73,9 +73,8 @@ export default function Admin() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [showCreateQuiz, setShowCreateQuiz] = useState(false);
-  const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
-  
-  // Stati per domande quiz
+  const [selectedQuizForQuestions, setSelectedQuizForQuestions] = useState<Quiz | null>(null);
+  const [showQuestionsModal, setShowQuestionsModal] = useState(false);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [showCreateQuestion, setShowCreateQuestion] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<QuizQuestion | null>(null);
@@ -239,6 +238,32 @@ export default function Admin() {
     }
   }
 
+  // Handler per visualizzare e gestire domande quiz
+  const handleViewQuizQuestions = async (quiz: Quiz) => {
+    try {
+      setSelectedQuizForQuestions(quiz);
+      const quizQuestions = await getQuizQuestions(quiz.id);
+      setQuestions(quizQuestions);
+      setShowQuestionsModal(true);
+    } catch (error) {
+      console.error('Errore caricamento domande quiz:', error);
+      alert('Errore nel caricamento delle domande del quiz');
+    }
+  };
+
+  const handleDeleteQuestion = async (questionId: string) => {
+    if (!confirm('Sei sicuro di voler eliminare questa domanda?')) return;
+    
+    try {
+      await deleteQuizQuestion(questionId);
+      setQuestions(questions.filter(q => q.id !== questionId));
+      alert('Domanda eliminata con successo!');
+    } catch (error) {
+      console.error('Errore eliminazione domanda:', error);
+      alert('Errore nell\'eliminazione della domanda');
+    }
+  };
+
   async function handleCreateQuiz() {
     if (!selectedCourseForQuiz) return;
     
@@ -294,71 +319,6 @@ export default function Admin() {
     }
   }
 
-  async function handleViewQuizQuestions(quizId: string) {
-    try {
-      const questions = await getQuizQuestions(quizId);
-      setQuizQuestions(questions);
-      setShowQuizQuestions(quizId);
-    } catch (error) {
-      console.error('Error fetching quiz questions:', error);
-    }
-  }
-
-  async function handleCreateQuestion() {
-    if (!showQuizQuestions) return;
-    
-    try {
-      const questionData = {
-        quiz_id: showQuizQuestions,
-        ...newQuestion
-      };
-      
-      await createQuizQuestion(questionData);
-      await handleViewQuizQuestions(showQuizQuestions);
-      setNewQuestion({
-        question: '',
-        options: ['', '', '', ''],
-        correct_answer: 0,
-        explanation: '',
-        points: 1,
-        order: quizQuestions.length + 1
-      });
-      setShowCreateQuestion(false);
-    } catch (error) {
-      console.error('Error creating question:', error);
-    }
-  }
-
-  async function handleUpdateQuestion() {
-    if (!editingQuestion) return;
-    
-    try {
-      await updateQuizQuestion(editingQuestion.id, newQuestion);
-      await handleViewQuizQuestions(showQuizQuestions);
-      setEditingQuestion(null);
-      setNewQuestion({
-        question: '',
-        options: ['', '', '', ''],
-        correct_answer: 0,
-        explanation: '',
-        points: 1,
-        order: 1
-      });
-    } catch (error) {
-      console.error('Error updating question:', error);
-    }
-  }
-
-  async function handleDeleteQuestion(questionId: string) {
-    if (!confirm('Sei sicuro di voler eliminare questa domanda?')) return;
-    
-    try {
-      await deleteQuizQuestion(questionId);
-      await handleViewQuizQuestions(showQuizQuestions);
-    } catch (error) {
-      console.error('Error deleting question:', error);
-    }
-  }
 
   async function handleCreateUser() {
     try {
@@ -1864,6 +1824,229 @@ export default function Admin() {
                 >
                   Conferma Annullamento
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Creazione/Modifica Domanda Quiz */}
+        {(showCreateQuestion || editingQuestion) && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {editingQuestion ? 'Modifica Domanda' : 'Nuova Domanda'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowCreateQuestion(false);
+                    setEditingQuestion(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                // Handle form submission here
+              }} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Domanda
+                  </label>
+                  <textarea
+                    placeholder="Inserisci il testo della domanda"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows={3}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Opzioni di Risposta
+                  </label>
+                  {[0, 1, 2, 3].map((index) => (
+                    <div key={index} className="flex items-center space-x-2 mb-2">
+                      <span className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-sm font-medium">
+                        {String.fromCharCode(65 + index)}
+                      </span>
+                      <input
+                        type="text"
+                        placeholder={`Opzione ${String.fromCharCode(65 + index)}`}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      />
+                      <input
+                        type="radio"
+                        name="correct_answer"
+                        value={index}
+                        className="w-4 h-4 text-blue-600"
+                        title="Seleziona come risposta corretta"
+                      />
+                    </div>
+                  ))}
+                  <p className="text-sm text-gray-500 mt-1">
+                    Seleziona il radio button per indicare la risposta corretta
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Spiegazione (opzionale)
+                  </label>
+                  <textarea
+                    placeholder="Spiegazione della risposta corretta"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows={2}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Punti
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      defaultValue="1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ordine
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      defaultValue={questions.length + 1}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateQuestion(false);
+                      setEditingQuestion(null);
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    {editingQuestion ? 'Aggiorna' : 'Crea'} Domanda
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Gestione Domande Quiz */}
+        {showQuestionsModal && selectedQuizForQuestions && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Gestione Domande - {selectedQuizForQuestions.title}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowQuestionsModal(false);
+                    setSelectedQuizForQuestions(null);
+                    setQuestions([]);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <button
+                  onClick={() => setShowCreateQuestion(true)}
+                  className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Nuova Domanda</span>
+                </button>
+              </div>
+
+              {/* Lista Domande */}
+              <div className="space-y-4">
+                {questions.map((question, index) => (
+                  <div key={question.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <h4 className="font-medium text-gray-900">
+                        Domanda {index + 1}
+                      </h4>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => setEditingQuestion(question)}
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                          title="Modifica domanda"
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteQuestion(question.id)}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded"
+                          title="Elimina domanda"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <p className="text-gray-700 mb-3">{question.question}</p>
+                    
+                    <div className="space-y-2">
+                      {question.options.map((option, optIndex) => (
+                        <div
+                          key={optIndex}
+                          className={`p-2 rounded ${
+                            optIndex === question.correct_answer
+                              ? 'bg-green-100 border border-green-300'
+                              : 'bg-gray-50'
+                          }`}
+                        >
+                          <span className="font-medium">
+                            {String.fromCharCode(65 + optIndex)}.
+                          </span>{' '}
+                          {option}
+                          {optIndex === question.correct_answer && (
+                            <span className="ml-2 text-green-600 text-sm font-medium">
+                              ✓ Corretta
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {question.explanation && (
+                      <div className="mt-3 p-2 bg-blue-50 rounded">
+                        <p className="text-sm text-blue-800">
+                          <strong>Spiegazione:</strong> {question.explanation}
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div className="mt-2 text-sm text-gray-500">
+                      Punti: {question.points}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
