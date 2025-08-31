@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless';
+import { DEFAULT_ROLE_PERMISSIONS } from './permissions';
 
 // Inizializza connessione Neon
 const sql = neon(import.meta.env.VITE_DATABASE_URL);
@@ -552,6 +553,10 @@ export async function getAllTables(): Promise<string[]> {
     console.error('🚨 NEON: Errore recupero tabelle:', error);
     return [];
   }
+}
+
+export async function getRolePermissionsMatrix() {
+  return DEFAULT_ROLE_PERMISSIONS;
 }
 
 // === INIZIALIZZAZIONE DATABASE ===
