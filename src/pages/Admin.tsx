@@ -410,25 +410,6 @@ export default function Admin() {
     } catch (error) {
       console.error('Error creating user:', error);
     }
-  }
-
-  const handleUpdateUser = async () => {
-    if (!editingUser) return;
-    
-    try {
-      await updateUser(editingUser.id, {
-        full_name: editingUser.full_name,
-        email: editingUser.email,
-        role: editingUser.role
-      });
-      
-      setUsers(users.map(user => 
-        user.id === editingUser.id ? editingUser : user
-      ));
-      setEditingUser(null);
-    } catch (error) {
-      console.error('Error updating user:', error);
-    }
   };
 
   const handleCreateCourse = async () => {
