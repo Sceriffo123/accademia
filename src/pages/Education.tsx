@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   BookOpen, 
   PlayCircle, 
@@ -22,6 +23,7 @@ export default function Education() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchCourses();
@@ -261,7 +263,7 @@ export default function Education() {
                       const IconComponent = enrollmentStatus.icon;
                       return (
                         <button
-                          onClick={() => window.location.href = `/course/${course.id}`}
+                          onClick={() => navigate(`/course/${course.id}`)}
                           className={`flex items-center space-x-2 text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
                             enrollmentStatus.status === 'completed' 
                               ? 'bg-green-100 text-green-800 hover:bg-green-200' 
