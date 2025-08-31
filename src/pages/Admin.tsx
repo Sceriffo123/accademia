@@ -710,29 +710,29 @@ export default function Admin() {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
             Pannello Amministrativo
           </h1>
-          <p className="text-gray-600">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             Gestione utenti, contenuti e monitoraggio piattaforma
           </p>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
           {statCards.map((stat, index) => {
             const Icon = stat.icon;
             return (
               <div
                 key={index}
-                className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+                className="bg-white rounded-xl shadow-sm p-4 lg:p-6 border border-gray-100"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className={`p-3 rounded-lg ${stat.color}`}>
-                    <Icon className="h-6 w-6 text-white" />
+                  <div className={`p-2 lg:p-3 rounded-lg ${isActive ? 'bg-blue-500' : 'bg-gray-100'}`}>
+                    <Icon className={`h-4 w-4 lg:h-6 lg:w-6 ${isActive ? 'text-white' : 'text-gray-600'}`} />
                   </div>
                 </div>
-                <h3 className="text-sm font-medium text-gray-600 mb-1">
+                <h3 className={`text-sm lg:text-lg font-semibold mb-2 leading-tight ${isActive ? 'text-blue-900' : 'text-gray-900'}`}>
                   {stat.title}
                 </h3>
-                <p className="text-2xl font-bold text-gray-900 mb-1">
+                <p className={`text-xs lg:text-sm leading-tight ${isActive ? 'text-blue-700' : 'text-gray-600'}`}>
                   {stat.value}
                 </p>
                 <span className="text-sm text-green-600 font-medium">
