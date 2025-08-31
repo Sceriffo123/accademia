@@ -559,6 +559,29 @@ export async function getRolePermissionsMatrix() {
   return DEFAULT_ROLE_PERMISSIONS;
 }
 
+export async function getTableRecords(tableName: string, limit: number = 100): Promise<any[]> {
+  try {
+    console.log('🎓 NEON: Recupero record da tabella:', tableName);
+    
+    // Validazione nome tabella per sicurezza
+    const allowedTables = ['users', 'normatives', 'documents'];
+    if (!allowedTables.includes(tableName)) {
+      throw new Error(`Tabella non consentita: ${tableName}`);
+    }
+    
+    const result = await sql`
+      SELECT * FROM ${sql.unsafe(tableName)}
+      ORDER BY created_at DESC
+      LIMIT ${limit}
+    `;
+    
+    return result;
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero record tabella:', error);
+    return [];
+  }
+}
+
 // === INIZIALIZZAZIONE DATABASE ===
 
 export async function initializeDatabase(): Promise<boolean> {
