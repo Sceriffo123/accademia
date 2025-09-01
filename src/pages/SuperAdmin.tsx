@@ -172,6 +172,46 @@ export default function SuperAdmin() {
     }
   }
 
+  async function handleBulkSectionUpdate(action: 'enable' | 'disable') {
+    if (!confirm(`Sei sicuro di voler ${action === 'enable' ? 'abilitare' : 'disabilitare'} tutti i menu per tutti i ruoli?`)) {
+      return;
+    }
+
+    try {
+      const visible = action === 'enable';
+      
+      for (const role of roles) {
+        for (const section of sections) {
+          await handleSectionToggle(role.name, section.name, visible);
+        }
+      }
+      
+      await loadPermissionsData(); // Ricarica i dati
+    } catch (error) {
+      console.error('Errore aggiornamento bulk sezioni:', error);
+    }
+  }
+
+  async function handleRoleMenuToggle(roleName: string) {
+    try {
+      // Controlla se il ruolo ha già tutti i menu abilitati
+      const roleData = roleMatrix.get(roleName);
+      const currentSections = roleData?.sections || [];
+      const allSectionsEnabled = sections.every(s => currentSections.includes(s.name));
+      
+      // Se tutti abilitati, disabilita tutto; altrimenti abilita tutto
+      const newState = !allSectionsEnabled;
+      
+      for (const section of sections) {
+        await handleSectionToggle(roleName, section.name, newState);
+      }
+      
+      await loadPermissionsData(); // Ricarica i dati
+    } catch (error) {
+      console.error('Errore toggle menu ruolo:', error);
+    }
+  }
+
   async function handleViewTable(tableName: string) {
     try {
       setSelectedTable(tableName);
