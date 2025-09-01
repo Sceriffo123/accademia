@@ -555,18 +555,27 @@ export default function SuperAdmin() {
                             </div>
                             {roles.map(role => {
                               const visible = hasSection(role.name, section.name);
+                              // Proteggi SuperAdmin: non può disattivare il proprio accesso al pannello superadmin
+                              const isProtected = role.name === 'superadmin' && section.name === 'superadmin';
                               return (
                                 <div key={role.name} className="col-span-2 text-center">
                                   <button
-                                    onClick={() => handleSectionToggle(role.name, section.name, !visible)}
+                                    onClick={() => !isProtected && handleSectionToggle(role.name, section.name, !visible)}
                                     className={`p-2 rounded-lg transition-colors ${
-                                      visible 
-                                        ? 'bg-green-100 text-green-600 hover:bg-green-200' 
-                                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                      isProtected
+                                        ? 'bg-purple-100 text-purple-600 cursor-not-allowed'
+                                        : visible 
+                                          ? 'bg-green-100 text-green-600 hover:bg-green-200' 
+                                          : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
                                     }`}
-                                    title={visible ? 'Rimuovi permesso' : 'Concedi permesso'}
+                                    title={
+                                      isProtected 
+                                        ? 'Accesso SuperAdmin protetto - non può essere disattivato'
+                                        : visible ? 'Rimuovi permesso' : 'Concedi permesso'
+                                    }
+                                    disabled={isProtected}
                                   >
-                                    {visible ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                                    {isProtected ? <Lock className="h-4 w-4" /> : visible ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                                   </button>
                                 </div>
                               );
