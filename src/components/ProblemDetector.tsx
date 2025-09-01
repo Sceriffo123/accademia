@@ -498,3 +498,5 @@ const ${variableName} = [];
     </div>
   );
 }
+
+export default React
