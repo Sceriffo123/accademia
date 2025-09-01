@@ -40,7 +40,7 @@ export default function Navigation() {
     } catch (error) {
       console.error('Errore caricamento sezioni visibili:', error);
       // Fallback ai default se il database non è disponibile
-      setVisibleSections(['dashboard', 'normatives', 'education', 'docx']);
+      setVisibleSections(['dashboard', 'normatives', 'education', 'documents']);
     }
   }
 
@@ -90,33 +90,29 @@ export default function Navigation() {
     );
   }
 
-  // Costruisci menu items basato su sezioni visibili
-  const navItems = [];
+  // Costruisci menu items basato su sezioni visibili - CORREZIONE: usa let invece di const
+  let navItems = [
   
   if (visibleSections.includes('dashboard')) {
     navItems.push({ to: '/dashboard', icon: Home, label: 'Dashboard' });
-  }
+  ];
   
-  if (visibleSections.includes('normatives')) {
-    navItems.push({ to: '/normative', icon: FileText, label: 'Normative' });
-  }
-  
-  if (visibleSections.includes('education')) {
-    navItems.push({ to: '/education', icon: GraduationCap, label: 'Formazione' });
-  }
-  
-  if (visibleSections.includes('docx')) {
-    navItems.push({ to: '/docx', icon: FileIcon, label: 'Documenti' });
+  // Aggiungi sezioni condizionali PRIMA del filtro
+  if (visibleSections.includes('documents')) {
+    navItems.push({ to: '/docx', icon: FileIcon, label: 'Documenti', section: 'documents' });
   }
 
   // Aggiungi sezioni amministrative se visibili
   if (visibleSections.includes('admin') && (profile?.role === 'admin' || profile?.role === 'superadmin')) {
-    navItems.push({ to: '/admin', icon: Settings, label: 'Admin' });
+    navItems.push({ to: '/admin', icon: Settings, label: 'Admin', section: 'admin' });
   }
   
   if (visibleSections.includes('superadmin') && profile?.role === 'superadmin') {
-    navItems.push({ to: '/superadmin', icon: Crown, label: 'SuperAdmin' });
+    navItems.push({ to: '/superadmin', icon: Crown, label: 'SuperAdmin', section: 'superadmin' });
   }
+
+  // APPLICA il filtro DOPO aver aggiunto tutti gli elementi
+  navItems = navItems.filter(item => visibleSections.includes(item.section));
 
   return (
     <nav className="bg-white shadow-sm border-b">
