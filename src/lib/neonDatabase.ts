@@ -809,10 +809,12 @@ export async function seedPermissionsData(): Promise<void> {
       ('dashboard', 'Dashboard', 'Pannello principale'),
       ('normatives', 'Normative', 'Gestione normative'),
       ('docx', 'Documenti', 'Gestione documenti'),
+      ('documents', 'Documenti', 'Gestione documenti'),
       ('education', 'Formazione', 'Corsi e formazione'),
       ('users', 'Utenti', 'Gestione utenti'),
       ('admin', 'Amministrazione', 'Pannello amministrativo'),
       ('superadmin', 'Super Admin', 'Pannello super amministrativo'),
+      ('settings', 'Impostazioni', 'Configurazione sistema'),
       ('reports', 'Report', 'Gestione report')
     `;
 
