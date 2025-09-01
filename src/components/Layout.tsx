@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Navigation from './Navigation';
+import SystemAlertPanel from './SystemAlertPanel';
 
 export default function Layout() {
   return (
@@ -9,6 +10,7 @@ export default function Layout() {
       <main className="pb-16 md:pb-0">
         <Outlet />
       </main>
+      <SystemAlertPanel />
     </div>
   );
 }

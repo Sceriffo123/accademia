@@ -200,12 +200,45 @@ export async function updateUser(id: string, data: { email?: string; full_name?:
     
     values.push(id);
     
-    const result = await sql`
+    // Costruisci la query dinamicamente in modo sicuro
+    const updates = [];
+    const values = [];
+    
+    if (data.email) {
+      updates.push('email = $' + (values.length + 1));
+      values.push(data.email);
+    }
+    
+    if (data.full_name) {
+      updates.push('full_name = $' + (values.length + 1));
+      values.push(data.full_name);
+    }
+    
+    if (data.role) {
+      updates.push('role = $' + (values.length + 1));
+      values.push(data.role);
+    }
+    
+    updates.push('updated_at = NOW()');
+    
+    if (updates.length === 1) { // Solo updated_at
+      throw new Error('Nessun campo da aggiornare specificato');
+    }
+    
+    // Aggiungi l'ID come ultimo parametro
+    values.push(id);
+    
+    const query = `
       UPDATE users 
-      SET ${sql.unsafe(updates.join(', '))}
-      WHERE id = ${id}
-      RETURNING id, email, full_name, role, created_at
+      SET ${updates.join(', ')}
+      WHERE id = $${values.length}
+      RETURNING *
     `;
+    
+    console.log('🎓 NEON: Query generata:', query);
+    console.log('🎓 NEON: Parametri:', values);
+    
+    const result = await sql(query, ...values);
     
     // Log audit successo
     await writeAuditLog('USER_UPDATE', 'SUCCESS', {
