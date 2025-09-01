@@ -13,7 +13,7 @@ import {
   getTableRecords,
   getTableStructure
 } from '../lib/neonDatabase';
-import { PERMISSIONS, DEFAULT_ROLE_PERMISSIONS } from '../lib/permissions';
+import { PERMISSIONS, DEFAULT_ROLE_PERMISSIONS, PERMISSION_CATEGORIES } from '../lib/permissions';
 import { 
   Crown, 
   Users, 
@@ -35,7 +35,9 @@ import {
   Filter,
   Download,
   Upload,
-  RefreshCw
+  RefreshCw,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
 interface PermissionMatrix {
@@ -70,6 +72,7 @@ export default function SuperAdmin() {
     full_name: '',
     role: 'user' as 'user' | 'admin' | 'superadmin' | 'operator'
   });
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['normatives']));
 
   useEffect(() => {
     if (profile?.role === 'superadmin') {
@@ -205,6 +208,16 @@ export default function SuperAdmin() {
       console.error('Errore eliminazione utente:', error);
       setError('Errore durante l\'eliminazione dell\'utente');
     }
+  }
+
+  function toggleCategory(category: string) {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(category)) {
+      newExpanded.delete(category);
+    } else {
+      newExpanded.add(category);
+    }
+    setExpandedCategories(newExpanded);
   }
 
   const roles = ['superadmin', 'admin', 'operator', 'user'];
@@ -362,56 +375,85 @@ export default function SuperAdmin() {
 
                 {/* Permissions Matrix */}
                 <div className="overflow-x-auto">
-                  <table className="w-full border border-gray-200 rounded-lg">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                          Permesso
-                        </th>
+                  <div className="space-y-4">
+                    {/* Header con ruoli */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="grid grid-cols-12 gap-4 items-center">
+                        <div className="col-span-4">
+                          <h4 className="font-medium text-gray-900">Permesso</h4>
+                        </div>
                         {roles.map(role => (
-                          <th key={role} className="px-4 py-3 text-center text-sm font-medium border-b">
+                          <div key={role} className="col-span-2 text-center">
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(role)}`}>
                               {getRoleLabel(role)}
                             </span>
-                          </th>
+                          </div>
                         ))}
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white">
-                      {PERMISSIONS.map((permission) => (
-                        <tr key={permission.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="px-4 py-3">
-                            <div>
-                              <div className="font-medium text-gray-900 text-sm">
-                                {permission.name}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {permission.description}
-                              </div>
+                      </div>
+                    </div>
+
+                    {/* Categorie di permessi */}
+                    {Object.entries(PERMISSION_CATEGORIES).map(([categoryKey, category]) => (
+                      <div key={categoryKey} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                        {/* Header categoria */}
+                        <button
+                          onClick={() => toggleCategory(categoryKey)}
+                          className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between"
+                        >
+                          <div className="flex items-center space-x-3">
+                            {expandedCategories.has(categoryKey) ? (
+                              <ChevronDown className="h-4 w-4 text-gray-500" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-gray-500" />
+                            )}
+                            <div className="text-left">
+                              <h3 className="font-semibold text-gray-900">{category.name}</h3>
+                              <p className="text-sm text-gray-600">{category.description}</p>
                             </div>
-                          </td>
-                          {roles.map(role => {
-                            const granted = hasPermission(role, permission.id);
-                            return (
-                              <td key={role} className="px-4 py-3 text-center">
-                                <button
-                                  onClick={() => handlePermissionToggle(role, permission.id, !granted)}
-                                  className={`p-2 rounded-lg transition-colors ${
-                                    granted 
-                                      ? 'bg-green-100 text-green-600 hover:bg-green-200' 
-                                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                  }`}
-                                  title={granted ? 'Rimuovi permesso' : 'Concedi permesso'}
-                                >
-                                  {granted ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                                </button>
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </div>
+                          <span className="text-sm text-gray-500">
+                            {category.permissions.length} permessi
+                          </span>
+                        </button>
+
+                        {/* Permessi della categoria */}
+                        {expandedCategories.has(categoryKey) && (
+                          <div className="border-t border-gray-200">
+                            {category.permissions.map((permission) => (
+                              <div key={permission.id} className="grid grid-cols-12 gap-4 items-center p-4 border-b border-gray-100 hover:bg-gray-50">
+                                <div className="col-span-4">
+                                  <div className="font-medium text-gray-900 text-sm">
+                                    {permission.name}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {permission.description}
+                                  </div>
+                                </div>
+                                {roles.map(role => {
+                                  const granted = hasPermission(role, permission.id);
+                                  return (
+                                    <div key={role} className="col-span-2 text-center">
+                                      <button
+                                        onClick={() => handlePermissionToggle(role, permission.id, !granted)}
+                                        className={`p-2 rounded-lg transition-colors ${
+                                          granted 
+                                            ? 'bg-green-100 text-green-600 hover:bg-green-200' 
+                                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                        }`}
+                                        title={granted ? 'Rimuovi permesso' : 'Concedi permesso'}
+                                      >
+                                        {granted ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Sections Matrix */}
@@ -423,52 +465,59 @@ export default function SuperAdmin() {
                     Controlla quali sezioni dell'interfaccia sono visibili per ogni ruolo
                   </p>
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full border border-gray-200 rounded-lg">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                            Sezione
-                          </th>
-                          {roles.map(role => (
-                            <th key={role} className="px-4 py-3 text-center text-sm font-medium border-b">
-                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(role)}`}>
-                                {getRoleLabel(role)}
-                              </span>
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white">
-                        {sections.map((section) => (
-                          <tr key={section} className="border-b border-gray-100 hover:bg-gray-50">
-                            <td className="px-4 py-3">
-                              <div className="font-medium text-gray-900 text-sm capitalize">
-                                {section}
-                              </div>
-                            </td>
-                            {roles.map(role => {
-                              const visible = hasSection(role, section);
-                              return (
-                                <td key={role} className="px-4 py-3 text-center">
-                                  <button
-                                    onClick={() => handleSectionToggle(role, section, !visible)}
-                                    className={`p-2 rounded-lg transition-colors ${
-                                      visible 
-                                        ? 'bg-green-100 text-green-600 hover:bg-green-200' 
-                                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                    }`}
-                                    title={visible ? 'Nascondi sezione' : 'Mostra sezione'}
-                                  >
-                                    {visible ? <Eye className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                                  </button>
-                                </td>
-                              );
-                            })}
-                          </tr>
+                  <div className="bg-white border border-gray-200 rounded-lg">
+                    {/* Header */}
+                    <div className="bg-gray-50 p-4 border-b border-gray-200">
+                      <div className="grid grid-cols-12 gap-4 items-center">
+                        <div className="col-span-4">
+                          <h4 className="font-medium text-gray-900">Sezione</h4>
+                        </div>
+                        {roles.map(role => (
+                          <div key={role} className="col-span-2 text-center">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(role)}`}>
+                              {getRoleLabel(role)}
+                            </span>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
+                      </div>
+                    </div>
+
+                    {/* Sezioni */}
+                    <div className="divide-y divide-gray-100">
+                      {sections.map((section) => (
+                        <div key={section} className="grid grid-cols-12 gap-4 items-center p-4 hover:bg-gray-50">
+                          <div className="col-span-4">
+                            <div className="font-medium text-gray-900 text-sm capitalize">
+                              {section === 'normatives' ? 'Normative' :
+                               section === 'documents' ? 'Documenti' :
+                               section === 'education' ? 'Formazione' :
+                               section === 'users' ? 'Utenti' :
+                               section === 'admin' ? 'Amministrazione' :
+                               section === 'superadmin' ? 'Super Admin' :
+                               section === 'dashboard' ? 'Dashboard' : section}
+                            </div>
+                          </div>
+                          {roles.map(role => {
+                            const visible = hasSection(role, section);
+                            return (
+                              <div key={role} className="col-span-2 text-center">
+                                <button
+                                  onClick={() => handleSectionToggle(role, section, !visible)}
+                                  className={`p-2 rounded-lg transition-colors ${
+                                    visible 
+                                      ? 'bg-green-100 text-green-600 hover:bg-green-200' 
+                                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                  }`}
+                                  title={visible ? 'Nascondi sezione' : 'Mostra sezione'}
+                                >
+                                  {visible ? <Eye className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
