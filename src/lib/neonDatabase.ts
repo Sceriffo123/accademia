@@ -587,7 +587,7 @@ export async function getTableRecords(tableName: string, limit: number = 100): P
     console.log('🎓 NEON: Recupero record da tabella:', tableName);
     
     // Validazione nome tabella per sicurezza
-    const allowedTables = ['users', 'normatives', 'documents', 'activity_logs'];
+    const allowedTables = ['users', 'normatives', 'documents', 'activity_logs', 'course_enrollments'];
     if (!allowedTables.includes(tableName)) {
       throw new Error(`Tabella non consentita: ${tableName}`);
     }
@@ -610,7 +610,7 @@ export async function getTableStructure(tableName: string): Promise<any[]> {
     console.log('🎓 NEON: Recupero struttura tabella:', tableName);
     
     // Validazione nome tabella per sicurezza
-    const allowedTables = ['users', 'normatives', 'documents', 'activity_logs'];
+    const allowedTables = ['users', 'normatives', 'documents', 'activity_logs', 'course_enrollments'];
     if (!allowedTables.includes(tableName)) {
       throw new Error(`Tabella non consentita: ${tableName}`);
     }
