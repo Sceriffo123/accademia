@@ -962,7 +962,62 @@ export async function getPermissionsMatrixFromDB(): Promise<Map<string, { permis
   }
 }
 
-// === FUNZIONI PERMESSI ===
+// === FUNZIONI SEZIONI RUOLI ===
+
+async function getRoleSectionsFromDB(role: string): Promise<string[]> {
+  try {
+    console.log('🎓 NEON: Recupero sezioni dal database per ruolo:', role);
+
+    // Configurazione sezioni per ruolo (hardcoded per ora)
+    const sectionsConfig: Record<string, string[]> = {
+      'superadmin': [
+        'dashboard',
+        'users',
+        'normatives',
+        'documents',  // ← AGGIUNTA LA SEZIONE DOCUMENTS!
+        'courses',
+        'modules',
+        'quizzes',
+        'reports',
+        'settings'
+      ],
+      'admin': [
+        'dashboard',
+        'users',
+        'normatives',
+        'documents',
+        'courses',
+        'modules',
+        'quizzes',
+        'reports'
+      ],
+      'operator': [
+        'dashboard',
+        'normatives',
+        'courses'
+      ],
+      'user': [
+        'dashboard',
+        'normatives',
+        'documents'
+      ],
+      'guest': [
+        'dashboard'
+      ]
+    };
+
+    // Restituisci le sezioni per il ruolo specificato
+    const sections = sectionsConfig[role] || ['dashboard'];
+
+    console.log('🎓 NEON: Sezioni recuperate per', role + ':', sections);
+    return sections;
+
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero sezioni per ruolo:', error);
+    // Fallback: restituisci dashboard come sezione minima
+    return ['dashboard'];
+  }
+}
 
 export async function getUserPermissions(role: string): Promise<string[]> {
   try {
