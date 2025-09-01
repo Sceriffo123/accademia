@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { 
   AlertTriangle, 
   Bug, 
@@ -37,7 +36,8 @@ interface Problem {
 }
 
 export default function ProblemDetector() {
-  const { profile } = useAuth();
+  // Rimuovi useAuth per evitare errore Context
+  // const { profile } = useAuth();
   const [problems, setProblems] = useState<Problem[]>([]);
   const [isVisible, setIsVisible] = useState(false);
   const [expandedProblem, setExpandedProblem] = useState<string | null>(null);

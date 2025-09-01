@@ -1504,34 +1504,33 @@ export async function updateUser(id: string, data: Partial<User>): Promise<User 
   try {
     console.log('🎓 NEON: Aggiornamento utente:', id, data);
     
-    // Costruisci la query dinamicamente in modo sicuro
+    // Costruisci la query dinamicamente con template literal Neon
     const updates = [];
-    const values = [];
     
     if (data.email) {
-      updates.push('email = $' + (values.length + 1));
-      values.push(data.email);
+      updates.push(`email = '${data.email.replace(/'/g, "''")}'`);
     }
     
     if (data.full_name) {
-      updates.push('full_name = $' + (values.length + 1));
-      values.push(data.full_name);
+      updates.push(`full_name = '${data.full_name.replace(/'/g, "''")}'`);
     }
     
     if (data.role) {
-      updates.push('role = $' + (values.length + 1));
-      values.push(data.role);
+      updates.push(`role = '${data.role.replace(/'/g, "''")}'`);
     }
     
-    if (updates.length === 0) return null;
+    if (updates.length === 0) {
+      console.log('🎓 NEON: Nessun campo da aggiornare');
+      return null;
+    }
     
-    // Aggiungi l'ID come ultimo parametro
-    values.push(id);
+    // Aggiungi updated_at
+    updates.push('updated_at = NOW()');
     
     const result = await sql`
       UPDATE users 
       SET ${sql.unsafe(updates.join(', '))}
-      WHERE id = $${values.length}
+      WHERE id = ${id}
       RETURNING id, email, full_name, role, created_at
     `;
     
