@@ -1158,7 +1158,24 @@ async function getRoleSectionsFromDB(role: string): Promise<string[]> {
   try {
     console.log('🎓 NEON: Recupero sezioni dal database per ruolo:', role);
 
-    // Configurazione sezioni per ruolo (hardcoded per ora)
+    // Prima prova a leggere dal database
+    const result = await sql`
+      SELECT s.name
+      FROM role_sections rs
+      JOIN roles r ON r.id = rs.role_id
+      JOIN sections s ON s.id = rs.section_id
+      WHERE r.name = ${role} AND rs.visible = true
+      ORDER BY s.name
+    `;
+
+    if (result.length > 0) {
+      const sections = result.map(row => row.name);
+      console.log('✅ NEON: Sezioni dal database per', role + ':', sections);
+      return sections;
+    }
+
+    // Fallback: configurazione hardcoded se database vuoto
+    console.log('⚠️ NEON: Database vuoto, uso configurazione hardcoded per', role);
     const sectionsConfig: Record<string, string[]> = {
       'superadmin': [
         'dashboard',
@@ -1200,10 +1217,8 @@ async function getRoleSectionsFromDB(role: string): Promise<string[]> {
       ]
     };
 
-    // Restituisci le sezioni per il ruolo specificato
     const sections = sectionsConfig[role] || ['dashboard'];
-
-    console.log('🎓 NEON: Sezioni recuperate per', role + ':', sections);
+    console.log('🎓 NEON: Sezioni hardcoded per', role + ':', sections);
     return sections;
 
   } catch (error) {

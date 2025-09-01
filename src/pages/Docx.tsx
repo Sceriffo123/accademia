@@ -58,6 +58,7 @@ export default function Docx() {
   const [uploaderName, setUploaderName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedDocument?.uploaded_by) {
@@ -137,6 +138,8 @@ export default function Docx() {
     } catch (error) {
       console.error('🚨 DOCX DEBUG: ERRORE durante il caricamento:', error);
       console.error('🚨 DOCX DEBUG: Dettagli errore:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Errore caricamento documenti';
+      setError(errorMessage);
       setDocuments([]);
     } finally {
       setLoading(false);
@@ -234,7 +237,9 @@ export default function Docx() {
 
     } catch (error) {
       console.error('❌ Errore durante il download del file originale:', error);
-      alert(`Errore durante il download: ${error.message || 'Riprova più tardi.'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+      alert(`Errore durante il download: ${errorMessage || 'Riprova più tardi.'}`);
+      setError(errorMessage);
     }
   }
 
@@ -538,33 +543,34 @@ export default function Docx() {
             </div>
           ) : filteredDocuments.length > 0 ? (
             <>
-              {/* Debug Info Panel */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-                <h4 className="font-semibold text-blue-800 mb-2">🔍 Debug Info:</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="text-blue-600 font-medium">Documenti DB:</span>
-                    <div className="text-blue-800">{documents.length}</div>
+              {(documents.length === 0 || filteredDocuments.length === 0 || error) && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+                  <h4 className="font-semibold text-yellow-800 mb-2">⚠️ Debug Info:</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-yellow-600 font-medium">Documenti DB:</span>
+                      <div className="text-yellow-800">{documents.length}</div>
+                    </div>
+                    <div>
+                      <span className="text-yellow-600 font-medium">Filtrati:</span>
+                      <div className="text-yellow-800">{filteredDocuments.length}</div>
+                    </div>
+                    <div>
+                      <span className="text-yellow-600 font-medium">Tipo Filtro:</span>
+                      <div className="text-yellow-800">{selectedType}</div>
+                    </div>
+                    <div>
+                      <span className="text-yellow-600 font-medium">Categoria Filtro:</span>
+                      <div className="text-yellow-800">{selectedCategory}</div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-blue-600 font-medium">Filtrati:</span>
-                    <div className="text-blue-800">{filteredDocuments.length}</div>
-                  </div>
-                  <div>
-                    <span className="text-blue-600 font-medium">Tipo Filtro:</span>
-                    <div className="text-blue-800">{selectedType}</div>
-                  </div>
-                  <div>
-                    <span className="text-blue-600 font-medium">Categoria Filtro:</span>
-                    <div className="text-blue-800">{selectedCategory}</div>
-                  </div>
+                  {error && (
+                    <div className="mt-3 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-xs">
+                      <strong>Errore:</strong> {error}
+                    </div>
+                  )}
                 </div>
-                <div className="mt-2 text-xs text-blue-700">
-                  Permessi: {userPermissions.join(', ') || 'Nessuno'} | 
-                  Sezioni: {userSections.join(', ') || 'Nessuna'} | 
-                  Ruolo: {profile?.role}
-                </div>
-              </div>
+              )}
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredDocuments.map((doc) => (
