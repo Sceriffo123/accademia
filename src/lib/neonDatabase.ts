@@ -1778,3 +1778,5 @@ export async function checkDatabaseTables(): Promise<{ tables: string[], error?:
 }
   }
 }
+  }
+}
