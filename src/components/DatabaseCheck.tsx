@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { checkDatabaseTables } from '../lib/neonDatabase';
+import { checkDatabaseTables, initializeDatabase } from '../lib/neonDatabase';
 import { Database, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function DatabaseCheck() {
@@ -8,11 +8,15 @@ export default function DatabaseCheck() {
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    checkTables();
+    initializeAndCheckTables();
   }, []);
 
-  async function checkTables() {
+  async function initializeAndCheckTables() {
     try {
+      // Prima inizializza il database
+      await initializeDatabase();
+      
+      // Poi verifica le tabelle
       const result = await checkDatabaseTables();
       if (result.error) {
         setError(result.error);
@@ -20,7 +24,7 @@ export default function DatabaseCheck() {
         setTables(result.tables);
       }
     } catch (err) {
-      setError('Errore durante la verifica delle tabelle');
+      setError('Errore durante l\'inizializzazione del database');
     } finally {
       setLoading(false);
     }

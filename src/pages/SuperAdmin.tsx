@@ -86,29 +86,9 @@ export default function SuperAdmin() {
 
   useEffect(() => {
     if (profile?.role === 'superadmin') {
-      initializeSystemIfNeeded();
       loadAllData();
     }
   }, [profile]);
-
-  async function initializeSystemIfNeeded() {
-    try {
-      setInitializingSystem(true);
-      console.log('🎓 SUPERADMIN: Inizializzazione sistema permessi...');
-      
-      // Inizializza le tabelle se non esistono
-      await initializePermissionsSystem();
-      
-      // Inserisci i dati base se non esistono
-      await seedPermissionsData();
-      
-      console.log('🎓 SUPERADMIN: Sistema permessi inizializzato');
-    } catch (error) {
-      console.error('🚨 SUPERADMIN: Errore inizializzazione sistema:', error);
-    } finally {
-      setInitializingSystem(false);
-    }
-  }
 
   async function loadAllData() {
     setLoading(true);
@@ -293,13 +273,6 @@ export default function SuperAdmin() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          {initializingSystem && (
-            <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg mb-4 flex items-center space-x-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-              <span>Inizializzazione sistema permessi in corso...</span>
-            </div>
-          )}
-          
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-3 bg-purple-100 rounded-xl">
               <Crown className="h-8 w-8 text-purple-600" />

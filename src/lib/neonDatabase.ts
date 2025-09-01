@@ -452,7 +452,7 @@ export async function initializePermissionsSystem(): Promise<boolean> {
 }
 
 // Inserisce i dati base del sistema permessi
-export async function seedPermissionsData(): Promise<boolean> {
+export async function seedPermissionsData(): Promise<void> {
   try {
     console.log('🎓 NEON: Inserimento dati base sistema permessi...');
     
@@ -536,10 +536,9 @@ export async function seedPermissionsData(): Promise<boolean> {
     `;
 
     console.log('🎓 NEON: Dati base sistema permessi inseriti');
-    return true;
   } catch (error) {
     console.error('🚨 NEON: Errore inserimento dati base:', error);
-    return false;
+    throw error;
   }
 }
 
@@ -923,6 +922,127 @@ export async function getTableStructure(tableName: string): Promise<any[]> {
 }
 
 // === INIZIALIZZAZIONE DATABASE ===
+
+export async function initializeDatabase(): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Inizializzazione completa database...');
+    
+    // Verifica che la URL del database sia configurata
+    if (!import.meta.env.VITE_DATABASE_URL) {
+      console.error('🚨 NEON: VITE_DATABASE_URL non configurata');
+      return false;
+    }
+
+    // 1. Crea tabelle principali
+    await createMainTables();
+    
+    // 2. Crea sistema permessi
+    await initializePermissionsSystem();
+    
+    // 3. Inserisci dati base
+    await seedPermissionsData();
+    await insertDefaultAdmin();
+    
+    console.log('🎓 NEON: Database inizializzato completamente');
+    return true;
+  } catch (error) {
+    console.error('🚨 NEON: Errore inizializzazione database:', error);
+    return false;
+  }
+}
+
+async function createMainTables(): Promise<void> {
+  try {
+    console.log('🎓 NEON: Creazione tabelle principali...');
+    
+    // Crea tabella users
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        email VARCHAR(255) UNIQUE NOT NULL,
+        full_name VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin', 'superadmin', 'operator')),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+
+    // Crea tabella normatives
+    await sql`
+      CREATE TABLE IF NOT EXISTS normatives (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        type VARCHAR(20) NOT NULL CHECK (type IN ('law', 'regulation', 'ruling')),
+        reference_number VARCHAR(100) NOT NULL,
+        publication_date DATE NOT NULL,
+        effective_date DATE NOT NULL,
+        tags TEXT[] DEFAULT '{}',
+        file_path TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+
+    // Crea tabella documents
+    await sql`
+      CREATE TABLE IF NOT EXISTS documents (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        filename VARCHAR(255) NOT NULL,
+        file_url TEXT,
+        file_path TEXT,
+        file_size BIGINT,
+        mime_type VARCHAR(100),
+        type VARCHAR(20) NOT NULL CHECK (type IN ('template', 'form', 'guide', 'report')),
+        category VARCHAR(100) NOT NULL,
+        tags TEXT[] DEFAULT '{}',
+        version VARCHAR(20),
+        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'draft', 'archived')),
+        uploaded_by UUID REFERENCES users(id),
+        download_count INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+
+    // Crea tabella activity_logs
+    await sql`
+      CREATE TABLE IF NOT EXISTS activity_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        action VARCHAR(100) NOT NULL,
+        resource_type VARCHAR(50) NOT NULL,
+        resource_id UUID,
+        details JSONB DEFAULT '{}',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+
+    console.log('🎓 NEON: Tabelle principali create');
+  } catch (error) {
+    console.error('🚨 NEON: Errore creazione tabelle principali:', error);
+    throw error;
+  }
+}
+
+async function insertDefaultAdmin(): Promise<void> {
+  try {
+    // Inserisci utente admin di default se non esiste
+    const adminHash = await hashPassword('admin123');
+    await sql`
+      INSERT INTO users (email, full_name, password_hash, role)
+      VALUES ('admin@accademia.it', 'Amministratore', ${adminHash}, 'superadmin')
+      ON CONFLICT (email) DO NOTHING
+    `;
+    console.log('🎓 NEON: Admin di default inserito');
+  } catch (error) {
+    console.error('🚨 NEON: Errore inserimento admin:', error);
+  }
+}
 
 export async function checkDatabaseTables(): Promise<{ tables: string[], error?: string }> {
   try {
