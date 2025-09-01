@@ -158,7 +158,7 @@ export default function SuperAdmin() {
     try {
       setSelectedTable(tableName);
       const [data, structure] = await Promise.all([
-        getTableRecords(tableName, 50),
+        getTableRecords(tableName, 1000),
         getTableStructure(tableName)
       ]);
       setTableData(data);
@@ -682,7 +682,7 @@ export default function SuperAdmin() {
                         </tr>
                       </thead>
                       <tbody>
-                        {tableData.slice(0, 20).map((row, index) => (
+                        {tableData.map((row, index) => (
                           <tr key={index} className="border-b border-gray-100">
                             {Object.values(row).map((value: any, cellIndex) => (
                               <td key={cellIndex} className="px-3 py-2 text-gray-600 max-w-xs truncate">
