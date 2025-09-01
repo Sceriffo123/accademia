@@ -218,7 +218,7 @@ export default function SuperAdmin() {
     const hasPermission = roleData?.permissions.includes(permissionId);
     
     try {
-      const success = await updateRolePermission(role, permissionId, !hasPermission, profile?.id || '');
+      const success = await updateRolePermission(role, permissionId, !hasPermission);
       if (success) {
         await loadPermissionsData(); // Ricarica i dati
         setHasChanges(true);

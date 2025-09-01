@@ -891,15 +891,33 @@ export async function updateRolePermissionInDB(roleName: string, permissionName:
   try {
     console.log('🎓 NEON: Aggiornamento permesso ruolo:', { roleName, permissionName, granted });
     
-    await sql`
+    // Prima verifica se ruolo e permesso esistono
+    const roleCheck = await sql`SELECT id, name FROM roles WHERE name = ${roleName}`;
+    const permissionCheck = await sql`SELECT id, name FROM permissions WHERE name = ${permissionName}`;
+    
+    console.log('🔍 NEON: Ruolo trovato:', roleCheck);
+    console.log('🔍 NEON: Permesso trovato:', permissionCheck);
+    
+    if (roleCheck.length === 0) {
+      console.error('🚨 NEON: Ruolo non trovato:', roleName);
+      return false;
+    }
+    
+    if (permissionCheck.length === 0) {
+      console.error('🚨 NEON: Permesso non trovato:', permissionName);
+      return false;
+    }
+    
+    const result = await sql`
       INSERT INTO role_permissions (role_id, permission_id, granted)
       SELECT CAST(r.id AS UUID), CAST(p.id AS UUID), ${granted}
       FROM roles r, permissions p
       WHERE r.name = ${roleName} AND p.name = ${permissionName}
       ON CONFLICT (role_id, permission_id)
-      DO UPDATE SET granted = ${granted}, created_at = NOW()
+      DO UPDATE SET granted = ${granted}, updated_at = NOW()
     `;
     
+    console.log('✅ NEON: Risultato aggiornamento permesso:', result);
     return true;
   } catch (error) {
     console.error('🚨 NEON: Errore aggiornamento permesso ruolo:', error);
@@ -911,15 +929,33 @@ export async function updateRoleSectionInDB(roleName: string, sectionName: strin
   try {
     console.log('🎓 NEON: Aggiornamento sezione ruolo:', { roleName, sectionName, visible });
     
-    await sql`
+    // Prima verifica se ruolo e sezione esistono
+    const roleCheck = await sql`SELECT id, name FROM roles WHERE name = ${roleName}`;
+    const sectionCheck = await sql`SELECT id, name FROM sections WHERE name = ${sectionName}`;
+    
+    console.log('🔍 NEON: Ruolo trovato:', roleCheck);
+    console.log('🔍 NEON: Sezione trovata:', sectionCheck);
+    
+    if (roleCheck.length === 0) {
+      console.error('🚨 NEON: Ruolo non trovato:', roleName);
+      return false;
+    }
+    
+    if (sectionCheck.length === 0) {
+      console.error('🚨 NEON: Sezione non trovata:', sectionName);
+      return false;
+    }
+    
+    const result = await sql`
       INSERT INTO role_sections (role_id, section_id, visible)
       SELECT CAST(r.id AS UUID), CAST(s.id AS UUID), ${visible}
       FROM roles r, sections s
       WHERE r.name = ${roleName} AND s.name = ${sectionName}
       ON CONFLICT (role_id, section_id)
-      DO UPDATE SET visible = ${visible}, created_at = NOW()
+      DO UPDATE SET visible = ${visible}, updated_at = NOW()
     `;
     
+    console.log('✅ NEON: Risultato aggiornamento sezione:', result);
     return true;
   } catch (error) {
     console.error('🚨 NEON: Errore aggiornamento sezione ruolo:', error);
