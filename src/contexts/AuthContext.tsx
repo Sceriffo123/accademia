@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
-  getUserByEmail,
-  getUserById,
-  createUser,
+  getUserByEmail, 
+  getUserById, 
+  createUser, 
   verifyPassword,
   type User 
 } from '../lib/neonDatabase';
@@ -59,10 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (token) {
       const decoded = verifyToken(token);
       if (decoded) {
-        fetchUserByEmail(decoded.email).catch(() => {
-          localStorage.removeItem('auth_token');
-          setLoading(false);
-        });
+        fetchUserByEmail(decoded.email);
       } else {
         localStorage.removeItem('auth_token');
         setLoading(false);
@@ -89,7 +86,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Error fetching user:', error);
       localStorage.removeItem('auth_token');
-       throw error;
     } finally {
       setLoading(false);
     }

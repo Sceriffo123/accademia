@@ -22,7 +22,16 @@ export default function Navigation() {
   const [visibleSections, setVisibleSections] = useState<string[]>([]);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
 
-  const { user, profile, signOut } = useAuth();
+  // Gestisci il caso in cui AuthProvider non è ancora disponibile
+  let authData;
+  try {
+    authData = useAuth();
+  } catch (error) {
+    // AuthProvider non è ancora disponibile, usa valori di default
+    authData = { user: null, profile: null, signOut: () => {} };
+  }
+
+  const { user, profile, signOut } = authData;
 
   useEffect(() => {
     if (profile?.role) {
@@ -36,11 +45,13 @@ export default function Navigation() {
       console.log('🎓 NAVIGATION: Caricamento sezioni per ruolo:', profile?.role);
       const sections = await getUserSections(profile?.role || '');
       console.log('🎓 NAVIGATION: Sezioni caricate dal database:', sections);
+      console.log('🎓 NAVIGATION: Numero sezioni:', sections.length);
       setVisibleSections(sections);
+      console.log('🎓 NAVIGATION: Sezioni salvate nello stato');
     } catch (error) {
       console.error('Errore caricamento sezioni visibili:', error);
       // Fallback ai default se il database non è disponibile
-      setVisibleSections(['dashboard', 'normatives', 'education', 'documents']);
+      setVisibleSections(['dashboard', 'normatives', 'education', 'docx']);
     }
   }
 
@@ -50,7 +61,7 @@ export default function Navigation() {
       setUserPermissions(permissions);
     } catch (error) {
       console.error('Errore caricamento permessi utente:', error);
-      setUserPermissions(['normatives.view', 'education.view']);
+      setUserPermissions([]);
     }
   }
 
@@ -60,7 +71,26 @@ export default function Navigation() {
     setIsMenuOpen(false);
   };
 
-  // Se non c'è utente, mostra menu pubblico
+  const navItems = [
+    { to: '/dashboard', icon: Home, label: 'Dashboard', section: 'dashboard' },
+    { to: '/normative', icon: FileText, label: 'Normative', section: 'normatives' },
+    { to: '/education', icon: GraduationCap, label: 'Formazione', section: 'education' },
+  ].filter(item => visibleSections.includes(item.section));
+
+  // Aggiungi Documenti solo se ha i permessi per visualizzare documenti
+  if (visibleSections.includes('docx') && userPermissions.includes('documents.view')) {
+    navItems.push({ to: '/docx', icon: FileIcon, label: 'Documenti', section: 'docx' });
+  }
+
+  // Aggiungi sezioni amministrative se visibili
+  if (visibleSections.includes('admin') && (profile?.role === 'admin' || profile?.role === 'superadmin')) {
+    navItems.push({ to: '/admin', icon: Settings, label: 'Admin', section: 'admin' });
+  }
+  
+  if (visibleSections.includes('superadmin') && profile?.role === 'superadmin') {
+    navItems.push({ to: '/superadmin', icon: Crown, label: 'SuperAdmin', section: 'superadmin' });
+  }
+
   if (!user) {
     return (
       <nav className="bg-white shadow-sm border-b">
@@ -90,90 +120,18 @@ export default function Navigation() {
     );
   }
 
-  // Costruisci menu items basato su sezioni visibili - CORREZIONE: usa let invece di const
-  let navItems = [
-    { to: '/dashboard', icon: Home, label: 'Dashboard', section: 'dashboard' },
-    { to: '/normative', icon: FileText, label: 'Normative', section: 'normatives' },
-    { to: '/education', icon: GraduationCap, label: 'Formazione', section: 'education' },
-  ].filter(item => visibleSections.includes(item.section));
-
-  // Aggiungi Documenti solo se la sezione è visibile
-  if (visibleSections.includes('documents')) {
-    navItems.push({ to: '/docx', icon: FileIcon, label: 'Documenti', section: 'documents' });
-  }
-
-  // Aggiungi sezioni amministrative se visibili
-  if (visibleSections.includes('admin') && (profile?.role === 'admin' || profile?.role === 'superadmin')) {
-    navItems.push({ to: '/admin', icon: Settings, label: 'Admin', section: 'admin' });
-  }
-  
-  if (visibleSections.includes('superadmin') && profile?.role === 'superadmin') {
-    navItems.push({ to: '/superadmin', icon: Crown, label: 'SuperAdmin', section: 'superadmin' });
-  }
-
-  // APPLICA il filtro DOPO aver aggiunto tutti gli elementi
-  navItems = navItems.filter(item => visibleSections.includes(item.section));
-
   return (
-    <nav className="bg-white shadow-sm border-b">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/dashboard" className="flex items-center space-x-2">
-            <GraduationCap className="h-8 w-8 text-blue-800" />
-            <span className="text-xl font-bold text-gray-900">Accademia TPL</span>
-          </Link>
-          
-          {/* Desktop Menu */}
-          <div className="flex items-center space-x-6">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.to;
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'text-gray-600 hover:text-blue-800 hover:bg-gray-100'
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span className="font-medium">{item.label}</span>
-                </Link>
-              );
-            })}
+    <>
+      {/* Desktop Navigation */}
+      <nav className="hidden md:block bg-white shadow-sm border-b">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <Link to="/dashboard" className="flex items-center space-x-2">
+              <GraduationCap className="h-8 w-8 text-blue-800" />
+              <span className="text-xl font-bold text-gray-900">Accademia TPL</span>
+            </Link>
             
-            {/* User Section */}
-            <div className="flex items-center space-x-3 pl-6 border-l border-gray-200">
-              <div className="flex items-center space-x-2">
-                <User className="h-5 w-5 text-gray-500" />
-                <span className="text-sm text-gray-600">{profile?.full_name}</span>
-              </div>
-              <button
-                onClick={handleSignOut}
-                className="flex items-center space-x-1 text-gray-600 hover:text-red-600 transition-colors"
-              >
-                <LogOut className="h-5 w-5" />
-                <span className="text-sm">Esci</span>
-              </button>
-            </div>
-          </div>
-          
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
-        
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden border-t border-gray-100 py-4">
-            <div className="space-y-1">
+            <div className="flex items-center space-x-6">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.to;
@@ -181,8 +139,7 @@ export default function Navigation() {
                   <Link
                     key={item.to}
                     to={item.to}
-                    onClick={() => setIsMenuOpen(false)}
-                    className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
                       isActive
                         ? 'bg-blue-100 text-blue-800'
                         : 'text-gray-600 hover:text-blue-800 hover:bg-gray-100'
@@ -194,23 +151,88 @@ export default function Navigation() {
                 );
               })}
               
-              <div className="border-t border-gray-200 pt-4 mt-4">
-                <div className="flex items-center space-x-3 px-3 py-2">
+              <div className="flex items-center space-x-3 pl-6 border-l border-gray-200">
+                <div className="flex items-center space-x-2">
                   <User className="h-5 w-5 text-gray-500" />
                   <span className="text-sm text-gray-600">{profile?.full_name}</span>
                 </div>
                 <button
                   onClick={handleSignOut}
-                  className="flex items-center space-x-3 px-3 py-3 rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors w-full"
+                  className="flex items-center space-x-1 text-gray-600 hover:text-red-600 transition-colors"
+                  aria-label="Esci"
+                  title="Esci"
                 >
                   <LogOut className="h-5 w-5" />
-                  <span className="font-medium">Esci</span>
+                  <span className="text-sm">Esci</span>
                 </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
-    </nav>
+        </div>
+      </nav>
+
+      {/* Mobile Navigation */}
+      <nav className="md:hidden bg-white shadow-sm border-b">
+        <div className="px-4">
+          <div className="flex items-center justify-between h-16">
+            <Link to="/dashboard" className="flex items-center space-x-2">
+              <GraduationCap className="h-7 w-7 text-blue-800" />
+              <span className="text-lg font-bold text-gray-900">Accademia TPL</span>
+            </Link>
+            
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label={isMenuOpen ? "Chiudi menu" : "Apri menu"}
+              title={isMenuOpen ? "Chiudi menu" : "Apri menu"}
+            >
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
+          
+          {isMenuOpen && (
+            <div className="border-t border-gray-100 py-4">
+              <div className="space-y-1">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.to;
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setIsMenuOpen(false)}
+                      className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'text-gray-600 hover:text-blue-800 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span className="font-medium">{item.label}</span>
+                    </Link>
+                  );
+                })}
+                
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <div className="flex items-center space-x-3 px-3 py-2">
+                    <User className="h-5 w-5 text-gray-500" />
+                    <span className="text-sm text-gray-600">{profile?.full_name}</span>
+                  </div>
+                  <button
+                    onClick={handleSignOut}
+                    className="flex items-center space-x-3 px-3 py-3 rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors w-full"
+                    aria-label="Esci"
+                    title="Esci"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    <span className="font-medium">Esci</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </nav>
+    </>
   );
 }
