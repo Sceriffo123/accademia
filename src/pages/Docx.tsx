@@ -98,15 +98,25 @@ export default function Docx() {
   async function loadDocuments() {
     try {
       console.log('🎓 DOCX: Inizio caricamento documenti...');
+      console.log('🎓 DOCX: Permessi utente:', userPermissions);
+      console.log('🎓 DOCX: Sezioni utente:', userSections);
+      console.log('🎓 DOCX: Ruolo utente:', profile?.role);
       setLoading(true);
       const docs = await getAllDocuments();
       console.log('🎓 DOCX: Documenti caricati dal database:', docs);
       console.log('🎓 DOCX: Numero documenti:', docs.length);
+      
+      if (docs.length === 0) {
+        console.log('⚠️ DOCX: Nessun documento trovato nel database!');
+        console.log('⚠️ DOCX: Verifica che la tabella documents contenga dati');
+      }
+      
       // Cast per risolvere il problema dei tipi
       setDocuments(docs as unknown as Document[]);
       console.log('🎓 DOCX: Documenti salvati nello stato');
     } catch (error) {
       console.error('🚨 DOCX: Errore caricamento documenti:', error);
+      console.error('🚨 DOCX: Dettagli errore:', error);
       setDocuments([]);
     } finally {
       setLoading(false);
@@ -543,10 +553,33 @@ export default function Docx() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-500">
-              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg">Nessun documento trovato</p>
-              <p className="text-sm">Prova a modificare i filtri di ricerca</p>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 text-center">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-yellow-500" />
+              <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+                Nessun documento trovato
+              </h3>
+              <p className="text-yellow-700 mb-4">
+                La tabella documents potrebbe essere vuota o i filtri sono troppo restrittivi
+              </p>
+              <div className="bg-white rounded-lg p-4 text-left text-sm">
+                <h4 className="font-semibold text-gray-900 mb-2">🔍 Debug Info:</h4>
+                <div className="space-y-1 text-gray-600">
+                  <div>• Documenti totali: {documents.length}</div>
+                  <div>• Documenti filtrati: {filteredDocuments.length}</div>
+                  <div>• Permessi: {userPermissions.join(', ') || 'Nessuno'}</div>
+                  <div>• Sezioni: {userSections.join(', ') || 'Nessuna'}</div>
+                  <div>• Ruolo: {profile?.role || 'Non definito'}</div>
+                  <div>• Filtro tipo: {selectedType}</div>
+                  <div>• Filtro categoria: {selectedCategory}</div>
+                  <div>• Termine ricerca: "{searchTerm}"</div>
+                </div>
+              </div>
+              <button
+                onClick={loadDocuments}
+                className="mt-4 bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+              >
+                🔄 Ricarica Documenti
+              </button>
             </div>
           )}
         </div>

@@ -1302,6 +1302,7 @@ export async function initializeDatabase(): Promise<boolean> {
     // 3. Inserisci dati base
     await seedPermissionsData();
     await insertDefaultAdmin();
+    await seedDocumentsData();
     
     // 4. Pulisci ruoli non necessari
     await cleanupUnwantedRoles();
@@ -1352,6 +1353,121 @@ async function cleanupUnwantedRoles(): Promise<void> {
   }
 }
 
+// Inserisce documenti di esempio se la tabella è vuota
+async function seedDocumentsData(): Promise<void> {
+  try {
+    console.log('🎓 NEON: Verifica documenti esistenti...');
+    
+    // Verifica se ci sono già documenti
+    const existingDocs = await sql`SELECT COUNT(*) as count FROM documents`;
+    if (parseInt(existingDocs[0].count) > 0) {
+      console.log('🎓 NEON: Documenti già presenti, skip inserimento');
+      return;
+    }
+    
+    console.log('🎓 NEON: Inserimento documenti di esempio...');
+    
+    // Trova l'ID dell'admin per associare i documenti
+    const adminUser = await sql`SELECT id FROM users WHERE role = 'superadmin' LIMIT 1`;
+    const adminId = adminUser[0]?.id;
+    
+    // Inserisci documenti di esempio
+    await sql`
+      INSERT INTO documents (
+        title, description, filename, file_path, file_size, mime_type, 
+        type, category, tags, version, status, uploaded_by
+      ) VALUES
+      (
+        'Modulo Richiesta Licenza Taxi',
+        'Modulo ufficiale per la richiesta di nuova licenza taxi comunale',
+        'modulo_licenza_taxi.pdf',
+        'https://drive.google.com/file/d/1example_taxi_license/view',
+        245,
+        'application/pdf',
+        'form',
+        'Licenze',
+        ARRAY['taxi', 'licenza', 'modulo'],
+        '2.1',
+        'active',
+        ${adminId}
+      ),
+      (
+        'Template Autorizzazione NCC',
+        'Template per la compilazione delle autorizzazioni NCC',
+        'template_autorizzazione_ncc.docx',
+        'https://drive.google.com/file/d/1example_ncc_auth/view',
+        189,
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'template',
+        'Autorizzazioni',
+        ARRAY['ncc', 'autorizzazione', 'template'],
+        '1.5',
+        'active',
+        ${adminId}
+      ),
+      (
+        'Guida Controlli Stradali',
+        'Guida operativa per la gestione dei controlli stradali e verifiche documentali',
+        'guida_controlli_stradali.pdf',
+        'https://drive.google.com/file/d/1example_road_controls/view',
+        567,
+        'application/pdf',
+        'guide',
+        'Controlli',
+        ARRAY['controlli', 'strada', 'verifiche'],
+        '3.0',
+        'active',
+        ${adminId}
+      ),
+      (
+        'Report Mensile Attività',
+        'Template per la compilazione del report mensile delle attività di trasporto',
+        'report_mensile_template.xlsx',
+        'https://drive.google.com/file/d/1example_monthly_report/view',
+        123,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'report',
+        'Report',
+        ARRAY['report', 'mensile', 'attività'],
+        '1.0',
+        'active',
+        ${adminId}
+      ),
+      (
+        'Modulo Denuncia Sinistro',
+        'Modulo per la denuncia di sinistri stradali nel trasporto pubblico locale',
+        'modulo_denuncia_sinistro.pdf',
+        'https://drive.google.com/file/d/1example_accident_report/view',
+        334,
+        'application/pdf',
+        'form',
+        'Sinistri',
+        ARRAY['sinistro', 'denuncia', 'assicurazione'],
+        '2.0',
+        'active',
+        ${adminId}
+      ),
+      (
+        'Guida Tariffe e Prezzi',
+        'Guida completa per la determinazione delle tariffe nel trasporto locale',
+        'guida_tariffe_prezzi.pdf',
+        'https://drive.google.com/file/d/1example_pricing_guide/view',
+        445,
+        'application/pdf',
+        'guide',
+        'Tariffe',
+        ARRAY['tariffe', 'prezzi', 'calcolo'],
+        '1.8',
+        'active',
+        ${adminId}
+      )
+    `;
+    
+    console.log('🎓 NEON: Documenti di esempio inseriti con successo');
+  } catch (error) {
+    console.error('🚨 NEON: Errore inserimento documenti di esempio:', error);
+  }
+}
 export async function checkDatabaseTables(): Promise<{ tables: string[], error?: string }> {
   try {
     // Verifica che la URL del database sia configurata
