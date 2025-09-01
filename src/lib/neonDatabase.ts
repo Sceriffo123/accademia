@@ -140,93 +140,49 @@ export async function getUserById(id: string): Promise<User | null> {
   }
 }
 
-export async function getAllUsers(excludeSuperAdmin: boolean = false, currentUserId?: string): Promise<User[]> {
+export async function getAllUsers(excludeSuperAdmin: boolean = false, currentUserId?: string): Promise<any[]> {
   try {
     console.log('🎓 NEON: Recupero tutti gli utenti');
-    let query = sql`
-      SELECT id, email, full_name, role, created_at
-      FROM users
-      ORDER BY created_at DESC
-    `;
     
-    const result = await query;
-    let users = result as User[];
+    let query = 'SELECT id, email, full_name, role, created_at FROM users';
+    const conditions = [];
+    const params = [];
     
     if (excludeSuperAdmin) {
-      users = users.filter(u => u.role !== 'superadmin');
+      conditions.push('role != $' + (params.length + 1));
+      params.push('superadmin');
     }
     
-    // Costruisci la query dinamicamente in modo sicuro
-    const updates = [];
-    const values = [];
-    
-    if (data.email) {
-      updates.push('email = $' + (values.length + 1));
-      values.push(data.email);
+    if (currentUserId) {
+      conditions.push('id != $' + (params.length + 1));
+      params.push(currentUserId);
     }
     
-    if (data.full_name) {
-      updates.push('full_name = $' + (values.length + 1));
-      values.push(data.full_name);
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
     }
     
-    if (data.role) {
-      updates.push('role = $' + (values.length + 1));
-      values.push(data.role);
-    }
+    query += ' ORDER BY created_at DESC';
     
-    // Aggiungi sempre updated_at
-    updates.push('updated_at = NOW()');
-    
-    if (updates.length === 1) { // Solo updated_at
-      console.log('🎓 NEON: Nessun campo da aggiornare');
-      return null;
-    }
-    
-    // Aggiungi l'ID come ultimo parametro per la WHERE clause
-    values.push(id);
-    
-    const updateQuery = `
-      UPDATE users 
-      SET ${updates.join(', ')} 
-      WHERE id = $${values.length}
-      RETURNING id, email, full_name, role, created_at, updated_at
-    `;
-    
-    console.log('🎓 NEON: Query generata:', query);
-    console.log('🎓 NEON: Parametri:', values);
-    
-    const updateResult = await sql(updateQuery, ...values);
-    
-    // Log audit successo
-    await writeAuditLog('USER_UPDATE', 'SUCCESS', {
-      userId: id,
-      updates: data,
-      verified: true
-    });
-    
-    return result[0] as User || null;
+    const result = await sql(query, ...params);
+    console.log('🎓 NEON: Utenti recuperati:', result.length);
+    return result;
   } catch (error) {
-    console.error('🚨 NEON: Errore aggiornamento utente:', error);
-    
-    // Log audit errore e crea alert immediato
-    await writeAuditLog('USER_UPDATE', 'ERROR', {
-      userId: id,
-      updates: data,
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
-    
-    // Crea alert immediato per Centro di Controllo
-    createSystemAlert('error', 'Database Error in User Update', {
-      operation: 'USER_UPDATE',
-      userId: id,
-      error: error instanceof Error ? error.message : String(error),
-      code: (error as any)?.code,
-      severity: (error as any)?.severity
-    });
-    
-    return null;
+    console.error('🚨 NEON: Errore recupero utenti:', error);
+    throw error;
+  }
+}
+
+export async function getUsersCount(): Promise<number> {
+  try {
+    console.log('🎓 NEON: Conteggio utenti totali');
+    const result = await sql`SELECT COUNT(*) as count FROM users`;
+    const count = parseInt(result[0].count);
+    console.log('🎓 NEON: Utenti totali:', count);
+    return count;
+  } catch (error) {
+    console.error('🚨 NEON: Errore conteggio utenti:', error);
+    throw error;
   }
 }
 
@@ -1535,6 +1491,84 @@ async function createMainTables(): Promise<void> {
   } catch (error) {
     console.error('🚨 NEON: Errore creazione tabelle principali:', error);
     throw error;
+  }
+}
+
+export async function updateUser(id: string, data: Partial<User>): Promise<User | null> {
+  try {
+    console.log('🎓 NEON: Aggiornamento utente:', id, data);
+    
+    // Costruisci la query dinamicamente in modo sicuro
+    const updates = [];
+    const values = [];
+    
+    if (data.email) {
+      updates.push('email = $' + (values.length + 1));
+      values.push(data.email);
+    }
+    
+    if (data.full_name) {
+      updates.push('full_name = $' + (values.length + 1));
+      values.push(data.full_name);
+    }
+    
+    if (data.role) {
+      updates.push('role = $' + (values.length + 1));
+      values.push(data.role);
+    }
+    
+    // Aggiungi sempre updated_at
+    updates.push('updated_at = NOW()');
+    
+    if (updates.length === 1) { // Solo updated_at
+      console.log('🎓 NEON: Nessun campo da aggiornare');
+      return null;
+    }
+    
+    // Aggiungi l'ID come ultimo parametro per la WHERE clause
+    values.push(id);
+    
+    const updateQuery = `
+      UPDATE users 
+      SET ${updates.join(', ')} 
+      WHERE id = $${values.length}
+      RETURNING id, email, full_name, role, created_at, updated_at
+    `;
+    
+    console.log('🎓 NEON: Query generata:', updateQuery);
+    console.log('🎓 NEON: Parametri:', values);
+    
+    const result = await sql(updateQuery, ...values);
+    
+    // Log audit successo
+    await writeAuditLog('USER_UPDATE', 'SUCCESS', {
+      userId: id,
+      updates: data,
+      verified: true
+    });
+    
+    return result[0] as User || null;
+  } catch (error) {
+    console.error('🚨 NEON: Errore aggiornamento utente:', error);
+    
+    // Log audit errore e crea alert immediato
+    await writeAuditLog('USER_UPDATE', 'ERROR', {
+      userId: id,
+      updates: data,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
+    // Crea alert immediato per Centro di Controllo
+    createSystemAlert('error', 'Database Error in User Update', {
+      operation: 'USER_UPDATE',
+      userId: id,
+      error: error instanceof Error ? error.message : String(error),
+      code: (error as any)?.code,
+      severity: (error as any)?.severity
+    });
+    
+    return null;
   }
 }
 
