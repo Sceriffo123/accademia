@@ -5,7 +5,8 @@ import {
   getAllRolesFromDB, 
   getAllPermissionsFromDB,
   getUserPermissions,
-  checkDatabaseTables 
+  checkDatabaseTables,
+  initializeDatabase
 } from '../lib/neonDatabase';
 import { 
   AlertTriangle, 
@@ -48,6 +49,14 @@ interface SystemHealthCheck {
   details?: any;
   lastCheck: string;
 }
+
+interface DatabaseStatus {
+  connected: boolean;
+  tables: string[];
+  error?: string;
+  initialized: boolean;
+}
+
 export default function SystemAlertPanel() {
   const { profile } = useAuth();
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
@@ -57,15 +66,24 @@ export default function SystemAlertPanel() {
   const [activeTab, setActiveTab] = useState<'alerts' | 'audit'>('alerts');
   const [healthChecks, setHealthChecks] = useState<SystemHealthCheck[]>([]);
   const [isRunningHealthCheck, setIsRunningHealthCheck] = useState(false);
+  const [databaseStatus, setDatabaseStatus] = useState<DatabaseStatus>({
+    connected: false,
+    tables: [],
+    initialized: false
+  });
 
   // ✅ useEffect SEMPRE chiamato - Hook order consistente
   useEffect(() => {
+    // Initialize database and check status
+    initializeDatabaseStatus();
+    
     // Run initial health check
     runSystemHealthCheck();
     
     // Run health check every 5 minutes
     const healthCheckInterval = setInterval(() => {
       runSystemHealthCheck();
+      initializeDatabaseStatus();
     }, 5 * 60 * 1000);
 
     // Listener per system alerts
@@ -173,6 +191,42 @@ export default function SystemAlertPanel() {
     };
   }, []); // Empty dependency array - only run once
 
+  const initializeDatabaseStatus = async () => {
+    try {
+      console.log('🎓 SYSTEM: Inizializzazione database...');
+      
+      // Prima inizializza il database
+      await initializeDatabase();
+      
+      // Poi verifica le tabelle
+      const result = await checkDatabaseTables();
+      
+      if (result.error) {
+        setDatabaseStatus({
+          connected: false,
+          tables: [],
+          error: result.error,
+          initialized: false
+        });
+      } else {
+        setDatabaseStatus({
+          connected: true,
+          tables: result.tables,
+          initialized: true
+        });
+        console.log('✅ SYSTEM: Database connesso con', result.tables.length, 'tabelle');
+      }
+    } catch (error) {
+      console.error('🚨 SYSTEM: Errore inizializzazione database:', error);
+      setDatabaseStatus({
+        connected: false,
+        tables: [],
+        error: error instanceof Error ? error.message : 'Errore sconosciuto',
+        initialized: false
+      });
+    }
+  };
+
   const runSystemHealthCheck = async () => {
     if (isRunningHealthCheck) return;
     
@@ -189,15 +243,23 @@ export default function SystemAlertPanel() {
     
     setHealthChecks([...checks]);
     
-    // Test 1: Database Connection
+    // Test 1: Database Connection (usa lo stato già verificato)
     try {
-      await checkDatabaseTables();
-      checks[0] = { 
-        ...checks[0], 
-        status: 'success', 
-        message: 'Database connection active',
-        details: { connection: 'Neon PostgreSQL', status: 'Connected' }
-      };
+      if (databaseStatus.connected) {
+        checks[0] = { 
+          ...checks[0], 
+          status: 'success', 
+          message: `Database connected (${databaseStatus.tables.length} tables)`,
+          details: { 
+            connection: 'Neon PostgreSQL', 
+            status: 'Connected',
+            tables: databaseStatus.tables.length,
+            initialized: databaseStatus.initialized
+          }
+        };
+      } else {
+        throw new Error(databaseStatus.error || 'Database not connected');
+      }
     } catch (error) {
       checks[0] = { 
         ...checks[0], 
@@ -447,7 +509,14 @@ export default function SystemAlertPanel() {
                   : 'bg-green-500 text-white'
           }`}
         >
-          <Shield className="h-5 w-5" />
+          <div className="relative">
+            <Shield className="h-5 w-5" />
+            {databaseStatus.connected && (
+              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white">
+                <Database className="h-2 w-2 text-white" />
+              </div>
+            )}
+          </div>
           {(errorCount + warningCount > 0 || overallStatus.status !== 'success') && (
             <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
               {overallStatus.status === 'error' ? '!' : errorCount + warningCount || '?'}
@@ -469,29 +538,47 @@ export default function SystemAlertPanel() {
           'bg-green-50 border-b border-green-200'
         }`}>
           <div className="flex items-center space-x-2">
-            <Shield className={`h-5 w-5 ${
-              errorCount > 0 || overallStatus.status === 'error' ? 'text-red-600' :
-              warningCount > 0 || overallStatus.status === 'warning' ? 'text-yellow-600' :
-              overallStatus.status === 'checking' ? 'text-blue-600' :
-              'text-green-600'
-            }`} />
+            <div className="relative">
+              <Shield className={`h-5 w-5 ${
+                errorCount > 0 || overallStatus.status === 'error' ? 'text-red-600' :
+                warningCount > 0 || overallStatus.status === 'warning' ? 'text-yellow-600' :
+                overallStatus.status === 'checking' ? 'text-blue-600' :
+                'text-green-600'
+              }`} />
+              {databaseStatus.connected && (
+                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border border-white">
+                  <Database className="h-2 w-2 text-white" />
+                </div>
+              )}
+            </div>
             <h3 className="font-semibold text-gray-900">System Monitor</h3>
-            {(errorCount + warningCount > 0 || overallStatus.status !== 'success') && (
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                errorCount > 0 || overallStatus.status === 'error' ? 'bg-red-100 text-red-700' : 
-                warningCount > 0 || overallStatus.status === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-                'bg-blue-100 text-blue-700'
+            <div className="flex items-center space-x-2">
+              {(errorCount + warningCount > 0 || overallStatus.status !== 'success') && (
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  errorCount > 0 || overallStatus.status === 'error' ? 'bg-red-100 text-red-700' : 
+                  warningCount > 0 || overallStatus.status === 'warning' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-blue-100 text-blue-700'
+                }`}>
+                  {overallStatus.status === 'checking' ? 'checking' : 
+                   overallStatus.status === 'error' ? 'critical' :
+                   overallStatus.status === 'warning' ? 'warnings' :
+                   `${errorCount + warningCount} issues`}
+                </span>
+              )}
+              <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${
+                databaseStatus.connected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
               }`}>
-                {overallStatus.status === 'checking' ? 'checking' : 
-                 overallStatus.status === 'error' ? 'critical' :
-                 overallStatus.status === 'warning' ? 'warnings' :
-                 `${errorCount + warningCount} issues`}
+                <Database className="h-3 w-3" />
+                <span>{databaseStatus.connected ? 'DB OK' : 'DB Error'}</span>
               </span>
-            )}
+            </div>
           </div>
           <div className="flex items-center space-x-1">
             <button
-              onClick={runSystemHealthCheck}
+              onClick={() => {
+                runSystemHealthCheck();
+                initializeDatabaseStatus();
+              }}
               disabled={isRunningHealthCheck}
               className="p-1 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
               title="Run health check"
@@ -510,6 +597,36 @@ export default function SystemAlertPanel() {
             >
               <X className="h-4 w-4" />
             </button>
+          </div>
+        </div>
+
+        {/* Database Status Bar */}
+        <div className={`px-4 py-2 text-xs border-b ${
+          databaseStatus.connected 
+            ? 'bg-green-50 border-green-200 text-green-700' 
+            : 'bg-red-50 border-red-200 text-red-700'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Database className="h-3 w-3" />
+              <span className="font-medium">
+                {databaseStatus.connected ? 'Neon DB Connected' : 'Database Error'}
+              </span>
+            </div>
+            <div className="flex items-center space-x-3">
+              {databaseStatus.connected && (
+                <>
+                  <span>{databaseStatus.tables.length} tables</span>
+                  <span>•</span>
+                  <span>Initialized: {databaseStatus.initialized ? '✅' : '❌'}</span>
+                </>
+              )}
+              {databaseStatus.error && (
+                <span className="truncate max-w-32" title={databaseStatus.error}>
+                  {databaseStatus.error}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
