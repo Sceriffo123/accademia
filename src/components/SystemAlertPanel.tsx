@@ -33,6 +33,10 @@ interface AuditLogEntry {
 }
 
 export default function SystemAlertPanel() {
+  const { profile } = useAuth();
+}
+
+export default function SystemAlertPanel() {
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [isVisible, setIsVisible] = useState(true);
@@ -44,10 +48,6 @@ export default function SystemAlertPanel() {
     return null;
   }
 
-  // Solo per admin e superadmin
-  if (!profile || !['admin', 'superadmin'].includes(profile.role)) {
-    return null;
-  }
 
   useEffect(() => {
     // Listener per system alerts
