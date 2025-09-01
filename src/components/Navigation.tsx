@@ -112,6 +112,7 @@ export default function Navigation() {
   }
 
   return (
+    <>
     <nav className="bg-white shadow-sm border-b">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
@@ -207,8 +208,6 @@ export default function Navigation() {
         )}
       </div>
     </nav>
-  );
-}
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <Link to="/dashboard" className="flex items-center space-x-2">
