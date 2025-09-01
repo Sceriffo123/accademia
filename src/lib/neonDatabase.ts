@@ -1395,7 +1395,45 @@ export async function updateRolePermission(role: string, permission: string, gra
   return await updateRolePermissionInDB(role, permission, granted);
 }
 
+// Inserisce le sezioni mancanti nel database se non esistono
+export async function ensureSectionsExist(): Promise<void> {
+  try {
+    console.log('🔧 NEON: Verifica ed inserimento sezioni mancanti...');
+    
+    const sectionsToEnsure = [
+      { name: 'dashboard', display_name: 'Dashboard', description: 'Pannello principale' },
+      { name: 'normatives', display_name: 'Normative', description: 'Gestione normative' },
+      { name: 'docx', display_name: 'Documenti', description: 'Gestione documenti' },
+      { name: 'documents', display_name: 'Documenti', description: 'Gestione documenti' },
+      { name: 'education', display_name: 'Formazione', description: 'Corsi e formazione' },
+      { name: 'users', display_name: 'Utenti', description: 'Gestione utenti' },
+      { name: 'admin', display_name: 'Amministrazione', description: 'Pannello amministrativo' },
+      { name: 'superadmin', display_name: 'Super Admin', description: 'Pannello super amministrativo' },
+      { name: 'settings', display_name: 'Impostazioni', description: 'Configurazione sistema' },
+      { name: 'reports', display_name: 'Report', description: 'Gestione report' }
+    ];
+    
+    for (const section of sectionsToEnsure) {
+      await sql`
+        INSERT INTO sections (name, display_name, description)
+        VALUES (${section.name}, ${section.display_name}, ${section.description})
+        ON CONFLICT (name) DO NOTHING
+      `;
+    }
+    
+    console.log('✅ NEON: Sezioni verificate e inserite se necessario');
+    
+    // Verifica che le sezioni esistano ora
+    const existingSections = await sql`SELECT name FROM sections ORDER BY name`;
+    console.log('📋 NEON: Sezioni presenti nel database:', existingSections.map(s => s.name));
+  } catch (error) {
+    console.error('🚨 NEON: Errore inserimento sezioni:', error);
+  }
+}
+
 export async function updateRoleSection(role: string, section: string, visible: boolean): Promise<boolean> {
+  // Prima assicurati che la sezione esista
+  await ensureSectionsExist();
   return await updateRoleSectionInDB(role, section, visible);
 }
 
