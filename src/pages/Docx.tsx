@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getAllDocuments, getUserPermissions, getUserSections, getUserById, updateDocument } from '../lib/neonDatabase';
+import { 
+  getDocuments, 
+  getDocumentStats, 
+  getDocumentCategories,
+  updateDocumentDownloadCount,
+  deleteDocument as deleteDocumentAPI,
+  updateDocument as updateDocumentAPI
+} from '../lib/api';
+import { getUserPermissions, getUserSections, getUserById } from '../lib/neonDatabase';
 import { downloadGoogleDriveFile, isGoogleDriveUrl } from '../lib/driveDownload';
 import { 
   FileText, 
@@ -58,6 +66,14 @@ export default function Docx() {
   const [uploaderName, setUploaderName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [documentStats, setDocumentStats] = useState<any>({
+    totalDocuments: 0,
+    totalDownloads: 0,
+    documentsByType: [],
+    documentsByCategory: [],
+    recentDocuments: 0
+  });
+  const [categories, setCategories] = useState<string[]>([]);
 
   useEffect(() => {
     if (selectedDocument?.uploaded_by) {
@@ -72,6 +88,8 @@ export default function Docx() {
       loadUserPermissions();
       loadUserSections();
       loadDocuments();
+      loadDocumentStats();
+      loadCategories();
     }
   }, [profile?.role]);
 
@@ -99,11 +117,18 @@ export default function Docx() {
     try {
       console.log('🎓 DOCX: Inizio caricamento documenti...');
       setLoading(true);
-      const docs = await getAllDocuments();
+      
+      // Usa i filtri attuali per recuperare i documenti
+      const filters = {
+        searchTerm: searchTerm || undefined,
+        type: selectedType !== 'all' ? selectedType : undefined,
+        category: selectedCategory !== 'all' ? selectedCategory : undefined
+      };
+      
+      const docs = await getDocuments(filters);
       console.log('🎓 DOCX: Documenti caricati dal database:', docs);
       console.log('🎓 DOCX: Numero documenti:', docs.length);
-      // Cast per risolvere il problema dei tipi
-      setDocuments(docs as unknown as Document[]);
+      setDocuments(docs);
       console.log('🎓 DOCX: Documenti salvati nello stato');
     } catch (error) {
       console.error('🚨 DOCX: Errore caricamento documenti:', error);
@@ -111,6 +136,28 @@ export default function Docx() {
     } finally {
       setLoading(false);
       console.log('🎓 DOCX: Caricamento completato');
+    }
+  }
+
+  async function loadDocumentStats() {
+    try {
+      console.log('🎓 DOCX: Caricamento statistiche documenti...');
+      const stats = await getDocumentStats();
+      setDocumentStats(stats);
+      console.log('🎓 DOCX: Statistiche caricate:', stats);
+    } catch (error) {
+      console.error('🚨 DOCX: Errore caricamento statistiche:', error);
+    }
+  }
+
+  async function loadCategories() {
+    try {
+      console.log('🎓 DOCX: Caricamento categorie documenti...');
+      const cats = await getDocumentCategories();
+      setCategories(cats);
+      console.log('🎓 DOCX: Categorie caricate:', cats);
+    } catch (error) {
+      console.error('🚨 DOCX: Errore caricamento categorie:', error);
     }
   }
 
@@ -146,28 +193,24 @@ export default function Docx() {
       }
 
       console.log('🔄 Inizio download documento:', doc.filename);
+      
+      // Incrementa contatore download
+      await updateDocumentDownloadCount(doc.id);
 
-      // Valida che il documento abbia un ID valido
-      if (!doc.id) {
-        console.error('❌ ID documento non valido');
-        return;
-      }
-
-      // Fetch del file come blob per gestire correttamente i file binari
-      const response = await fetch(`/api/documents/download/${doc.id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/octet-stream',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      // Converti la risposta in blob per preservare i dati binari
+      // Genera PDF del documento
+      const { generatePDF } = await import('../lib/pdfGenerator');
+      const blob = generatePDF(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${doc.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
       
       console.log('✅ Download PDF completato con successo');
+      
+      // Ricarica documenti per aggiornare il contatore
+      loadDocuments();
 
     } catch (error) {
       console.error('❌ Errore durante il download PDF:', error);
@@ -228,8 +271,9 @@ export default function Docx() {
     
     try {
       console.log('💾 Salvataggio modifiche documento:', editingDocument.title);
-      await updateDocument(editingDocument.id, editingDocument);
+      await updateDocumentAPI(editingDocument.id, editingDocument);
       loadDocuments();
+      loadDocumentStats(); // Ricarica anche le statistiche
       setIsEditMode(false);
       setEditingDocument(null);
 
@@ -288,15 +332,15 @@ export default function Docx() {
   const filteredDocuments = documents.filter(doc => {
     const matchesSearch = searchTerm === '' || 
       doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (doc.description && doc.description.toLowerCase().includes(searchTerm.toLowerCase()));
+      (doc.description && doc.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      doc.filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (doc.tags && doc.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase())));
     
     const matchesType = selectedType === 'all' || doc.type === selectedType;
     const matchesCategory = selectedCategory === 'all' || doc.category === selectedCategory;
     
     return matchesSearch && matchesType && matchesCategory;
   });
-
-  const categories = [...new Set(documents.map(d => d.category))];
 
   const getTypeLabel = (type: string) => {
     switch (type) {
@@ -319,10 +363,10 @@ export default function Docx() {
   };
 
   const stats = [
-    { label: 'Documenti Totali', value: documents.length.toString(), icon: FileText, color: 'bg-blue-500' },
-    { label: 'Download Totali', value: documents.reduce((sum, doc) => sum + (doc.download_count || 0), 0).toString(), icon: Download, color: 'bg-green-500' },
-    { label: 'Template Disponibili', value: documents.filter(d => d.type === 'template').length.toString(), icon: FolderOpen, color: 'bg-purple-500' },
-    { label: 'Guide Operative', value: documents.filter(d => d.type === 'guide').length.toString(), icon: Eye, color: 'bg-orange-500' }
+    { label: 'Documenti Totali', value: documentStats.totalDocuments.toString(), icon: FileText, color: 'bg-blue-500' },
+    { label: 'Download Totali', value: documentStats.totalDownloads.toString(), icon: Download, color: 'bg-green-500' },
+    { label: 'Template Disponibili', value: documentStats.documentsByType.find(t => t.type === 'template')?.count.toString() || '0', icon: FolderOpen, color: 'bg-purple-500' },
+    { label: 'Guide Operative', value: documentStats.documentsByType.find(t => t.type === 'guide')?.count.toString() || '0', icon: Eye, color: 'bg-orange-500' }
   ];
 
   return (

@@ -304,6 +304,289 @@ export async function getAllDocuments(): Promise<Document[]> {
   }
 }
 
+export async function getDocumentsByCategory(category: string): Promise<Document[]> {
+  try {
+    console.log('🎓 NEON: Recupero documenti per categoria:', category);
+    const result = await sql`
+      SELECT d.*, u.full_name as uploader_name
+      FROM documents d
+      LEFT JOIN users u ON d.uploaded_by = u.id
+      WHERE d.category = ${category}
+      ORDER BY d.created_at DESC
+    `;
+    return result as Document[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero documenti per categoria:', error);
+    return [];
+  }
+}
+
+export async function getDocumentsByType(type: 'template' | 'form' | 'guide' | 'report'): Promise<Document[]> {
+  try {
+    console.log('🎓 NEON: Recupero documenti per tipo:', type);
+    const result = await sql`
+      SELECT d.*, u.full_name as uploader_name
+      FROM documents d
+      LEFT JOIN users u ON d.uploaded_by = u.id
+      WHERE d.type = ${type}
+      ORDER BY d.created_at DESC
+    `;
+    return result as Document[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero documenti per tipo:', error);
+    return [];
+  }
+}
+
+export async function getDocumentsWithUploaderInfo(): Promise<(Document & { uploader_name?: string })[]> {
+  try {
+    console.log('🎓 NEON: Recupero documenti con info uploader');
+    const result = await sql`
+      SELECT 
+        d.*,
+        u.full_name as uploader_name,
+        u.email as uploader_email
+      FROM documents d
+      LEFT JOIN users u ON d.uploaded_by = u.id
+      ORDER BY d.created_at DESC
+    `;
+    return result as (Document & { uploader_name?: string; uploader_email?: string })[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero documenti con uploader:', error);
+    return [];
+  }
+}
+
+export async function getDocumentStats(): Promise<{
+  totalDocuments: number;
+  totalDownloads: number;
+  documentsByType: { type: string; count: number }[];
+  documentsByCategory: { category: string; count: number }[];
+  recentDocuments: number;
+}> {
+  try {
+    console.log('🎓 NEON: Recupero statistiche documenti');
+    
+    const [totalResult, downloadsResult, typeResult, categoryResult, recentResult] = await Promise.all([
+      sql`SELECT COUNT(*) as count FROM documents`,
+      sql`SELECT SUM(download_count) as total FROM documents`,
+      sql`
+        SELECT type, COUNT(*) as count 
+        FROM documents 
+        GROUP BY type 
+        ORDER BY count DESC
+      `,
+      sql`
+        SELECT category, COUNT(*) as count 
+        FROM documents 
+        GROUP BY category 
+        ORDER BY count DESC
+      `,
+      sql`
+        SELECT COUNT(*) as count 
+        FROM documents 
+        WHERE created_at >= NOW() - INTERVAL '30 days'
+      `
+    ]);
+
+    return {
+      totalDocuments: parseInt(totalResult[0].count),
+      totalDownloads: parseInt(downloadsResult[0].total || '0'),
+      documentsByType: typeResult.map(r => ({ type: r.type, count: parseInt(r.count) })),
+      documentsByCategory: categoryResult.map(r => ({ category: r.category, count: parseInt(r.count) })),
+      recentDocuments: parseInt(recentResult[0].count)
+    };
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero statistiche documenti:', error);
+    return {
+      totalDocuments: 0,
+      totalDownloads: 0,
+      documentsByType: [],
+      documentsByCategory: [],
+      recentDocuments: 0
+    };
+  }
+}
+
+export async function searchDocuments(query: string): Promise<Document[]> {
+  try {
+    console.log('🎓 NEON: Ricerca documenti:', query);
+    const result = await sql`
+      SELECT d.*, u.full_name as uploader_name
+      FROM documents d
+      LEFT JOIN users u ON d.uploaded_by = u.id
+      WHERE 
+        d.title ILIKE ${'%' + query + '%'} OR
+        d.description ILIKE ${'%' + query + '%'} OR
+        d.filename ILIKE ${'%' + query + '%'} OR
+        d.category ILIKE ${'%' + query + '%'} OR
+        EXISTS (
+          SELECT 1 FROM unnest(d.tags) as tag 
+          WHERE tag ILIKE ${'%' + query + '%'}
+        )
+      ORDER BY d.created_at DESC
+    `;
+    return result as Document[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore ricerca documenti:', error);
+    return [];
+  }
+}
+
+export async function getDocumentCategories(): Promise<string[]> {
+  try {
+    console.log('🎓 NEON: Recupero categorie documenti');
+    const result = await sql`
+      SELECT DISTINCT category 
+      FROM documents 
+      WHERE category IS NOT NULL 
+      ORDER BY category
+    `;
+    return result.map(r => r.category);
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero categorie:', error);
+    return [];
+  }
+}
+
+export async function getPopularDocuments(limit: number = 10): Promise<Document[]> {
+  try {
+    console.log('🎓 NEON: Recupero documenti più scaricati');
+    const result = await sql`
+      SELECT d.*, u.full_name as uploader_name
+      FROM documents d
+      LEFT JOIN users u ON d.uploaded_by = u.id
+      WHERE d.status = 'active'
+      ORDER BY d.download_count DESC NULLS LAST, d.created_at DESC
+      LIMIT ${limit}
+    `;
+    return result as Document[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero documenti popolari:', error);
+    return [];
+  }
+}
+
+export async function getDocumentsByUploader(uploaderId: string): Promise<Document[]> {
+  try {
+    console.log('🎓 NEON: Recupero documenti per uploader:', uploaderId);
+    const result = await sql`
+      SELECT d.*, u.full_name as uploader_name
+      FROM documents d
+      LEFT JOIN users u ON d.uploaded_by = u.id
+      WHERE d.uploaded_by = ${uploaderId}
+      ORDER BY d.created_at DESC
+    `;
+    return result as Document[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero documenti per uploader:', error);
+    return [];
+  }
+}
+
+export async function updateDocumentDownloadCount(id: string): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Incremento contatore download documento:', id);
+    await sql`
+      UPDATE documents 
+      SET 
+        download_count = COALESCE(download_count, 0) + 1,
+        updated_at = NOW()
+      WHERE id = ${id}
+    `;
+    return true;
+  } catch (error) {
+    console.error('🚨 NEON: Errore incremento download:', error);
+    return false;
+  }
+}
+
+export async function getDocumentsWithFilters(filters: {
+  searchTerm?: string;
+  type?: string;
+  category?: string;
+  status?: string;
+  uploaderId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}): Promise<Document[]> {
+  try {
+    console.log('🎓 NEON: Recupero documenti con filtri:', filters);
+    
+    let whereConditions = ['1=1']; // Base condition
+    let params: any[] = [];
+    let paramIndex = 1;
+    
+    if (filters.searchTerm) {
+      whereConditions.push(`(
+        d.title ILIKE $${paramIndex} OR
+        d.description ILIKE $${paramIndex} OR
+        d.filename ILIKE $${paramIndex} OR
+        EXISTS (
+          SELECT 1 FROM unnest(d.tags) as tag 
+          WHERE tag ILIKE $${paramIndex}
+        )
+      )`);
+      params.push(`%${filters.searchTerm}%`);
+      paramIndex++;
+    }
+    
+    if (filters.type && filters.type !== 'all') {
+      whereConditions.push(`d.type = $${paramIndex}`);
+      params.push(filters.type);
+      paramIndex++;
+    }
+    
+    if (filters.category && filters.category !== 'all') {
+      whereConditions.push(`d.category = $${paramIndex}`);
+      params.push(filters.category);
+      paramIndex++;
+    }
+    
+    if (filters.status && filters.status !== 'all') {
+      whereConditions.push(`d.status = $${paramIndex}`);
+      params.push(filters.status);
+      paramIndex++;
+    }
+    
+    if (filters.uploaderId) {
+      whereConditions.push(`d.uploaded_by = $${paramIndex}`);
+      params.push(filters.uploaderId);
+      paramIndex++;
+    }
+    
+    if (filters.dateFrom) {
+      whereConditions.push(`d.created_at >= $${paramIndex}`);
+      params.push(filters.dateFrom);
+      paramIndex++;
+    }
+    
+    if (filters.dateTo) {
+      whereConditions.push(`d.created_at <= $${paramIndex}`);
+      params.push(filters.dateTo);
+      paramIndex++;
+    }
+    
+    const whereClause = whereConditions.join(' AND ');
+    
+    const result = await sql(
+      `SELECT 
+        d.*,
+        u.full_name as uploader_name,
+        u.email as uploader_email
+      FROM documents d
+      LEFT JOIN users u ON d.uploaded_by = u.id
+      WHERE ${whereClause}
+      ORDER BY d.created_at DESC`,
+      ...params
+    );
+    
+    return result as Document[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero documenti con filtri:', error);
+    return [];
+  }
+}
 export async function getDocumentsCount(): Promise<number> {
   try {
     const result = await sql`SELECT COUNT(*) as count FROM documents`;

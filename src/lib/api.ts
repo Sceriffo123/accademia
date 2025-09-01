@@ -119,3 +119,105 @@ export async function updateUserPassword(id: string, newPassword: string): Promi
   const { updateUserPassword } = await import('./neonDatabase');
   return await updateUserPassword(id, newPassword);
 }
+
+// === FUNZIONI DOCUMENTI ===
+
+export async function getDocuments(filters?: {
+  searchTerm?: string;
+  type?: string;
+  category?: string;
+  status?: string;
+  uploaderId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}): Promise<any[]> {
+  try {
+    const { getDocumentsWithFilters } = await import('./neonDatabase');
+    return await getDocumentsWithFilters(filters || {});
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    return [];
+  }
+}
+
+export async function getDocumentById(id: string): Promise<any | null> {
+  try {
+    const { getDocumentById } = await import('./neonDatabase');
+    return await getDocumentById(id);
+  } catch (error) {
+    console.error('Error fetching document:', error);
+    return null;
+  }
+}
+
+export async function getDocumentStats(): Promise<{
+  totalDocuments: number;
+  totalDownloads: number;
+  documentsByType: { type: string; count: number }[];
+  documentsByCategory: { category: string; count: number }[];
+  recentDocuments: number;
+}> {
+  try {
+    const { getDocumentStats } = await import('./neonDatabase');
+    return await getDocumentStats();
+  } catch (error) {
+    console.error('Error fetching document stats:', error);
+    return {
+      totalDocuments: 0,
+      totalDownloads: 0,
+      documentsByType: [],
+      documentsByCategory: [],
+      recentDocuments: 0
+    };
+  }
+}
+
+export async function getDocumentCategories(): Promise<string[]> {
+  try {
+    const { getDocumentCategories } = await import('./neonDatabase');
+    return await getDocumentCategories();
+  } catch (error) {
+    console.error('Error fetching document categories:', error);
+    return [];
+  }
+}
+
+export async function updateDocumentDownloadCount(id: string): Promise<boolean> {
+  try {
+    const { updateDocumentDownloadCount } = await import('./neonDatabase');
+    return await updateDocumentDownloadCount(id);
+  } catch (error) {
+    console.error('Error updating download count:', error);
+    return false;
+  }
+}
+
+export async function deleteDocument(id: string): Promise<boolean> {
+  try {
+    const { deleteDocument } = await import('./neonDatabase');
+    return await deleteDocument(id);
+  } catch (error) {
+    console.error('Error deleting document:', error);
+    return false;
+  }
+}
+
+export async function createDocument(data: any): Promise<any | null> {
+  try {
+    const { createDocument } = await import('./neonDatabase');
+    return await createDocument(data);
+  } catch (error) {
+    console.error('Error creating document:', error);
+    return null;
+  }
+}
+
+export async function updateDocument(id: string, data: any): Promise<any | null> {
+  try {
+    const { updateDocument } = await import('./neonDatabase');
+    return await updateDocument(id, data);
+  } catch (error) {
+    console.error('Error updating document:', error);
+    return null;
+  }
+}
