@@ -87,11 +87,23 @@ export default function Docx() {
     if (profile?.role) {
       loadUserPermissions();
       loadUserSections();
+    }
+  }, [profile?.role]);
+
+  useEffect(() => {
+    if (userPermissions.includes('documents.view') && userSections.includes('documents')) {
       loadDocuments();
       loadDocumentStats();
       loadCategories();
     }
-  }, [profile?.role]);
+  }, [userPermissions, userSections]);
+
+  useEffect(() => {
+    // Ricarica documenti quando cambiano i filtri
+    if (userPermissions.includes('documents.view')) {
+      loadDocuments();
+    }
+  }, [searchTerm, selectedType, selectedCategory]);
 
   async function loadUserPermissions() {
     try {
@@ -116,6 +128,8 @@ export default function Docx() {
   async function loadDocuments() {
     try {
       console.log('🎓 DOCX: Inizio caricamento documenti...');
+      console.log('🎓 DOCX: Permessi utente:', userPermissions);
+      console.log('🎓 DOCX: Sezioni utente:', userSections);
       setLoading(true);
       
       // Usa i filtri attuali per recuperare i documenti
@@ -127,9 +141,21 @@ export default function Docx() {
       
       const docs = await getDocuments(filters);
       console.log('🎓 DOCX: Documenti caricati dal database:', docs);
-      console.log('🎓 DOCX: Numero documenti:', docs.length);
+      console.log('🎓 DOCX: Numero documenti trovati:', docs.length);
+      
+      // Carica i nomi degli uploader per ogni documento
+      const docsWithUploaders = await Promise.all(
+        docs.map(async (doc) => {
+          if (doc.uploaded_by) {
+            const uploaderName = await getUserName(doc.uploaded_by);
+            return { ...doc, uploader_name: uploaderName };
+          }
+          return { ...doc, uploader_name: 'Sistema' };
+        })
+      );
+      
       setDocuments(docs);
-      console.log('🎓 DOCX: Documenti salvati nello stato');
+      console.log('🎓 DOCX: Documenti con uploader salvati nello stato');
     } catch (error) {
       console.error('🚨 DOCX: Errore caricamento documenti:', error);
       setDocuments([]);
@@ -543,7 +569,7 @@ export default function Docx() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-1">
                         <User className="h-3 w-3" />
-                        <span>{doc.uploaded_by || 'Sistema'}</span>
+                        <span>{(doc as any).uploader_name || 'Sistema'}</span>
                       </div>
                       <span>{doc.file_size ? `${doc.file_size} KB` : 'N/A'}</span>
                     </div>
