@@ -594,7 +594,6 @@ export async function getTableRecords(tableName: string, limit: number = 100): P
     
     const result = await sql`
       SELECT * FROM ${sql.unsafe(tableName)}
-      ORDER BY created_at DESC
       LIMIT ${limit}
     `;
     
