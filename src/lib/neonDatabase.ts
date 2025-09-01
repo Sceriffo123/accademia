@@ -923,30 +923,10 @@ export async function getTableStructure(tableName: string): Promise<any[]> {
 
 // === INIZIALIZZAZIONE DATABASE ===
 
-export async function initializeDatabase(): Promise<boolean> {
+async function createMainTables(): Promise<void> {
   try {
-    console.log('🎓 NEON: Inizializzazione completa database...');
+    console.log('🎓 NEON: Creazione tabelle principali...');
     
-    // Verifica che la URL del database sia configurata
-    if (!import.meta.env.VITE_DATABASE_URL) {
-      console.error('🚨 NEON: VITE_DATABASE_URL non configurata');
-      return false;
-    }
-
-    // 1. Crea tabelle principali
-    await createMainTables();
-    
-    // 2. Crea sistema permessi
-    await initializePermissionsSystem();
-    
-    // 3. Inserisci dati base
-    await seedPermissionsData();
-    await insertDefaultAdmin();
-    
-    console.log('🎓 NEON: Database inizializzato completamente');
-    return true;
-  } catch (error) {
-    console.error('🚨 NEON: Errore inizializzazione database:', error);
     // Crea tabella users
     await sql`
       CREATE TABLE IF NOT EXISTS users (
@@ -1018,6 +998,34 @@ export async function initializeDatabase(): Promise<boolean> {
   } catch (error) {
     console.error('🚨 NEON: Errore creazione tabelle principali:', error);
     throw error;
+  }
+}
+
+export async function initializeDatabase(): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Inizializzazione completa database...');
+    
+    // Verifica che la URL del database sia configurata
+    if (!import.meta.env.VITE_DATABASE_URL) {
+      console.error('🚨 NEON: VITE_DATABASE_URL non configurata');
+      return false;
+    }
+
+    // 1. Crea tabelle principali
+    await createMainTables();
+    
+    // 2. Crea sistema permessi
+    await initializePermissionsSystem();
+    
+    // 3. Inserisci dati base
+    await seedPermissionsData();
+    await insertDefaultAdmin();
+    
+    console.log('🎓 NEON: Database inizializzato completamente');
+    return true;
+  } catch (error) {
+    console.error('🚨 NEON: Errore inizializzazione database:', error);
+    return false;
   }
 }
 
