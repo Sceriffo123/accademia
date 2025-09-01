@@ -1532,7 +1532,7 @@ export async function updateUser(id: string, data: Partial<User>): Promise<User 
       UPDATE users 
       SET ${updates.join(', ')} 
       WHERE id = $${values.length}
-      RETURNING id, email, full_name, role, created_at
+      RETURNING id, email, full_name, role, created_at, updated_at
     `;
 
     console.log('🎓 NEON: Query di aggiornamento:', updateQuery);
@@ -1550,43 +1550,6 @@ export async function updateUser(id: string, data: Partial<User>): Promise<User 
   } catch (error) {
     console.error('🚨 NEON: Errore aggiornamento utente:', error);
     throw error;
-  }
-}
-    
-    console.log('🎓 NEON: Query generata:', updateQuery);
-    console.log('🎓 NEON: Parametri:', values);
-    
-    const result = await sql.query(updateQuery, values);
-    
-    // Log audit successo
-    await writeAuditLog('USER_UPDATE', 'SUCCESS', {
-      userId: id,
-      updates: data,
-      verified: true
-    });
-    
-    return result[0] as User || null;
-  } catch (error) {
-    console.error('🚨 NEON: Errore aggiornamento utente:', error);
-    
-    // Log audit errore e crea alert immediato
-    await writeAuditLog('USER_UPDATE', 'ERROR', {
-      userId: id,
-      updates: data,
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
-    
-    // Crea alert immediato per Centro di Controllo
-    createSystemAlert('error', 'Database Error in User Update', {
-      operation: 'USER_UPDATE',
-      userId: id,
-      error: error instanceof Error ? error.message : String(error),
-      code: (error as any)?.code,
-      severity: (error as any)?.severity
-    });
-    
-    return null;
   }
 }
 
