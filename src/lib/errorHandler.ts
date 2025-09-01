@@ -76,10 +76,21 @@ export class GlobalErrorHandler {
       timestamp: new Date().toISOString()
     };
 
-    // Solo logga errori che sembrano critici
+    // Cattura TUTTI gli errori database e di sistema
     const errorText = errorInfo.args.join(' ');
-    if (errorText.includes('🚨') || errorText.includes('ERROR') || errorText.includes('Failed')) {
-      await writeAuditLog('CONSOLE_ERROR', 'WARNING', errorInfo);
+    if (errorText.includes('🚨') || errorText.includes('ERROR') || errorText.includes('Failed') || 
+        errorText.includes('NeonDbError') || errorText.includes('column') || errorText.includes('does not exist')) {
+      
+      await writeAuditLog('CONSOLE_ERROR', 'ERROR', errorInfo);
+      
+      // Crea alert immediato per errori database
+      if (errorText.includes('NeonDbError') || errorText.includes('column') || errorText.includes('does not exist')) {
+        createSystemAlert('error', 'Database Schema Error Detected', {
+          source: 'console',
+          error: errorText,
+          timestamp: new Date().toISOString()
+        });
+      }
     }
   }
 

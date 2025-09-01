@@ -76,13 +76,24 @@ export default function ControlCenter() {
         'SYSTEM_ALERT', `${message} - ${JSON.stringify(details)}`);
     };
     
+    // Listener per audit logs
+    const handleAuditLog = (event: CustomEvent) => {
+      const logEntry = event.detail;
+      if (logEntry.status === 'ERROR' || logEntry.status === 'VERIFICATION_FAILED') {
+        addDebugLog('error', 'AUDIT_ERROR', 
+          `${logEntry.operation}: ${logEntry.data.error || 'Operation failed'}`);
+      }
+    };
+    
     if (typeof window !== 'undefined') {
       window.addEventListener('systemAlert', handleSystemAlert as EventListener);
+      window.addEventListener('auditLog', handleAuditLog as EventListener);
     }
     
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('systemAlert', handleSystemAlert as EventListener);
+        window.removeEventListener('auditLog', handleAuditLog as EventListener);
       }
     };
   }, [profile]);
@@ -622,14 +633,33 @@ export default function ControlCenter() {
                     </ul>
                   </div>
                   
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h5 className="font-medium text-blue-900 mb-2">Monitoraggio Real-time</h5>
-                    <ul className="text-sm text-blue-700 space-y-1">
-                      <li>• Verifica dopo ogni modifica</li>
-                      <li>• Alert automatici per anomalie</li>
-                      <li>• Log audit dettagliati</li>
-                      <li>• Sincronizzazione stato locale</li>
+                  <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                    <h5 className="font-medium text-red-900 mb-2">🚨 Errori Real-time</h5>
+                    <ul className="text-sm text-red-700 space-y-1">
+                      <li>• Cattura errori NeonDbError automatica</li>
+                      <li>• Alert immediati per errori schema</li>
+                      <li>• Intercettazione errori console</li>
+                      <li>• Notifiche errori operazioni CRUD</li>
                     </ul>
+                  </div>
+                </div>
+                
+                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <h5 className="font-medium text-yellow-900 mb-2">⚠️ Errori Attivi</h5>
+                  <div className="text-sm text-yellow-700">
+                    {debugLogs.filter(log => log.type === 'error').length > 0 ? (
+                      <div className="space-y-2">
+                        {debugLogs.filter(log => log.type === 'error').slice(-5).map(log => (
+                          <div key={log.id} className="p-2 bg-white rounded border border-yellow-300">
+                            <div className="font-medium">{log.operation}</div>
+                            <div className="text-xs text-gray-600">{log.timestamp}</div>
+                            <div className="text-xs mt-1">{log.details}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center py-2">Nessun errore attivo rilevato</p>
+                    )}
                   </div>
                 </div>
               </div>

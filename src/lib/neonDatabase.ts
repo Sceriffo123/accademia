@@ -198,7 +198,6 @@ export async function updateUser(id: string, data: { email?: string; full_name?:
     
     if (updates.length === 0) return null;
     
-    updates.push('updated_at = NOW()');
     values.push(id);
     
     const result = await sql`
@@ -208,9 +207,34 @@ export async function updateUser(id: string, data: { email?: string; full_name?:
       RETURNING id, email, full_name, role, created_at
     `;
     
+    // Log audit successo
+    await writeAuditLog('USER_UPDATE', 'SUCCESS', {
+      userId: id,
+      updates: data,
+      verified: true
+    });
+    
     return result[0] as User || null;
   } catch (error) {
     console.error('🚨 NEON: Errore aggiornamento utente:', error);
+    
+    // Log audit errore e crea alert immediato
+    await writeAuditLog('USER_UPDATE', 'ERROR', {
+      userId: id,
+      updates: data,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
+    // Crea alert immediato per Centro di Controllo
+    createSystemAlert('error', 'Database Error in User Update', {
+      operation: 'USER_UPDATE',
+      userId: id,
+      error: error instanceof Error ? error.message : String(error),
+      code: (error as any)?.code,
+      severity: (error as any)?.severity
+    });
+    
     return null;
   }
 }
