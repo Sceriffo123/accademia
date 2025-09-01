@@ -422,3 +422,5 @@ interface AuditLogEntry {
     </div>
   );
 }
+
+export default React
