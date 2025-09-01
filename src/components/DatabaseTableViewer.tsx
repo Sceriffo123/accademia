@@ -15,13 +15,24 @@ import {
   Save,
   Plus,
   Trash2
+  Link,
+  ArrowRight,
+  GitBranch
 } from 'lucide-react';
 
 const sql = neon(import.meta.env.VITE_DATABASE_URL || '');
 export default function DatabaseTableViewer() {
+interface TableRelation {
+  constraint_name: string;
+  column_name: string;
+  foreign_table_name: string;
+  foreign_column_name: string;
+  constraint_type: string;
+}
   const [tables, setTables] = useState<string[]>([]);
   const [selectedTable, setSelectedTable] = useState<string>('');
   const [tableStructure, setTableStructure] = useState<any[]>([]);
+  const [tableRelations, setTableRelations] = useState<TableRelation[]>([]);
   const [tableData, setTableData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingTable, setLoadingTable] = useState(false);
@@ -60,16 +71,19 @@ export default function DatabaseTableViewer() {
       setSelectedTable(tableName);
       console.log('🎓 DATABASE: Caricamento dati tabella:', tableName);
       
-      const [structure, data] = await Promise.all([
+      const [structure, data, relations] = await Promise.all([
         getTableStructure(tableName),
-        getTableRecords(tableName, 1000)
+        getTableRecords(tableName, 1000),
+        getTableRelations(tableName)
       ]);
       
       console.log('🎓 DATABASE: Struttura tabella:', structure);
       console.log('🎓 DATABASE: Dati tabella:', data.length, 'record');
+      console.log('🎓 DATABASE: Relazioni tabella:', relations);
       
       setTableStructure(structure);
       setTableData(data);
+      setTableRelations(relations);
       setShowModal(true);
     } catch (error) {
       console.error('🚨 DATABASE: Errore caricamento tabella:', error);
@@ -79,6 +93,36 @@ export default function DatabaseTableViewer() {
     }
   }
 
+  async function getTableRelations(tableName: string): Promise<TableRelation[]> {
+    try {
+      console.log('🎓 DATABASE: Recupero relazioni per tabella:', tableName);
+      
+      const result = await sql`
+        SELECT 
+          tc.constraint_name,
+          kcu.column_name,
+          ccu.table_name AS foreign_table_name,
+          ccu.column_name AS foreign_column_name,
+          tc.constraint_type
+        FROM information_schema.table_constraints AS tc 
+        JOIN information_schema.key_column_usage AS kcu
+          ON tc.constraint_name = kcu.constraint_name
+          AND tc.table_schema = kcu.table_schema
+        JOIN information_schema.constraint_column_usage AS ccu
+          ON ccu.constraint_name = tc.constraint_name
+          AND ccu.table_schema = tc.table_schema
+        WHERE tc.table_name = ${tableName}
+          AND tc.constraint_type = 'FOREIGN KEY'
+          AND tc.table_schema = 'public'
+        ORDER BY tc.constraint_name
+      `;
+      
+      return result as TableRelation[];
+    } catch (error) {
+      console.error('🚨 DATABASE: Errore recupero relazioni:', error);
+      return [];
+    }
+  }
   function handleEditRecord(record: any) {
     setEditingRecord(record);
     setEditFormData({ ...record });
@@ -472,6 +516,7 @@ export default function DatabaseTableViewer() {
                   setSelectedTable('');
                   setTableData([]);
                   setTableStructure([]);
+                  setTableRelations([]);
                 }}
                 className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
               >
@@ -501,10 +546,12 @@ export default function DatabaseTableViewer() {
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Nullable</th>
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Default</th>
                             <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Lunghezza</th>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Relazione</th>
                           </tr>
                         </thead>
                         <tbody className="bg-white">
                           {tableStructure.map((column, index) => (
+                            const relation = tableRelations.find(rel => rel.column_name === column.column_name);
                             <tr key={index} className="border-b border-gray-100">
                               <td className="px-4 py-3 font-medium text-gray-900">{column.column_name}</td>
                               <td className="px-4 py-3 text-gray-600">{column.data_type}</td>
@@ -595,6 +642,18 @@ export default function DatabaseTableViewer() {
                                     </button>
                                   </div>
                                 </td>
+                                <td className="px-4 py-3">
+                                  {relation ? (
+                                    <div className="flex items-center space-x-2">
+                                      <Link className="h-4 w-4 text-blue-600" />
+                                      <span className="text-sm text-blue-600 font-medium">
+                                        {relation.foreign_table_name}.{relation.foreign_column_name}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400 text-sm">-</span>
+                                  )}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -603,6 +662,43 @@ export default function DatabaseTableViewer() {
                     ) : (
                       <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
                         <Database className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  {/* Table Relations Summary */}
+                  {tableRelations.length > 0 && (
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <GitBranch className="h-5 w-5 text-purple-600 mr-2" />
+                        Relazioni Tabella ({tableRelations.length})
+                      </h4>
+                      <div className="bg-purple-50 rounded-lg p-4">
+                        <div className="space-y-3">
+                          {tableRelations.map((relation, index) => (
+                            <div key={index} className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200">
+                              <div className="flex items-center space-x-3">
+                                <div className="p-2 bg-purple-100 rounded-lg">
+                                  <Link className="h-4 w-4 text-purple-600" />
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">
+                                    {relation.column_name}
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    Foreign Key
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2 text-sm">
+                                <span className="text-gray-600">riferisce a</span>
+                                <ArrowRight className="h-4 w-4 text-gray-400" />
+                                <span className="font-medium text-purple-600">
+                                  {relation.foreign_table_name}.{relation.foreign_column_name}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                         <p>Nessun dato nella tabella</p>
                       </div>
                     )}
