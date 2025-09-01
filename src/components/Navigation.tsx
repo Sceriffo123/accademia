@@ -22,16 +22,7 @@ export default function Navigation() {
   const [visibleSections, setVisibleSections] = useState<string[]>([]);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
 
-  // Gestisci il caso in cui AuthProvider non è ancora disponibile
-  let authData;
-  try {
-    authData = useAuth();
-  } catch (error) {
-    // AuthProvider non è ancora disponibile, usa valori di default
-    authData = { user: null, profile: null, signOut: () => {} };
-  }
-
-  const { user, profile, signOut } = authData;
+  const { user, profile, signOut } = useAuth();
 
   useEffect(() => {
     if (profile?.role) {
@@ -51,7 +42,7 @@ export default function Navigation() {
     } catch (error) {
       console.error('Errore caricamento sezioni visibili:', error);
       // Fallback ai default se il database non è disponibile
-      setVisibleSections(['dashboard', 'normatives', 'education', 'docx']);
+      setVisibleSections(['dashboard', 'normatives', 'education']);
     }
   }
 
@@ -61,7 +52,7 @@ export default function Navigation() {
       setUserPermissions(permissions);
     } catch (error) {
       console.error('Errore caricamento permessi utente:', error);
-      setUserPermissions([]);
+      setUserPermissions(['normatives.view', 'education.view']);
     }
   }
 
@@ -77,8 +68,8 @@ export default function Navigation() {
     { to: '/education', icon: GraduationCap, label: 'Formazione', section: 'education' },
   ].filter(item => visibleSections.includes(item.section));
 
-  // Aggiungi Documenti solo se ha i permessi per visualizzare documenti
-  if (visibleSections.includes('docx') && userPermissions.includes('documents.view')) {
+  // Aggiungi Documenti solo se la sezione è visibile
+  if (visibleSections.includes('docx')) {
     navItems.push({ to: '/docx', icon: FileIcon, label: 'Documenti', section: 'docx' });
   }
 
@@ -123,7 +114,7 @@ export default function Navigation() {
   return (
     <>
       {/* Desktop Navigation */}
-      <nav className="hidden md:block bg-white shadow-sm border-b">
+      <nav className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <Link to="/dashboard" className="flex items-center space-x-2">
@@ -131,7 +122,7 @@ export default function Navigation() {
               <span className="text-xl font-bold text-gray-900">Accademia TPL</span>
             </Link>
             
-            <div className="flex items-center space-x-6">
+            <div className="hidden md:flex items-center space-x-6">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.to;
@@ -167,22 +158,11 @@ export default function Navigation() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Mobile Navigation */}
-      <nav className="md:hidden bg-white shadow-sm border-b">
-        <div className="px-4">
-          <div className="flex items-center justify-between h-16">
-            <Link to="/dashboard" className="flex items-center space-x-2">
-              <GraduationCap className="h-7 w-7 text-blue-800" />
-              <span className="text-lg font-bold text-gray-900">Accademia TPL</span>
-            </Link>
             
+            {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               aria-label={isMenuOpen ? "Chiudi menu" : "Apri menu"}
               title={isMenuOpen ? "Chiudi menu" : "Apri menu"}
             >
@@ -190,8 +170,9 @@ export default function Navigation() {
             </button>
           </div>
           
+          {/* Mobile Menu */}
           {isMenuOpen && (
-            <div className="border-t border-gray-100 py-4">
+            <div className="md:hidden border-t border-gray-100 py-4">
               <div className="space-y-1">
                 {navItems.map((item) => {
                   const Icon = item.icon;
