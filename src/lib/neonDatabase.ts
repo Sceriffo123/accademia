@@ -646,7 +646,7 @@ export async function updateRoleSectionInDB(roleName: string, sectionName: strin
     
     await sql`
       INSERT INTO role_sections (role_id, section_id, visible)
-      SELECT r.id, s.id, ${visible}
+      SELECT CAST(r.id AS UUID), CAST(s.id AS UUID), ${visible}
       FROM roles r, sections s
       WHERE r.name = ${roleName} AND s.name = ${sectionName}
       ON CONFLICT (role_id, section_id)
