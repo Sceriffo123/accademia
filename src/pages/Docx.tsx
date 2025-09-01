@@ -278,8 +278,20 @@ export default function Docx() {
   const canUpload = userPermissions.includes('documents.upload');
   const sectionVisible = userSections.includes('documents');
 
+  console.log('🎯 DOCX DEBUG: === CONTROLLO PERMESSI E SEZIONI ===');
+  console.log('🎯 DOCX DEBUG: userPermissions:', userPermissions);
+  console.log('🎯 DOCX DEBUG: userSections:', userSections);
+  console.log('🎯 DOCX DEBUG: canView:', canView);
+  console.log('🎯 DOCX DEBUG: sectionVisible:', sectionVisible);
+  console.log('🎯 DOCX DEBUG: documents.length:', documents.length);
+  console.log('🎯 DOCX DEBUG: documents:', documents);
+
   // Controllo visibilità sezione
   if (!sectionVisible) {
+    console.log('🎯 DOCX DEBUG: === SEZIONE NON VISIBILE ===');
+    console.log('🎯 DOCX DEBUG: sectionVisible:', sectionVisible);
+    console.log('🎯 DOCX DEBUG: userSections:', userSections);
+    console.log('🎯 DOCX DEBUG: includes documents?:', userSections.includes('documents'));
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto text-center">
@@ -295,7 +307,13 @@ export default function Docx() {
     );
   }
 
+  console.log('🎯 DOCX DEBUG: === SEZIONE VISIBILE, CONTROLLO PERMESSI ===');
+
   if (!canView) {
+    console.log('🎯 DOCX DEBUG: === ACCESSO NEGATO ===');
+    console.log('🎯 DOCX DEBUG: canView:', canView);
+    console.log('🎯 DOCX DEBUG: userPermissions:', userPermissions);
+    console.log('🎯 DOCX DEBUG: includes documents.view?:', userPermissions.includes('documents.view'));
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto text-center">
@@ -311,30 +329,41 @@ export default function Docx() {
     );
   }
 
+  console.log('🎯 DOCX DEBUG: === ACCESSO CONSENTITO, CONTROLLO FILTRI ===');
+
   const filteredDocuments = documents.filter(doc => {
+    console.log('🎯 DOCX DEBUG: === FILTRAGGIO DOCUMENTO ===');
+    console.log('🎯 DOCX DEBUG: Documento da filtrare:', {
+      id: doc.id,
+      title: doc.title,
+      type: doc.type,
+      category: doc.category,
+      status: doc.status
+    });
+
     const matchesSearch = searchTerm === '' || 
       doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (doc.description && doc.description.toLowerCase().includes(searchTerm.toLowerCase()));
     
+    console.log('🎯 DOCX DEBUG: matchesSearch:', matchesSearch, '(searchTerm:', searchTerm, ')');
+
     const matchesType = selectedType === 'all' || doc.type === selectedType;
+    console.log('🎯 DOCX DEBUG: matchesType:', matchesType, '(selectedType:', selectedType, 'doc.type:', doc.type, ')');
+
     const matchesCategory = selectedCategory === 'all' || doc.category === selectedCategory;
+    console.log('🎯 DOCX DEBUG: matchesCategory:', matchesCategory, '(selectedCategory:', selectedCategory, 'doc.category:', doc.category, ')');
     
-    // Debug filtri per ogni documento
-    console.log('🔍 DOCX: Filtro documento:', {
-      title: doc.title,
-      searchTerm,
-      matchesSearch,
-      selectedType,
-      docType: doc.type,
-      matchesType,
-      selectedCategory,
-      docCategory: doc.category,
-      matchesCategory,
-      finalResult: matchesSearch && matchesType && matchesCategory
-    });
+    const finalResult = matchesSearch && matchesType && matchesCategory;
+    console.log('🎯 DOCX DEBUG: finalResult:', finalResult);
+    console.log('🎯 DOCX DEBUG: === FINE FILTRAGGIO DOCUMENTO ===');
     
-    return matchesSearch && matchesType && matchesCategory;
+    return finalResult;
   });
+
+  console.log('🎯 DOCX DEBUG: === RISULTATO FILTRAGGIO ===');
+  console.log('🎯 DOCX DEBUG: documents.length:', documents.length);
+  console.log('🎯 DOCX DEBUG: filteredDocuments.length:', filteredDocuments.length);
+  console.log('🎯 DOCX DEBUG: filteredDocuments:', filteredDocuments);
 
   const categories = [...new Set(documents.map(d => d.category))];
 
@@ -508,10 +537,7 @@ export default function Docx() {
               <p className="text-gray-600">Caricamento documenti...</p>
             </div>
           ) : filteredDocuments.length > 0 ? (
-            <>
-              {/* Debug Info Panel */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-                <h4 className="font-semibold text-blue-800 mb-2">🔍 Debug Info:</h4>
+            <></>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <span className="text-blue-600 font-medium">Documenti DB:</span>
