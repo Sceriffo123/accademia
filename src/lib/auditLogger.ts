@@ -1,5 +1,4 @@
-import { appendFile, writeFile } from 'fs/promises';
-import { join } from 'path';
+// Browser-compatible audit logging (no fs/promises)
 
 interface AuditLogEntry {
   timestamp: string;
@@ -9,7 +8,7 @@ interface AuditLogEntry {
   user?: string;
 }
 
-// Funzione per scrivere nel file audit log
+// Browser-compatible audit logging using localStorage and console
 export async function writeAuditLog(operation: string, status: 'SUCCESS' | 'ERROR' | 'VERIFICATION_FAILED' | 'WARNING', data: any, user?: string): Promise<void> {
   try {
     const timestamp = new Date().toISOString();
@@ -21,27 +20,98 @@ export async function writeAuditLog(operation: string, status: 'SUCCESS' | 'ERRO
       user
     };
 
-    const logLine = `[${timestamp}] ${operation} - ${status}: ${JSON.stringify(data)}\n`;
-    const auditPath = join(process.cwd(), 'AUDIT_LOG.md');
+    // Store in localStorage for persistence
+    const existingLogs = localStorage.getItem('auditLogs') || '[]';
+    const logs = JSON.parse(existingLogs);
+    logs.push(logEntry);
     
-    // Aggiungi al file markdown
-    const markdownEntry = `
-### ${timestamp} - ${operation}
-- **Status**: ${status}
-- **Data**: \`${JSON.stringify(data, null, 2)}\`
-${user ? `- **User**: ${user}` : ''}
-
----
-`;
+    // Keep only last 1000 entries to prevent storage overflow
+    if (logs.length > 1000) {
+      logs.splice(0, logs.length - 1000);
+    }
     
-    await appendFile(auditPath, markdownEntry);
+    localStorage.setItem('auditLogs', JSON.stringify(logs));
     
-    // Log anche in console per debug immediato
-    console.log('📝 AUDIT:', logEntry);
+    // Log in console with structured format
+    const statusEmoji = {
+      'SUCCESS': '✅',
+      'ERROR': '🚨',
+      'VERIFICATION_FAILED': '⚠️',
+      'WARNING': '🟡'
+    };
+    
+    console.log(`📝 AUDIT ${statusEmoji[status]} [${operation}]:`, {
+      timestamp,
+      status,
+      data,
+      user
+    });
+    
+    // Also send to any listening components via custom event
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('auditLog', { 
+        detail: logEntry 
+      }));
+    }
     
   } catch (error) {
     console.error('🚨 AUDIT: Errore scrittura log:', error);
   }
+}
+
+// Funzione per recuperare log di audit dal localStorage
+export function getAuditLogs(): AuditLogEntry[] {
+  try {
+    const logs = localStorage.getItem('auditLogs') || '[]';
+    return JSON.parse(logs);
+  } catch (error) {
+    console.error('🚨 AUDIT: Errore lettura log:', error);
+    return [];
+  }
+}
+
+// Funzione per esportare log di audit come file
+export function exportAuditLogs(): void {
+  try {
+    const logs = getAuditLogs();
+    const markdown = generateMarkdownReport(logs);
+    
+    const blob = new Blob([markdown], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit-log-${new Date().toISOString().split('T')[0]}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    console.log('📝 AUDIT: Log esportati come file markdown');
+  } catch (error) {
+    console.error('🚨 AUDIT: Errore export log:', error);
+  }
+}
+
+// Genera report markdown dai log
+function generateMarkdownReport(logs: AuditLogEntry[]): string {
+  const header = `# Audit Log Report
+Generated: ${new Date().toISOString()}
+Total Entries: ${logs.length}
+
+---
+
+`;
+
+  const entries = logs.map(log => `
+### ${log.timestamp} - ${log.operation}
+- **Status**: ${log.status}
+- **Data**: \`${JSON.stringify(log.data, null, 2)}\`
+${log.user ? `- **User**: ${log.user}` : ''}
+
+---
+`).join('');
+
+  return header + entries;
 }
 
 // Funzione per verificare integrità database dopo modifiche

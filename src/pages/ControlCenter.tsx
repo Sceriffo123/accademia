@@ -593,6 +593,21 @@ export default function ControlCenter() {
                       <Database className="h-4 w-4" />
                       <span>Export Schema</span>
                     </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const { exportAuditLogs } = await import('../lib/auditLogger');
+                          exportAuditLogs();
+                          addDebugLog('success', 'AUDIT_EXPORT', 'Log di audit esportati come file markdown');
+                        } catch (error) {
+                          addDebugLog('error', 'AUDIT_EXPORT', `Errore export audit logs: ${error}`);
+                        }
+                      }}
+                      className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      <Shield className="h-4 w-4" />
+                      <span>Export Audit</span>
+                    </button>
                   </div>
                 </div>
                 
