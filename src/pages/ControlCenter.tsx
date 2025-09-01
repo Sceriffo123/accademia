@@ -71,6 +71,8 @@ export default function ControlCenter() {
   const [realTimeMonitoring, setRealTimeMonitoring] = useState(false);
   const [selectedTable, setSelectedTable] = useState<string>('');
   const [tableData, setTableData] = useState<any[]>([]);
+  const [allPermissions, setAllPermissions] = useState<any[]>([]);
+  const [allSections, setAllSections] = useState<any[]>([]);
 
   useEffect(() => {
     if (profile?.role === 'superadmin') {
@@ -124,6 +126,8 @@ export default function ControlCenter() {
       });
 
       setRoleMatrix(matrix);
+      setAllPermissions(permissions);
+      setAllSections(sections);
 
       // Carica info tabelle database
       const tableInfo: DatabaseTable[] = [];
@@ -443,19 +447,21 @@ export default function ControlCenter() {
                 </div>
                 <div className="p-4 space-y-4">
                   <div className="grid grid-cols-3 gap-4">
-                    <select className="border rounded-lg px-3 py-2" id="test-role">
+                    <select className="border rounded-lg px-3 py-2" id="test-role" title="Seleziona ruolo">
                       <option value="">Seleziona Ruolo</option>
                       {Array.from(roleMatrix.keys()).map(role => (
                         <option key={role} value={role}>{role}</option>
                       ))}
                     </select>
-                    <input 
-                      type="text" 
-                      placeholder="Nome Permesso" 
-                      className="border rounded-lg px-3 py-2"
-                      id="test-permission"
-                    />
-                    <select className="border rounded-lg px-3 py-2" id="test-granted">
+                    <select className="border rounded-lg px-3 py-2" id="test-permission" title="Seleziona permesso">
+                      <option value="">Seleziona Permesso</option>
+                      {allPermissions.map(permission => (
+                        <option key={permission.id} value={permission.name}>
+                          {permission.name} ({permission.category})
+                        </option>
+                      ))}
+                    </select>
+                    <select className="border rounded-lg px-3 py-2" id="test-granted" title="Stato permesso">
                       <option value="true">Abilitato</option>
                       <option value="false">Disabilitato</option>
                     </select>
@@ -463,7 +469,7 @@ export default function ControlCenter() {
                   <button
                     onClick={() => {
                       const role = (document.getElementById('test-role') as HTMLSelectElement)?.value;
-                      const permission = (document.getElementById('test-permission') as HTMLInputElement)?.value;
+                      const permission = (document.getElementById('test-permission') as HTMLSelectElement)?.value;
                       const granted = (document.getElementById('test-granted') as HTMLSelectElement)?.value === 'true';
                       if (role && permission) testPermissionOperation(role, permission, granted);
                     }}
@@ -480,19 +486,21 @@ export default function ControlCenter() {
                 </div>
                 <div className="p-4 space-y-4">
                   <div className="grid grid-cols-3 gap-4">
-                    <select className="border rounded-lg px-3 py-2" id="test-section-role">
+                    <select className="border rounded-lg px-3 py-2" id="test-section-role" title="Seleziona ruolo">
                       <option value="">Seleziona Ruolo</option>
                       {Array.from(roleMatrix.keys()).map(role => (
                         <option key={role} value={role}>{role}</option>
                       ))}
                     </select>
-                    <input 
-                      type="text" 
-                      placeholder="Nome Sezione" 
-                      className="border rounded-lg px-3 py-2"
-                      id="test-section"
-                    />
-                    <select className="border rounded-lg px-3 py-2" id="test-visible">
+                    <select className="border rounded-lg px-3 py-2" id="test-section" title="Seleziona sezione">
+                      <option value="">Seleziona Sezione</option>
+                      {allSections.map(section => (
+                        <option key={section.id} value={section.name}>
+                          {section.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select className="border rounded-lg px-3 py-2" id="test-visible" title="Visibilità sezione">
                       <option value="true">Visibile</option>
                       <option value="false">Nascosta</option>
                     </select>
@@ -500,7 +508,7 @@ export default function ControlCenter() {
                   <button
                     onClick={() => {
                       const role = (document.getElementById('test-section-role') as HTMLSelectElement)?.value;
-                      const section = (document.getElementById('test-section') as HTMLInputElement)?.value;
+                      const section = (document.getElementById('test-section') as HTMLSelectElement)?.value;
                       const visible = (document.getElementById('test-visible') as HTMLSelectElement)?.value === 'true';
                       if (role && section) testSectionOperation(role, section, visible);
                     }}
