@@ -156,50 +156,6 @@ export async function getAllUsers(excludeSuperAdmin: boolean = false, currentUse
       users = users.filter(u => u.role !== 'superadmin');
     }
     
-    if (currentUserId) {
-      users = users.filter(u => u.id !== currentUserId);
-    }
-    
-    return users;
-  } catch (error) {
-    console.error('🚨 NEON: Errore recupero utenti:', error);
-    return [];
-  }
-}
-
-export async function getUsersCount(): Promise<number> {
-  try {
-    const result = await sql`SELECT COUNT(*) as count FROM users`;
-    return parseInt(result[0].count);
-  } catch (error) {
-    console.error('🚨 NEON: Errore conteggio utenti:', error);
-    return 0;
-  }
-}
-
-export async function updateUser(id: string, data: { email?: string; full_name?: string; role?: 'user' | 'admin' | 'superadmin' | 'operator' }): Promise<User | null> {
-  try {
-    console.log('🎓 NEON: Aggiornamento utente:', id);
-    const updates = [];
-    const values = [];
-    
-    if (data.email) {
-      updates.push('email = $' + (values.length + 1));
-      values.push(data.email);
-    }
-    if (data.full_name) {
-      updates.push('full_name = $' + (values.length + 1));
-      values.push(data.full_name);
-    }
-    if (data.role) {
-      updates.push('role = $' + (values.length + 1));
-      values.push(data.role);
-    }
-    
-    if (updates.length === 0) return null;
-    
-    values.push(id);
-    
     // Costruisci la query dinamicamente in modo sicuro
     const updates = [];
     const values = [];
@@ -219,20 +175,22 @@ export async function updateUser(id: string, data: { email?: string; full_name?:
       values.push(data.role);
     }
     
+    // Aggiungi sempre updated_at
     updates.push('updated_at = NOW()');
     
     if (updates.length === 1) { // Solo updated_at
-      throw new Error('Nessun campo da aggiornare specificato');
+      console.log('🎓 NEON: Nessun campo da aggiornare');
+      return null;
     }
     
-    // Aggiungi l'ID come ultimo parametro
+    // Aggiungi l'ID come ultimo parametro per la WHERE clause
     values.push(id);
     
     const query = `
       UPDATE users 
-      SET ${updates.join(', ')}
+      SET ${updates.join(', ')} 
       WHERE id = $${values.length}
-      RETURNING *
+      RETURNING id, email, full_name, role, created_at, updated_at
     `;
     
     console.log('🎓 NEON: Query generata:', query);
