@@ -63,6 +63,13 @@ export default function SuperAdmin() {
   const [tableData, setTableData] = useState<any[]>([]);
   const [tableStructure, setTableStructure] = useState<any[]>([]);
   const [showTableModal, setShowTableModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [userFormData, setUserFormData] = useState({
+    email: '',
+    full_name: '',
+    role: 'user' as 'user' | 'admin' | 'superadmin' | 'operator'
+  });
 
   useEffect(() => {
     if (profile?.role === 'superadmin') {
@@ -159,6 +166,44 @@ export default function SuperAdmin() {
       setShowTableModal(true);
     } catch (error) {
       console.error('Errore caricamento dati tabella:', error);
+    }
+  }
+
+  function handleEditUser(user: any) {
+    setEditingUser(user);
+    setUserFormData({
+      email: user.email,
+      full_name: user.full_name,
+      role: user.role
+    });
+    setShowEditUserModal(true);
+  }
+
+  async function handleSaveUser() {
+    if (!editingUser) return;
+    
+    try {
+      const { updateUser } = await import('../lib/neonDatabase');
+      await updateUser(editingUser.id, userFormData);
+      await loadUsersData(); // Ricarica la lista utenti
+      setShowEditUserModal(false);
+      setEditingUser(null);
+    } catch (error) {
+      console.error('Errore aggiornamento utente:', error);
+      setError('Errore durante l\'aggiornamento dell\'utente');
+    }
+  }
+
+  async function handleDeleteUser(userId: string) {
+    if (!confirm('Sei sicuro di voler eliminare questo utente?')) return;
+    
+    try {
+      const { deleteUser } = await import('../lib/neonDatabase');
+      await deleteUser(userId);
+      await loadUsersData(); // Ricarica la lista utenti
+    } catch (error) {
+      console.error('Errore eliminazione utente:', error);
+      setError('Errore durante l\'eliminazione dell\'utente');
     }
   }
 
@@ -468,11 +513,19 @@ export default function SuperAdmin() {
                           </td>
                           <td className="px-4 py-3 text-center">
                             <div className="flex items-center justify-center space-x-2">
-                              <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                              <button 
+                                onClick={() => handleEditUser(user)}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Modifica utente"
+                              >
                                 <Edit3 className="h-4 w-4" />
                               </button>
                               {user.role !== 'superadmin' && (
-                                <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                <button 
+                                  onClick={() => handleDeleteUser(user.id)}
+                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Elimina utente"
+                                >
                                   <Trash2 className="h-4 w-4" />
                                 </button>
                               )}
@@ -647,6 +700,83 @@ export default function SuperAdmin() {
                     <p>Nessun dato nella tabella</p>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {showEditUserModal && editingUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">
+                Modifica Utente
+              </h3>
+              <button
+                onClick={() => setShowEditUserModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nome Completo
+                </label>
+                <input
+                  type="text"
+                  value={userFormData.full_name}
+                  onChange={(e) => setUserFormData({...userFormData, full_name: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={userFormData.email}
+                  onChange={(e) => setUserFormData({...userFormData, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ruolo
+                </label>
+                <select
+                  value={userFormData.role}
+                  onChange={(e) => setUserFormData({...userFormData, role: e.target.value as any})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                >
+                  <option value="user">Utente</option>
+                  <option value="operator">Operatore</option>
+                  <option value="admin">Amministratore</option>
+                  <option value="superadmin">Super Amministratore</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-4">
+                <button
+                  onClick={() => setShowEditUserModal(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleSaveUser}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+                >
+                  <Save className="h-4 w-4" />
+                  <span>Salva</span>
+                </button>
               </div>
             </div>
           </div>
