@@ -456,6 +456,13 @@ export async function seedPermissionsData(): Promise<void> {
   try {
     console.log('🎓 NEON: Inserimento dati base sistema permessi...');
     
+    // Verifica se i dati esistono già
+    const existingRoles = await sql`SELECT COUNT(*) as count FROM roles`;
+    if (parseInt(existingRoles[0].count) > 0) {
+      console.log('🎓 NEON: Dati già esistenti, skip inserimento');
+      return;
+    }
+    
     // Inserisci ruoli base
     await sql`
       INSERT INTO roles (name, display_name, description, level) VALUES
@@ -464,7 +471,6 @@ export async function seedPermissionsData(): Promise<void> {
       ('operator', 'Operatore', 'Gestione contenuti', 3),
       ('user', 'Utente', 'Accesso base', 4),
       ('guest', 'Ospite', 'Accesso limitato', 5)
-      ON CONFLICT (name) DO NOTHING
     `;
 
     // Inserisci permessi per normative
@@ -475,7 +481,6 @@ export async function seedPermissionsData(): Promise<void> {
       ('normatives.edit', 'Può modificare normative esistenti', 'normatives'),
       ('normatives.delete', 'Può eliminare normative', 'normatives'),
       ('normatives.publish', 'Può pubblicare normative', 'normatives')
-      ON CONFLICT (name) DO NOTHING
     `;
 
     // Inserisci permessi per documenti
@@ -486,7 +491,6 @@ export async function seedPermissionsData(): Promise<void> {
       ('documents.edit', 'Può modificare documenti esistenti', 'documents'),
       ('documents.delete', 'Può eliminare documenti', 'documents'),
       ('documents.upload', 'Può caricare nuovi documenti', 'documents')
-      ON CONFLICT (name) DO NOTHING
     `;
 
     // Inserisci permessi per utenti
@@ -497,7 +501,6 @@ export async function seedPermissionsData(): Promise<void> {
       ('users.edit', 'Può modificare utenti esistenti', 'users'),
       ('users.delete', 'Può eliminare utenti', 'users'),
       ('users.manage_roles', 'Può modificare i ruoli utente', 'users')
-      ON CONFLICT (name) DO NOTHING
     `;
 
     // Inserisci permessi per formazione
@@ -508,7 +511,6 @@ export async function seedPermissionsData(): Promise<void> {
       ('education.edit', 'Può modificare corsi esistenti', 'education'),
       ('education.delete', 'Può eliminare corsi', 'education'),
       ('education.enroll', 'Può iscriversi ai corsi', 'education')
-      ON CONFLICT (name) DO NOTHING
     `;
 
     // Inserisci permessi per sistema
@@ -518,7 +520,6 @@ export async function seedPermissionsData(): Promise<void> {
       ('system.permissions', 'Può modificare i permessi', 'system'),
       ('system.logs', 'Può visualizzare i log di sistema', 'system'),
       ('system.backup', 'Può fare backup del sistema', 'system')
-      ON CONFLICT (name) DO NOTHING
     `;
 
     // Inserisci sezioni dell'interfaccia
@@ -526,13 +527,12 @@ export async function seedPermissionsData(): Promise<void> {
       INSERT INTO sections (name, display_name, description) VALUES
       ('dashboard', 'Dashboard', 'Pannello principale'),
       ('normatives', 'Normative', 'Gestione normative'),
-      ('documents', 'Documenti', 'Gestione documenti'),
+      ('docx', 'Documenti', 'Gestione documenti'),
       ('education', 'Formazione', 'Corsi e formazione'),
       ('users', 'Utenti', 'Gestione utenti'),
       ('admin', 'Amministrazione', 'Pannello amministrativo'),
       ('superadmin', 'Super Admin', 'Pannello super amministrativo'),
       ('reports', 'Report', 'Gestione report')
-      ON CONFLICT (name) DO NOTHING
     `;
 
     console.log('🎓 NEON: Dati base sistema permessi inseriti');
