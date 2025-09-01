@@ -885,22 +885,7 @@ export async function getRolePermissionsFromDB(roleName: string): Promise<string
   }
 }
 
-export async function getRoleSectionsFromDB(roleName: string): Promise<string[]> {
-  try {
-    console.log('🎓 NEON: Recupero sezioni per ruolo dal database:', roleName);
-    const result = await sql`
-      SELECT s.name
-      FROM sections s
-      JOIN role_sections rs ON s.id = rs.section_id
-      JOIN roles r ON CAST(rs.role_id AS TEXT) = CAST(r.id AS TEXT)
-      WHERE r.name = ${roleName} AND rs.visible = TRUE
-    `;
-    return result.map(row => row.name);
-  } catch (error) {
-    console.error('🚨 NEON: Errore recupero sezioni ruolo:', error);
-    return [];
-  }
-}
+// Funzione rimossa - ora usa la versione hardcoded più sotto
 
 export async function updateRolePermissionInDB(roleName: string, permissionName: string, granted: boolean): Promise<boolean> {
   try {
