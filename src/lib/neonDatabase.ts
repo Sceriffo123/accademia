@@ -1523,9 +1523,35 @@ export async function updateUser(id: string, data: Partial<User>): Promise<User 
     if (updates.length === 1) { // Solo updated_at
       console.log('🎓 NEON: Nessun campo da aggiornare');
       return null;
-      UPDATE users 
     }
+
+    // Aggiungi l'ID come ultimo parametro per la WHERE clause
+    values.push(id);
+
+    const updateQuery = `
+      UPDATE users 
+      SET ${updates.join(', ')} 
+      WHERE id = $${values.length}
+      RETURNING id, email, full_name, role, created_at
     `;
+
+    console.log('🎓 NEON: Query di aggiornamento:', updateQuery);
+    console.log('🎓 NEON: Valori:', values);
+
+    const result = await sql.query(updateQuery, values);
+    
+    if (result.rows && result.rows.length > 0) {
+      console.log('✅ NEON: Utente aggiornato con successo:', result.rows[0]);
+      return result.rows[0];
+    } else {
+      console.error('❌ NEON: Nessun utente aggiornato');
+      return null;
+    }
+  } catch (error) {
+    console.error('🚨 NEON: Errore aggiornamento utente:', error);
+    throw error;
+  }
+}
     
     console.log('🎓 NEON: Query generata:', updateQuery);
     console.log('🎓 NEON: Parametri:', values);
