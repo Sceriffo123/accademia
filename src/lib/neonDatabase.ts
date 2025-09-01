@@ -741,7 +741,8 @@ export async function seedPermissionsData(): Promise<void> {
     // Verifica se i dati esistono già
     const existingRoles = await sql`SELECT COUNT(*) as count FROM roles`;
     if (parseInt(existingRoles[0].count) > 0) {
-      console.log('🎓 NEON: Dati già esistenti, skip inserimento');
+      console.log('🎓 NEON: Dati già esistenti, inizializzazione sezioni ruoli...');
+      await initializeRoleSections();
       return;
     }
     
@@ -819,9 +820,45 @@ export async function seedPermissionsData(): Promise<void> {
     `;
 
     console.log('🎓 NEON: Dati base sistema permessi inseriti');
+    
+    // Inizializza le sezioni per i ruoli
+    await initializeRoleSections();
   } catch (error) {
     console.error('🚨 NEON: Errore inserimento dati base:', error);
     throw error;
+  }
+}
+
+// Inizializza le sezioni per tutti i ruoli
+async function initializeRoleSections(): Promise<void> {
+  try {
+    console.log('🎓 NEON: Inizializzazione sezioni ruoli...');
+    
+    // Configurazione sezioni per ruolo
+    const roleSectionsConfig = {
+      'superadmin': ['dashboard', 'normatives', 'docx', 'documents', 'education', 'users', 'admin', 'superadmin', 'settings', 'reports'],
+      'admin': ['dashboard', 'normatives', 'docx', 'documents', 'education', 'users', 'admin', 'reports'],
+      'operator': ['dashboard', 'normatives', 'education', 'documents'],
+      'user': ['dashboard', 'normatives', 'documents', 'education']
+    };
+    
+    // Per ogni ruolo, inserisci le sezioni
+    for (const [roleName, sections] of Object.entries(roleSectionsConfig)) {
+      for (const sectionName of sections) {
+        await sql`
+          INSERT INTO role_sections (role_id, section_id, visible)
+          SELECT r.id, s.id, true
+          FROM roles r, sections s
+          WHERE r.name = ${roleName} AND s.name = ${sectionName}
+          ON CONFLICT (role_id, section_id) DO NOTHING
+        `;
+      }
+      console.log(`✅ NEON: Sezioni inizializzate per ruolo ${roleName}: ${sections.join(', ')}`);
+    }
+    
+    console.log('🎓 NEON: Inizializzazione sezioni ruoli completata');
+  } catch (error) {
+    console.error('🚨 NEON: Errore inizializzazione sezioni ruoli:', error);
   }
 }
 
@@ -1358,8 +1395,8 @@ export async function updateRolePermission(role: string, permission: string, gra
   return await updateRolePermissionInDB(role, permission, granted);
 }
 
-export async function updateRoleSection(role: string, section: string, granted: boolean): Promise<boolean> {
-  return await updateRoleSectionInDB(role, section, granted);
+export async function updateRoleSection(role: string, section: string, visible: boolean): Promise<boolean> {
+  return await updateRoleSectionInDB(role, section, visible);
 }
 
 export async function getTableRecords(tableName: string, limit: number = 100): Promise<any[]> {
