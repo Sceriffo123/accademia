@@ -1365,8 +1365,10 @@ export async function getTableRecords(tableName: string, limit: number = 100): P
     console.log('🎓 NEON: Recupero record da tabella:', tableName);
     
     // Validazione nome tabella per sicurezza
-    // Rimuovo la validazione per permettere l'accesso a tutte le tabelle esistenti
-    // const allowedTables = ['users', 'normatives', 'documents', 'activity_logs', 'course_enrollments', 'course_modules', 'courses'];
+    const allowedTables = ['users', 'normatives', 'documents', 'activity_logs', 'course_enrollments', 'course_modules', 'courses'];
+    if (!allowedTables.includes(tableName)) {
+      throw new Error(`Tabella non consentita: ${tableName}`);
+    }
     // if (!allowedTables.includes(tableName)) {
     //   throw new Error(`Tabella non consentita: ${tableName}`);
     // }
@@ -1763,11 +1765,5 @@ export async function checkDatabaseTables(): Promise<{ tables: string[], error?:
   } catch (error) {
     console.error('🚨 NEON: Errore verifica tabelle:', error);
     return { tables: [], error: error.message };
-  }
-}
-  }
-}
-  }
-}
   }
 }
