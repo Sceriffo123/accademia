@@ -14,7 +14,7 @@ import {
   Edit3,
   Save,
   Plus,
-  Trash2
+  Trash2,
   Link,
   ArrowRight,
   GitBranch
