@@ -504,7 +504,7 @@ export default function Docx() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-800 mx-auto mb-4"></div>
               <p className="text-gray-600">Caricamento documenti...</p>
             </div>
-          ) : documents.length > 0 ? (
+          ) : filteredDocuments.length > 0 ? (
             <>
               {/* Debug Info Panel */}
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
