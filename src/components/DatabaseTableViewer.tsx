@@ -151,11 +151,10 @@ export default function DatabaseTableViewer() {
       
       const columns = Object.keys(addFormData).filter(key => addFormData[key] !== '');
       const values = columns.map(key => addFormData[key]);
-      const placeholders = columns.map((_, index) => `$${index + 1}`).join(', ');
       
       await sql`
         INSERT INTO ${sql.unsafe(selectedTable)} (${sql.unsafe(columns.join(', '))})
-        VALUES (${sql.unsafe(placeholders)})
+        VALUES (${sql.join(values, ', ')})
       `;
       
       // Ricarica dati tabella
