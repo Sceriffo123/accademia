@@ -636,109 +636,30 @@ export async function getTableStructure(tableName: string): Promise<any[]> {
 
 // === INIZIALIZZAZIONE DATABASE ===
 
-export async function initializeDatabase(): Promise<boolean> {
+export async function checkDatabaseTables(): Promise<{ tables: string[], error?: string }> {
   try {
     // Verifica che la URL del database sia configurata
     if (!import.meta.env.VITE_DATABASE_URL) {
       console.error('🚨 NEON: VITE_DATABASE_URL non configurata');
-      return false;
+      return { tables: [], error: 'VITE_DATABASE_URL non configurata' };
     }
     
-    console.log('🎓 NEON: Inizializzazione database...');
+    console.log('🎓 NEON: Verifica tabelle esistenti...');
     
-    // Crea tabella users
-    await sql`
-      CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        email VARCHAR(255) UNIQUE NOT NULL,
-        full_name VARCHAR(255) NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
-        role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin', 'superadmin', 'operator')),
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      )
+    // Recupera lista tabelle esistenti
+    const result = await sql`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      ORDER BY table_name
     `;
-
-    // Crea tabella normatives
-    await sql`
-      CREATE TABLE IF NOT EXISTS normatives (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        title TEXT NOT NULL,
-        content TEXT NOT NULL,
-        category VARCHAR(100) NOT NULL,
-        type VARCHAR(20) NOT NULL CHECK (type IN ('law', 'regulation', 'ruling')),
-        reference_number VARCHAR(100) NOT NULL,
-        publication_date DATE NOT NULL,
-        effective_date DATE NOT NULL,
-        tags TEXT[] DEFAULT '{}',
-        file_path TEXT,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      )
-    `;
-
-    // Crea tabella documents
-    await sql`
-      CREATE TABLE IF NOT EXISTS documents (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        title TEXT NOT NULL,
-        description TEXT,
-        filename VARCHAR(255) NOT NULL,
-        file_url TEXT,
-        file_path TEXT,
-        file_size INTEGER,
-        mime_type VARCHAR(100),
-        type VARCHAR(20) NOT NULL CHECK (type IN ('template', 'form', 'guide', 'report')),
-        category VARCHAR(100) NOT NULL,
-        tags TEXT[] DEFAULT '{}',
-        version VARCHAR(20) DEFAULT '1.0',
-        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'draft', 'archived')),
-        uploaded_by UUID REFERENCES users(id),
-        download_count INTEGER DEFAULT 0,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      )
-    `;
-
-    // Inserisci utente admin di default
-    const adminPasswordHash = await hashPassword('admin123');
-    await sql`
-      INSERT INTO users (email, full_name, password_hash, role)
-      VALUES ('admin@accademia.it', 'Amministratore', ${adminPasswordHash}, 'admin')
-      ON CONFLICT (email) DO NOTHING
-    `;
-
-    // Inserisci dati di esempio per normative
-    await sql`
-      INSERT INTO normatives (title, content, category, type, reference_number, publication_date, effective_date, tags)
-      VALUES 
-      (
-        'Decreto Legislativo 285/1992 - Codice della Strada',
-        'Il presente decreto disciplina la circolazione stradale e stabilisce le norme per il trasporto pubblico locale non di linea. Articolo 1: Definizioni e campo di applicazione. Il trasporto pubblico locale non di linea comprende tutti i servizi di trasporto di persone effettuati con veicoli adibiti al trasporto di persone aventi più di nove posti compreso quello del conducente.',
-        'Trasporto Pubblico',
-        'law',
-        'D.Lgs. 285/1992',
-        '1992-04-30',
-        '1993-01-01',
-        ARRAY['trasporto', 'codice strada', 'pubblico locale']
-      ),
-      (
-        'Legge Regionale 15/2018 - Disciplina TPL non di linea',
-        'La presente legge disciplina il trasporto pubblico locale non di linea nella regione, stabilendo requisiti, procedure e controlli. Articolo 1: Oggetto e finalità. La presente legge disciplina il trasporto pubblico locale non di linea al fine di garantire la sicurezza degli utenti e la qualità del servizio.',
-        'Normativa Regionale',
-        'regulation',
-        'L.R. 15/2018',
-        '2018-03-15',
-        '2018-06-01',
-        ARRAY['trasporto locale', 'regionale', 'licenze']
-      )
-      ON CONFLICT DO NOTHING
-    `;
-
-    console.log('🎓 NEON: Database inizializzato con successo');
-    return true;
+    
+    const tables = result.map(row => row.table_name);
+    console.log('🎓 NEON: Tabelle trovate:', tables);
+    
+    return { tables };
   } catch (error) {
-    console.error('🚨 NEON: Errore inizializzazione database:', error);
-    return false;
+    console.error('🚨 NEON: Errore verifica tabelle:', error);
+    return { tables: [], error: error.message };
   }
 }

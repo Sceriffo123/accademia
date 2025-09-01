@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import DatabaseCheck from './components/DatabaseCheck';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -17,6 +18,7 @@ import Docx from './pages/Docx';
 function App() {
   return (
     <AuthProvider>
+      <DatabaseCheck />
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
