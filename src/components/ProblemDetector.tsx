@@ -62,12 +62,6 @@ export default function ProblemDetector() {
       } catch (e) {
         // Ignore errors in error handler
       }
-      } catch (e) {
-        // Ignore errors in error handler
-      }
-      } catch (e) {
-        // Ignore errors in error handler to prevent loops
-      }
       originalConsoleError.apply(console, args);
     };
     
@@ -100,6 +94,9 @@ export default function ProblemDetector() {
       };
       
       addProblem(problem);
+      } catch (e) {
+        // Ignore errors in error handler
+      }
     };
 
     // Intercetta promise rejections
@@ -125,6 +122,9 @@ export default function ProblemDetector() {
       };
       
       addProblem(problem);
+      } catch (e) {
+        // Ignore errors in error handler
+      }
     };
 
     window.addEventListener('error', handleError);
