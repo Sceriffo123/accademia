@@ -1538,7 +1538,7 @@ export async function updateUser(id: string, data: Partial<User>): Promise<User 
     console.log('🎓 NEON: Query generata:', updateQuery);
     console.log('🎓 NEON: Parametri:', values);
     
-    const result = await sql(updateQuery, ...values);
+    const result = await sql.query(updateQuery, values);
     
     // Log audit successo
     await writeAuditLog('USER_UPDATE', 'SUCCESS', {
