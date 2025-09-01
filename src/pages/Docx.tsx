@@ -97,47 +97,50 @@ export default function Docx() {
 
   async function loadDocuments() {
     try {
-      console.log('🎓 DOCX: Inizio caricamento documenti...');
-      console.log('🎓 DOCX: Permessi utente:', userPermissions);
-      console.log('🎓 DOCX: Sezioni utente:', userSections);
-      console.log('🎓 DOCX: Ruolo utente:', profile?.role);
+      console.log('🎯 DOCX DEBUG: === INIZIO CARICAMENTO DOCUMENTI ===');
+      console.log('🎯 DOCX DEBUG: Profilo utente:', profile);
+      console.log('🎯 DOCX DEBUG: Ruolo utente:', profile?.role);
+      console.log('🎯 DOCX DEBUG: Stato loading iniziale:', loading);
+
       setLoading(true);
+      console.log('🎯 DOCX DEBUG: Stato loading impostato a true');
+
       const docs = await getAllDocuments();
-      console.log('🎓 DOCX: Documenti caricati dal database:', docs);
-      console.log('🎓 DOCX: Numero documenti:', docs.length);
-      
-      // Debug dettagliato del primo documento
-      if (docs.length > 0) {
-        console.log('🎓 DOCX: Primo documento dettagli:', {
-          id: docs[0].id,
-          title: docs[0].title,
-          type: docs[0].type,
-          category: docs[0].category,
-          status: docs[0].status,
-          description: docs[0].description
+      console.log('🎯 DOCX DEBUG: Risultato getAllDocuments():', docs);
+      console.log('🎯 DOCX DEBUG: Tipo di docs:', typeof docs);
+      console.log('🎯 DOCX DEBUG: docs è array?', Array.isArray(docs));
+      console.log('🎯 DOCX DEBUG: Lunghezza docs:', docs?.length);
+
+      if (docs && Array.isArray(docs)) {
+        console.log('🎯 DOCX DEBUG: Documenti validi ricevuti:', docs.length);
+        docs.forEach((doc, index) => {
+          console.log(`🎯 DOCX DEBUG: Documento ${index + 1}:`, {
+            id: doc.id,
+            title: doc.title,
+            type: doc.type,
+            category: doc.category,
+            status: doc.status,
+            created_at: doc.created_at
+          });
         });
-      }
-      
-      if (docs.length === 0) {
-        console.log('⚠️ DOCX: Nessun documento trovato nel database!');
-        console.log('⚠️ DOCX: Inserimento documenti di esempio...');
-        await seedDocumentsIfEmpty();
-        // Ricarica dopo aver inserito i dati
-        const newDocs = await getAllDocuments();
-        console.log('🎓 DOCX: Documenti dopo seed:', newDocs.length);
-        setDocuments(newDocs as unknown as Document[]);
+
+        const docsAsDocument = docs as unknown as Document[];
+        console.log('🎯 DOCX DEBUG: Conversione a Document[] completata');
+        setDocuments(docsAsDocument);
+        console.log('🎯 DOCX DEBUG: Stato documents aggiornato con', docsAsDocument.length, 'documenti');
       } else {
-        setDocuments(docs as unknown as Document[]);
+        console.log('🎯 DOCX DEBUG: ATTENZIONE - docs non è un array valido:', docs);
+        setDocuments([]);
       }
-      
-      console.log('🎓 DOCX: Documenti salvati nello stato');
+
+      console.log('🎯 DOCX DEBUG: === CARICAMENTO DOCUMENTI COMPLETATO ===');
     } catch (error) {
-      console.error('🚨 DOCX: Errore caricamento documenti:', error);
-      console.error('🚨 DOCX: Dettagli errore:', error);
+      console.error('🚨 DOCX DEBUG: ERRORE durante il caricamento:', error);
+      console.error('🚨 DOCX DEBUG: Dettagli errore:', error);
       setDocuments([]);
     } finally {
       setLoading(false);
-      console.log('🎓 DOCX: Caricamento completato');
+      console.log('🎯 DOCX DEBUG: Stato loading impostato a false');
     }
   }
 
