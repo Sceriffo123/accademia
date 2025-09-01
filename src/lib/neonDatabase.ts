@@ -1524,9 +1524,6 @@ export async function updateUser(id: string, data: Partial<User>): Promise<User 
       console.log('🎓 NEON: Nessun campo da aggiornare');
       return null;
       UPDATE users 
-      SET ${updates.join(', ')} 
-      WHERE id = $${values.length}
-      RETURNING id, email, full_name, role, created_at, updated_at
     }
     `;
     
