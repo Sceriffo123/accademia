@@ -1525,10 +1525,13 @@ export async function updateUser(id: string, data: Partial<User>): Promise<User 
     
     if (updates.length === 0) return null;
     
+    // Aggiungi l'ID come ultimo parametro
+    values.push(id);
+    
     const result = await sql`
       UPDATE users 
       SET ${sql.unsafe(updates.join(', '))}
-      WHERE id = ${id}
+      WHERE id = $${values.length}
       RETURNING id, email, full_name, role, created_at
     `;
     
