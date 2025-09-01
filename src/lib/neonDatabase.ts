@@ -947,14 +947,6 @@ export async function initializeDatabase(): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('🚨 NEON: Errore inizializzazione database:', error);
-    return false;
-  }
-}
-
-async function createMainTables(): Promise<void> {
-  try {
-    console.log('🎓 NEON: Creazione tabelle principali...');
-    
     // Crea tabella users
     await sql`
       CREATE TABLE IF NOT EXISTS users (
