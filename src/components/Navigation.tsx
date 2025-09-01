@@ -98,21 +98,19 @@ export default function Navigation() {
   ].filter(item => visibleSections.includes(item.section));
 
   // Aggiungi Documenti solo se la sezione è visibile
-  if (visibleSections.includes('documents')) {
+  if (visibleSections.includes('documents') || visibleSections.includes('docx')) {
     navItems.push({ to: '/docx', icon: FileIcon, label: 'Documenti', section: 'documents' });
   }
 
   // Aggiungi sezioni amministrative se visibili
-  if (visibleSections.includes('admin') && (profile?.role === 'admin' || profile?.role === 'superadmin')) {
+  if ((visibleSections.includes('admin') || profile?.role === 'admin' || profile?.role === 'superadmin')) {
     navItems.push({ to: '/admin', icon: Settings, label: 'Admin', section: 'admin' });
   }
   
-  if (visibleSections.includes('superadmin') && profile?.role === 'superadmin') {
+  if (profile?.role === 'superadmin') {
     navItems.push({ to: '/superadmin', icon: Crown, label: 'SuperAdmin', section: 'superadmin' });
   }
 
-  // APPLICA il filtro DOPO aver aggiunto tutti gli elementi
-  navItems = navItems.filter(item => visibleSections.includes(item.section));
 
   return (
     <nav className="bg-white shadow-sm border-b">
