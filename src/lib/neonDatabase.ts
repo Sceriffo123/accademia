@@ -1079,3 +1079,5 @@ export async function checkDatabaseTables(): Promise<{ tables: string[], error?:
     return { tables: [], error: error.message };
   }
 }
+
+export { getAllDocuments, getDocumentsCount, getUserPermissions, getUserSections, getUserById }
