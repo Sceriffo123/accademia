@@ -552,7 +552,12 @@ export async function getAllTables(): Promise<string[]> {
 }
 
 export async function getRolePermissionsMatrix() {
-  return DEFAULT_ROLE_PERMISSIONS;
+  // Converte l'array in Map per compatibilità con SuperAdmin
+  const matrix = new Map();
+  DEFAULT_ROLE_PERMISSIONS.forEach(rolePerms => {
+    matrix.set(rolePerms.role, rolePerms);
+  });
+  return matrix;
 }
 
 export async function updateRolePermission(role: string, permission: string, granted: boolean): Promise<boolean> {
