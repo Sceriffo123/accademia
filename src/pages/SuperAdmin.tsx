@@ -320,7 +320,7 @@ export default function SuperAdmin() {
       
       for (const role of roles) {
         for (const permission of permissions) {
-          await handlePermissionToggle(role.name, permission.name, granted);
+          await updateRolePermissionInDB(role.name, permission.name, granted);
         }
       }
       
