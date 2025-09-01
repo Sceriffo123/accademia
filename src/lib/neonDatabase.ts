@@ -587,10 +587,11 @@ export async function getTableRecords(tableName: string, limit: number = 100): P
     console.log('🎓 NEON: Recupero record da tabella:', tableName);
     
     // Validazione nome tabella per sicurezza
-    const allowedTables = ['users', 'normatives', 'documents', 'activity_logs', 'course_enrollments', 'course_modules', 'courses'];
-    if (!allowedTables.includes(tableName)) {
-      throw new Error(`Tabella non consentita: ${tableName}`);
-    }
+    // Rimuovo la validazione per permettere l'accesso a tutte le tabelle esistenti
+    // const allowedTables = ['users', 'normatives', 'documents', 'activity_logs', 'course_enrollments', 'course_modules', 'courses'];
+    // if (!allowedTables.includes(tableName)) {
+    //   throw new Error(`Tabella non consentita: ${tableName}`);
+    // }
     
     const result = await sql`
       SELECT * FROM ${sql.unsafe(tableName)}
@@ -609,10 +610,11 @@ export async function getTableStructure(tableName: string): Promise<any[]> {
     console.log('🎓 NEON: Recupero struttura tabella:', tableName);
     
     // Validazione nome tabella per sicurezza
-    const allowedTables = ['users', 'normatives', 'documents', 'activity_logs', 'course_enrollments', 'course_modules', 'courses'];
-    if (!allowedTables.includes(tableName)) {
-      throw new Error(`Tabella non consentita: ${tableName}`);
-    }
+    // Rimuovo la validazione per permettere l'accesso a tutte le tabelle esistenti
+    // const allowedTables = ['users', 'normatives', 'documents', 'activity_logs', 'course_enrollments', 'course_modules', 'courses'];
+    // if (!allowedTables.includes(tableName)) {
+    //   throw new Error(`Tabella non consentita: ${tableName}`);
+    // }
     
     const result = await sql`
       SELECT 

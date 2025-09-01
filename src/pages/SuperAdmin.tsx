@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import DatabaseTableViewer from '../components/DatabaseTableViewer';
 import { 
   getAllUsers, 
   getAllPermissions, 
@@ -590,37 +591,7 @@ export default function SuperAdmin() {
 
             {/* Database Tab */}
             {activeTab === 'database' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-gray-900">
-                    Gestione Database
-                  </h3>
-                  <button 
-                    onClick={loadTablesData}
-                    className="flex items-center space-x-2 border border-gray-300 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    <span>Aggiorna</span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {tables.map((table) => (
-                    <div
-                      key={table}
-                      className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all cursor-pointer"
-                      onClick={() => handleViewTable(table)}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <Database className="h-5 w-5 text-gray-400" />
-                        <Eye className="h-4 w-4 text-gray-400" />
-                      </div>
-                      <h4 className="font-medium text-gray-900 mb-1">{table}</h4>
-                      <p className="text-sm text-gray-600">Clicca per visualizzare</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <DatabaseTableViewer />
             )}
 
             {/* System Tab */}
