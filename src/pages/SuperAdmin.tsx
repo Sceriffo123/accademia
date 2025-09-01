@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
+import { useDebugLogger } from '../hooks/useDebugLogger';
 import { 
   getAllPermissionsFromDB, 
   getRolePermissionsMatrix, 
@@ -66,6 +67,14 @@ export default function SuperAdmin() {
   const [migrationStatus, setMigrationStatus] = useState<'idle' | 'checking' | 'migrating' | 'success' | 'error'>('idle');
   const [migrationMessage, setMigrationMessage] = useState('');
 
+  // Debug Logger Integration
+  const debugLogger = useDebugLogger({
+    page: 'SuperAdmin',
+    operation: 'SystemManagement',
+    userId: profile?.id,
+    userRole: profile?.role
+  });
+
   function addNotification(type: 'success' | 'error' | 'info', title: string, message: string) {
     const id = Date.now().toString();
     const notification = { id, type, title, message };
@@ -100,19 +109,29 @@ export default function SuperAdmin() {
   }
 
   useEffect(() => {
-    loadPermissionsData();
-    loadDatabaseData();
-  }, []);
+    if (profile?.role === 'superadmin') {
+      debugLogger.logInfo('SuperAdmin panel inizializzato', { userId: profile.id, userRole: profile.role });
+      loadPermissionsData();
+      loadDatabaseData();
+    }
+  }, [profile]);
 
   async function loadPermissionsData() {
     try {
       setLoading(true);
+      debugLogger.logInfo('Inizio caricamento dati sistema completo');
       console.log('🔄 SuperAdmin: Caricamento dati dal database...');
       
       const [allPermissions, matrix] = await Promise.all([
-        getAllPermissionsFromDB(),
-        getRolePermissionsMatrix()
+        debugLogger.wrapOperation('getAllPermissionsFromDB', () => getAllPermissionsFromDB()),
+        debugLogger.wrapOperation('getRolePermissionsMatrix', () => getRolePermissionsMatrix())
       ]);
+      
+      // Verifica integrità dati caricati
+      debugLogger.logInfo('Dati sistema caricati', {
+        permissionsCount: allPermissions?.length || 0,
+        matrixSize: matrix?.size || 0
+      });
       
       console.log('✅ SuperAdmin: Permessi caricati:', allPermissions.length);
       console.log('✅ SuperAdmin: Matrix caricata:', matrix);
@@ -120,9 +139,15 @@ export default function SuperAdmin() {
       setPermissions(allPermissions);
       setRoleMatrix(matrix);
       
+      debugLogger.logSuccess('Sistema caricato completamente dal database');
+      
       addNotification('success', 'Dati Caricati', 
         `${allPermissions.length} permessi e ${matrix.size} ruoli caricati dal database`);
     } catch (error) {
+      debugLogger.logError('Errore critico caricamento sistema', error as Error, {
+        operation: 'loadPermissionsData',
+        timestamp: new Date().toISOString()
+      });
       console.error('🚨 SuperAdmin: Errore caricamento permessi:', error);
       addNotification('error', 'Errore Database', 
         'Impossibile caricare permessi e ruoli dal database');
@@ -228,11 +253,17 @@ export default function SuperAdmin() {
     const hasPermission = roleData?.permissions.includes(permissionId);
     
     // Trova il nome del permesso dall'ID
-    const permission = allPermissions.find(p => p.id === permissionId);
+    const permission = permissions.find(p => p.id === permissionId);
     const permissionName = permission?.name || permissionId;
     
     try {
-      const success = await updateRolePermission(role, permissionName, !hasPermission);
+      debugLogger.logInfo('Toggle permesso ruolo', { role, permission: permissionName });
+      
+      const success = await debugLogger.wrapOperation(
+        `updateRolePermission-${role}-${permissionName}`,
+        () => updateRolePermission(role, permissionName, !hasPermission)
+      );
+      
       if (success) {
         // Aggiorna immediatamente lo stato locale
         const newMatrix = new Map(roleMatrix);
@@ -250,13 +281,31 @@ export default function SuperAdmin() {
         }
         
         setHasChanges(true);
+        
+        debugLogger.logSuccess('Permesso ruolo aggiornato', { 
+          role, 
+          permission: permissionName, 
+          newState: !hasPermission,
+          databaseSuccess: true 
+        });
+        
         addNotification('success', 'Permesso Aggiornato', 
           `${permissionName} ${!hasPermission ? 'abilitato' : 'disabilitato'} per ${role}`);
       } else {
+        debugLogger.logError('Aggiornamento permesso fallito', new Error('Database update returned false'), {
+          role,
+          permission: permissionName,
+          newState: !hasPermission
+        });
         addNotification('error', 'Errore Aggiornamento', 
           'Operazione fallita - controlla i Debug Logs');
       }
     } catch (error: any) {
+      debugLogger.logError('Errore toggle permesso ruolo', error as Error, {
+        role,
+        permission: permissionName,
+        operation: 'togglePermission'
+      });
       console.error('🚨 SUPERADMIN: Errore aggiornamento permesso:', error);
       addNotification('error', 'Errore Sistema', 
         `Errore: ${error?.message || 'Operazione fallita'}`);
@@ -270,8 +319,13 @@ export default function SuperAdmin() {
     console.log(`🔄 SuperAdmin: Toggle sezione ${section} per ruolo ${role} (attualmente: ${isVisible ? 'visibile' : 'nascosta'})`);
     
     try {
+      debugLogger.logInfo('Toggle sezione ruolo', { role, section });
+      
       // Chiama la funzione database reale
-      const success = await updateRoleSection(role, section, !isVisible);
+      const success = await debugLogger.wrapOperation(
+        `updateRoleSection-${role}-${section}`,
+        () => updateRoleSection(role, section, !isVisible)
+      );
       
       if (success) {
         console.log(`✅ SuperAdmin: Database aggiornato con successo`);
@@ -280,14 +334,34 @@ export default function SuperAdmin() {
         await loadPermissionsData();
         
         setHasChanges(true);
+        
+        debugLogger.logSuccess('Sezione ruolo aggiornata', { 
+          role, 
+          section, 
+          newState: !isVisible,
+          databaseSuccess: true 
+        });
+        
         addNotification('success', 'Sezione Aggiornata', 
           `${section} ${!isVisible ? 'abilitata' : 'disabilitata'} per ${role}`);
       } else {
         console.log(`❌ SuperAdmin: Aggiornamento database fallito`);
+        
+        debugLogger.logError('Aggiornamento sezione fallito', new Error('Database update returned false'), {
+          role,
+          section,
+          newState: !isVisible
+        });
+        
         addNotification('error', 'Errore Aggiornamento', 
           'Operazione fallita - controlla i Debug Logs nel Centro di Controllo');
       }
     } catch (error: any) {
+      debugLogger.logError('Errore toggle sezione ruolo', error as Error, {
+        role,
+        section,
+        operation: 'toggleSectionVisibility'
+      });
       console.error('🚨 SUPERADMIN: Errore aggiornamento sezione:', error);
       addNotification('error', 'Errore Sistema', 
         `Errore: ${error?.message || 'Operazione fallita'}`);
