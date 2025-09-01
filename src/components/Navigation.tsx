@@ -122,7 +122,7 @@ export default function Navigation() {
               <span className="text-xl font-bold text-gray-900">Accademia TPL</span>
             </Link>
             
-            <div className="hidden md:flex items-center space-x-6">
+            <div className="flex items-center space-x-6">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.to;
@@ -130,7 +130,7 @@ export default function Navigation() {
                   <Link
                     key={item.to}
                     to={item.to}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+                    className={`hidden md:flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
                       isActive
                         ? 'bg-blue-100 text-blue-800'
                         : 'text-gray-600 hover:text-blue-800 hover:bg-gray-100'
@@ -142,7 +142,7 @@ export default function Navigation() {
                 );
               })}
               
-              <div className="flex items-center space-x-3 pl-6 border-l border-gray-200">
+              <div className="hidden md:flex items-center space-x-3 pl-6 border-l border-gray-200">
                 <div className="flex items-center space-x-2">
                   <User className="h-5 w-5 text-gray-500" />
                   <span className="text-sm text-gray-600">{profile?.full_name}</span>
