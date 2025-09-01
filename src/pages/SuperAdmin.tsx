@@ -235,6 +235,80 @@ export default function SuperAdmin() {
     setExpandedCategories(newExpanded);
   }
 
+  function getMenuIcon(sectionName: string): string {
+    switch (sectionName) {
+      case 'dashboard': return '🏠';
+      case 'normatives': return '📋';
+      case 'documents': return '📄';
+      case 'docx': return '📄';
+      case 'education': return '🎓';
+      case 'users': return '👥';
+      case 'admin': return '⚙️';
+      case 'superadmin': return '👑';
+      case 'reports': return '📊';
+      default: return '📁';
+    }
+  }
+
+  async function handleBulkSectionUpdate(action: 'enable' | 'disable') {
+    if (!confirm(`Sei sicuro di voler ${action === 'enable' ? 'abilitare' : 'disabilitare'} tutti i menu per tutti i ruoli?`)) {
+      return;
+    }
+
+    try {
+      const visible = action === 'enable';
+      
+      for (const role of roles) {
+        for (const section of sections) {
+          await handleSectionToggle(role.name, section.name, visible);
+        }
+      }
+      
+      await loadPermissionsData(); // Ricarica i dati
+    } catch (error) {
+      console.error('Errore aggiornamento bulk sezioni:', error);
+    }
+  }
+
+  async function handleBulkPermissionUpdate(action: 'enable' | 'disable') {
+    if (!confirm(`Sei sicuro di voler ${action === 'enable' ? 'abilitare' : 'disabilitare'} tutti i permessi per tutti i ruoli?`)) {
+      return;
+    }
+
+    try {
+      const granted = action === 'enable';
+      
+      for (const role of roles) {
+        for (const permission of permissions) {
+          await handlePermissionToggle(role.name, permission.name, granted);
+        }
+      }
+      
+      await loadPermissionsData(); // Ricarica i dati
+    } catch (error) {
+      console.error('Errore aggiornamento bulk permessi:', error);
+    }
+  }
+
+  async function handleRoleMenuToggle(roleName: string) {
+    try {
+      // Controlla se il ruolo ha già tutti i menu abilitati
+      const roleData = roleMatrix.get(roleName);
+      const currentSections = roleData?.sections || [];
+      const allSectionsEnabled = sections.every(s => currentSections.includes(s.name));
+      
+      // Se tutti abilitati, disabilita tutto; altrimenti abilita tutto
+      const newState = !allSectionsEnabled;
+      
+      for (const section of sections) {
+        await handleSectionToggle(roleName, section.name, newState);
+      }
+      
+      await loadPermissionsData(); // Ricarica i dati
+    } catch (error) {
+      console.error('Errore toggle menu ruolo:', error);
+    }
+  }
   const roleNames = roles.map(r => r.name);
   const sectionNames = sections.map(s => s.name);
 
@@ -356,15 +430,140 @@ export default function SuperAdmin() {
               <div className="space-y-8">
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                    Matrice Permessi per Ruolo
+                    Gestione Menu e Permessi
                   </h3>
                   <p className="text-gray-600 mb-6">
-                    Gestisci i permessi specifici per ogni ruolo del sistema
+                    Gestisci la visibilità dei menu e i permessi specifici per ogni ruolo
                   </p>
                 </div>
 
+                {/* Menu Management Section */}
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                        🎛️ Gestione Menu di Navigazione
+                      </h4>
+                      <p className="text-gray-600">
+                        Controlla quali sezioni dell'interfaccia sono visibili per ogni ruolo
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleBulkSectionUpdate('enable')}
+                        className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        <span>Abilita Tutto</span>
+                      </button>
+                      <button
+                        onClick={() => handleBulkSectionUpdate('disable')}
+                        className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm"
+                      >
+                        <X className="h-4 w-4" />
+                        <span>Disabilita Tutto</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    {/* Header */}
+                    <div className="bg-gray-50 p-4 border-b border-gray-200">
+                      <div className="grid grid-cols-12 gap-4 items-center">
+                        <div className="col-span-4">
+                          <h5 className="font-medium text-gray-900">Menu / Sezione</h5>
+                        </div>
+                        {roles.map(role => (
+                          <div key={role.name} className="col-span-2 text-center">
+                            <div className="flex flex-col items-center space-y-1">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(role.name)}`}>
+                                {getRoleDisplayName(role.name)}
+                              </span>
+                              <button
+                                onClick={() => handleRoleMenuToggle(role.name)}
+                                className="text-xs text-blue-600 hover:text-blue-800 transition-colors"
+                              >
+                                Toggle All
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Sezioni */}
+                    <div className="divide-y divide-gray-100">
+                      {sections.map((section) => (
+                        <div key={section.name} className="grid grid-cols-12 gap-4 items-center p-4 hover:bg-gray-50">
+                          <div className="col-span-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="text-2xl">
+                                {getMenuIcon(section.name)}
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-900 text-sm">
+                                  {section.display_name}
+                                </div>
+                                {section.description && (
+                                  <div className="text-xs text-gray-500">
+                                    {section.description}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          {roles.map(role => {
+                            const visible = hasSection(role.name, section.name);
+                            return (
+                              <div key={role.name} className="col-span-2 text-center">
+                                <button
+                                  onClick={() => handleSectionToggle(role.name, section.name, !visible)}
+                                  className={`p-3 rounded-xl transition-all transform hover:scale-105 ${
+                                    visible 
+                                      ? 'bg-green-100 text-green-600 hover:bg-green-200 shadow-sm' 
+                                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                  }`}
+                                  title={visible ? `Nascondi ${section.display_name} per ${getRoleDisplayName(role.name)}` : `Mostra ${section.display_name} per ${getRoleDisplayName(role.name)}`}
+                                >
+                                  {visible ? <Eye className="h-5 w-5" /> : <X className="h-5 w-5" />}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Permissions Matrix */}
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto mt-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                        🔐 Matrice Permessi Dettagliati
+                      </h4>
+                      <p className="text-gray-600">
+                        Gestisci i permessi specifici per ogni ruolo del sistema
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleBulkPermissionUpdate('enable')}
+                        className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        <span>Abilita Tutto</span>
+                      </button>
+                      <button
+                        onClick={() => handleBulkPermissionUpdate('disable')}
+                        className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm"
+                      >
+                        <X className="h-4 w-4" />
+                        <span>Disabilita Tutto</span>
+                      </button>
+                    </div>
+                  </div>
                   <div className="space-y-4">
                     {/* Header con ruoli */}
                     <div className="bg-gray-50 rounded-lg p-4">
@@ -446,69 +645,6 @@ export default function SuperAdmin() {
                   </div>
                 </div>
 
-                {/* Sections Matrix */}
-                <div className="mt-12">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                    Sezioni Visibili per Ruolo
-                  </h3>
-                  <p className="text-gray-600 mb-6">
-                    Controlla quali sezioni dell'interfaccia sono visibili per ogni ruolo
-                  </p>
-
-                  <div className="bg-white border border-gray-200 rounded-lg">
-                    {/* Header */}
-                    <div className="bg-gray-50 p-4 border-b border-gray-200">
-                      <div className="grid grid-cols-12 gap-4 items-center">
-                        <div className="col-span-4">
-                          <h4 className="font-medium text-gray-900">Sezione</h4>
-                        </div>
-                        {roles.map(role => (
-                          <div key={role.name} className="col-span-2 text-center">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(role.name)}`}>
-                              {getRoleDisplayName(role.name)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Sezioni */}
-                    <div className="divide-y divide-gray-100">
-                      {sections.map((section) => (
-                        <div key={section.name} className="grid grid-cols-12 gap-4 items-center p-4 hover:bg-gray-50">
-                          <div className="col-span-4">
-                            <div className="font-medium text-gray-900 text-sm capitalize">
-                              {section.display_name}
-                            </div>
-                            {section.description && (
-                              <div className="text-xs text-gray-500">
-                                {section.description}
-                              </div>
-                            )}
-                          </div>
-                          {roles.map(role => {
-                            const visible = hasSection(role.name, section.name);
-                            return (
-                              <div key={role.name} className="col-span-2 text-center">
-                                <button
-                                  onClick={() => handleSectionToggle(role.name, section.name, !visible)}
-                                  className={`p-2 rounded-lg transition-colors ${
-                                    visible 
-                                      ? 'bg-green-100 text-green-600 hover:bg-green-200' 
-                                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                  }`}
-                                  title={visible ? 'Nascondi sezione' : 'Mostra sezione'}
-                                >
-                                  {visible ? <Eye className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
 
