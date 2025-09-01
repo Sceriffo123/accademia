@@ -217,16 +217,39 @@ export default function SuperAdmin() {
     const roleData = roleMatrix.get(role);
     const hasPermission = roleData?.permissions.includes(permissionId);
     
+    // Trova il nome del permesso dall'ID
+    const permission = allPermissions.find(p => p.id === permissionId);
+    const permissionName = permission?.name || permissionId;
+    
     try {
-      const success = await updateRolePermission(role, permissionId, !hasPermission);
+      const success = await updateRolePermission(role, permissionName, !hasPermission);
       if (success) {
-        await loadPermissionsData(); // Ricarica i dati
+        // Aggiorna immediatamente lo stato locale
+        const newMatrix = new Map(roleMatrix);
+        const currentRoleData = newMatrix.get(role);
+        if (currentRoleData) {
+          if (!hasPermission) {
+            // Aggiungi permesso
+            currentRoleData.permissions = [...currentRoleData.permissions, permissionId];
+          } else {
+            // Rimuovi permesso
+            currentRoleData.permissions = currentRoleData.permissions.filter(p => p !== permissionId);
+          }
+          newMatrix.set(role, currentRoleData);
+          setRoleMatrix(newMatrix);
+        }
+        
         setHasChanges(true);
+        addNotification('success', 'Permesso Aggiornato', 
+          `${permissionName} ${!hasPermission ? 'abilitato' : 'disabilitato'} per ${role}`);
+      } else {
+        addNotification('error', 'Errore Aggiornamento', 
+          'Operazione fallita - controlla i Debug Logs');
       }
-    } catch (error) {
-      console.error('Errore aggiornamento permesso:', error);
+    } catch (error: any) {
+      console.error('🚨 SUPERADMIN: Errore aggiornamento permesso:', error);
       addNotification('error', 'Errore Sistema', 
-        'Impossibile aggiornare le autorizzazioni. Riprovare.');
+        `Errore: ${error?.message || 'Operazione fallita'}`);
     }
   };
 
@@ -237,13 +260,32 @@ export default function SuperAdmin() {
     try {
       const success = await updateRoleSection(role, section, !isVisible);
       if (success) {
-        await loadPermissionsData(); // Ricarica i dati
+        // Aggiorna immediatamente lo stato locale
+        const newMatrix = new Map(roleMatrix);
+        const currentRoleData = newMatrix.get(role);
+        if (currentRoleData) {
+          if (!isVisible) {
+            // Aggiungi sezione
+            currentRoleData.sections = [...currentRoleData.sections, section];
+          } else {
+            // Rimuovi sezione
+            currentRoleData.sections = currentRoleData.sections.filter(s => s !== section);
+          }
+          newMatrix.set(role, currentRoleData);
+          setRoleMatrix(newMatrix);
+        }
+        
         setHasChanges(true);
+        addNotification('success', 'Sezione Aggiornata', 
+          `${section} ${!isVisible ? 'abilitata' : 'disabilitata'} per ${role}`);
+      } else {
+        addNotification('error', 'Errore Aggiornamento', 
+          'Operazione fallita - controlla i Debug Logs');
       }
-    } catch (error) {
-      console.error('Errore aggiornamento sezione:', error);
+    } catch (error: any) {
+      console.error('🚨 SUPERADMIN: Errore aggiornamento sezione:', error);
       addNotification('error', 'Errore Sistema', 
-        'Impossibile aggiornare la visibilità. Riprovare.');
+        `Errore: ${error?.message || 'Operazione fallita'}`);
     }
   };
 
@@ -477,13 +519,13 @@ export default function SuperAdmin() {
                                   </td>
                                   {Array.from(roleMatrix.keys()).map(role => {
                                     const roleData = roleMatrix.get(role);
-                                    const hasPermission = roleData?.permissions.includes(permission.name);
+                                    const hasPermission = roleData?.permissions.includes(permission.id);
                                     const isDisabled = role === 'superadmin'; // SuperAdmin ha sempre tutti i permessi
                                     
                                     return (
                                       <td key={role} className="py-3 px-3 text-center">
                                         <button
-                                          onClick={() => !isDisabled && togglePermission(role, permission.name)}
+                                          onClick={() => !isDisabled && togglePermission(role, permission.id)}
                                           disabled={isDisabled}
                                           className={`p-2 rounded-lg transition-colors ${
                                             hasPermission 
