@@ -550,8 +550,9 @@ interface TableRelation {
                           </tr>
                         </thead>
                         <tbody className="bg-white">
-                          {tableStructure.map((column, index) => (
+                          {tableStructure.map((column, index) => {
                             const relation = tableRelations.find(rel => rel.column_name === column.column_name);
+                            return (
                             <tr key={index} className="border-b border-gray-100">
                               <td className="px-4 py-3 font-medium text-gray-900">{column.column_name}</td>
                               <td className="px-4 py-3 text-gray-600">{column.data_type}</td>
@@ -570,8 +571,21 @@ interface TableRelation {
                               <td className="px-4 py-3 text-gray-600 text-sm">
                                 {column.character_maximum_length || '-'}
                               </td>
+                              <td className="px-4 py-3">
+                                {relation ? (
+                                  <div className="flex items-center space-x-2">
+                                    <Link className="h-4 w-4 text-blue-600" />
+                                    <span className="text-sm text-blue-600 font-medium">
+                                      {relation.foreign_table_name}.{relation.foreign_column_name}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400 text-sm">-</span>
+                                )}
+                              </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -641,18 +655,6 @@ interface TableRelation {
                                       <Trash2 className="h-4 w-4" />
                                     </button>
                                   </div>
-                                </td>
-                                <td className="px-4 py-3">
-                                  {relation ? (
-                                    <div className="flex items-center space-x-2">
-                                      <Link className="h-4 w-4 text-blue-600" />
-                                      <span className="text-sm text-blue-600 font-medium">
-                                        {relation.foreign_table_name}.{relation.foreign_column_name}
-                                      </span>
-                                    </div>
-                                  ) : (
-                                    <span className="text-gray-400 text-sm">-</span>
-                                  )}
                                 </td>
                               </tr>
                             ))}
