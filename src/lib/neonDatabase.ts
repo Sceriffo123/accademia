@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless';
-import { DEFAULT_ROLE_PERMISSIONS } from './permissions';
+import { DEFAULT_ROLE_PERMISSIONS, PERMISSIONS } from './permissions';
 
 // Inizializza connessione Neon
 const sql = neon(import.meta.env.VITE_DATABASE_URL || '');
@@ -269,15 +269,11 @@ export async function getRecentNormativesCount(days: number = 30): Promise<numbe
 
 export async function getAllPermissions() {
   try {
-    const result = await sql`
-      SELECT DISTINCT permission_name 
-      FROM user_permissions 
-      ORDER BY permission_name
-    `;
-    return result.map(row => row.permission_name);
+    console.log('🎓 NEON: Recupero permessi statici');
+    return PERMISSIONS.map(permission => permission.id);
   } catch (error) {
-    console.error('Error getting all permissions:', error);
-    throw error;
+    console.error('🚨 NEON: Errore recupero permessi:', error);
+    return [];
   }
 }
 
