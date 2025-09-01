@@ -112,9 +112,103 @@ export default function Navigation() {
   }
 
   return (
-    <>
-      {/* Desktop Navigation */}
-      <nav className="bg-white shadow-sm border-b">
+    <nav className="bg-white shadow-sm border-b">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          <Link to="/dashboard" className="flex items-center space-x-2">
+            <GraduationCap className="h-8 w-8 text-blue-800" />
+            <span className="text-xl font-bold text-gray-900">Accademia TPL</span>
+          </Link>
+          
+          {/* Desktop Menu */}
+          <div className="hidden md:flex items-center space-x-6">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.to;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+                    isActive
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'text-gray-600 hover:text-blue-800 hover:bg-gray-100'
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span className="font-medium">{item.label}</span>
+                </Link>
+              );
+            })}
+            
+            <div className="flex items-center space-x-3 pl-6 border-l border-gray-200">
+              <div className="flex items-center space-x-2">
+                <User className="h-5 w-5 text-gray-500" />
+                <span className="text-sm text-gray-600">{profile?.full_name}</span>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="flex items-center space-x-1 text-gray-600 hover:text-red-600 transition-colors"
+              >
+                <LogOut className="h-5 w-5" />
+                <span className="text-sm">Esci</span>
+              </button>
+            </div>
+          </div>
+          
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
+        
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden border-t border-gray-100 py-4">
+            <div className="space-y-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.to;
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'text-gray-600 hover:text-blue-800 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="font-medium">{item.label}</span>
+                  </Link>
+                );
+              })}
+              
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <div className="flex items-center space-x-3 px-3 py-2">
+                  <User className="h-5 w-5 text-gray-500" />
+                  <span className="text-sm text-gray-600">{profile?.full_name}</span>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center space-x-3 px-3 py-3 rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors w-full"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span className="font-medium">Esci</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </nav>
+  );
+}
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <Link to="/dashboard" className="flex items-center space-x-2">
