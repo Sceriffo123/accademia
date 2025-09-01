@@ -478,7 +478,8 @@ export default function SuperAdmin() {
                 </div>
 
                 {/* Menu Management Section */}
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
+                {/* Menu Management Section */}
+                <div className="overflow-x-auto">
                   <div className="flex items-center justify-between mb-6">
                     <div>
                       <h4 className="text-lg font-semibold text-gray-900 mb-2">
@@ -505,18 +506,17 @@ export default function SuperAdmin() {
                       </button>
                     </div>
                   </div>
-
-                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                    {/* Header */}
-                    <div className="bg-gray-50 p-4 border-b border-gray-200">
+                  <div className="space-y-4">
+                    {/* Header con ruoli */}
+                    <div className="bg-gray-50 rounded-lg p-4">
                       <div className="grid grid-cols-12 gap-4 items-center">
                         <div className="col-span-4">
-                          <h5 className="font-medium text-gray-900">Menu / Sezione</h5>
+                          <h4 className="font-medium text-gray-900">Menu / Sezione</h4>
                         </div>
                         {roles.map(role => (
                           <div key={role.name} className="col-span-2 text-center">
                             <div className="flex flex-col items-center space-y-1">
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(role.name)}`}>
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(role.name)}`}>
                                 {getRoleDisplayName(role.name)}
                               </span>
                               <button
@@ -532,46 +532,48 @@ export default function SuperAdmin() {
                     </div>
 
                     {/* Sezioni */}
-                    <div className="divide-y divide-gray-100">
-                      {sections.map((section) => (
-                        <div key={section.name} className="grid grid-cols-12 gap-4 items-center p-4 hover:bg-gray-50">
-                          <div className="col-span-4">
-                            <div className="flex items-center space-x-3">
-                              <div className="text-2xl">
-                                {getMenuIcon(section.name)}
-                              </div>
-                              <div>
-                                <div className="font-medium text-gray-900 text-sm">
-                                  {section.display_name}
+                    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                      <div className="divide-y divide-gray-100">
+                        {sections.map((section) => (
+                          <div key={section.name} className="grid grid-cols-12 gap-4 items-center p-4 hover:bg-gray-50">
+                            <div className="col-span-4">
+                              <div className="flex items-center space-x-3">
+                                <div className="text-2xl">
+                                  {getMenuIcon(section.name)}
                                 </div>
-                                {section.description && (
-                                  <div className="text-xs text-gray-500">
-                                    {section.description}
+                                <div>
+                                  <div className="font-medium text-gray-900 text-sm">
+                                    {section.display_name}
                                   </div>
-                                )}
+                                  {section.description && (
+                                    <div className="text-xs text-gray-500">
+                                      {section.description}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
+                            {roles.map(role => {
+                              const visible = hasSection(role.name, section.name);
+                              return (
+                                <div key={role.name} className="col-span-2 text-center">
+                                  <button
+                                    onClick={() => handleSectionToggle(role.name, section.name, !visible)}
+                                    className={`p-2 rounded-lg transition-colors ${
+                                      visible 
+                                        ? 'bg-green-100 text-green-600 hover:bg-green-200' 
+                                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                    }`}
+                                    title={visible ? 'Rimuovi permesso' : 'Concedi permesso'}
+                                  >
+                                    {visible ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                                  </button>
+                                </div>
+                              );
+                            })}
                           </div>
-                          {roles.map(role => {
-                            const visible = hasSection(role.name, section.name);
-                            return (
-                              <div key={role.name} className="col-span-2 text-center">
-                                <button
-                                  onClick={() => handleSectionToggle(role.name, section.name, !visible)}
-                                  className={`p-3 rounded-xl transition-all transform hover:scale-105 ${
-                                    visible 
-                                      ? 'bg-green-100 text-green-600 hover:bg-green-200 shadow-sm' 
-                                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                  }`}
-                                  title={visible ? `Nascondi ${section.display_name} per ${getRoleDisplayName(role.name)}` : `Mostra ${section.display_name} per ${getRoleDisplayName(role.name)}`}
-                                >
-                                  {visible ? <Eye className="h-5 w-5" /> : <X className="h-5 w-5" />}
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
