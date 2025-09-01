@@ -13,6 +13,7 @@ import NormativeDetail from './pages/NormativeDetail';
 import Education from './pages/Education';
 import Admin from './pages/Admin';
 import SuperAdmin from './pages/SuperAdmin';
+import ControlCenter from './pages/ControlCenter';
 import Docx from './pages/Docx';
 
 function App() {
@@ -58,6 +59,11 @@ function App() {
             <Route path="/superadmin" element={
               <ProtectedRoute superAdminOnly>
                 <SuperAdmin />
+              </ProtectedRoute>
+            } />
+            <Route path="/control-center" element={
+              <ProtectedRoute superAdminOnly>
+                <ControlCenter />
               </ProtectedRoute>
             } />
           </Route>

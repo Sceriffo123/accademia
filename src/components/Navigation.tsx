@@ -109,6 +109,7 @@ export default function Navigation() {
   
   if (profile?.role === 'superadmin') {
     navItems.push({ to: '/superadmin', icon: Crown, label: 'SuperAdmin', section: 'superadmin' });
+    navItems.push({ to: '/control-center', icon: Settings, label: 'Centro Controllo', section: 'control' });
   }
 
 
