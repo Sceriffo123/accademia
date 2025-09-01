@@ -106,6 +106,19 @@ export default function Docx() {
       console.log('🎓 DOCX: Documenti caricati dal database:', docs);
       console.log('🎓 DOCX: Numero documenti:', docs.length);
       
+      // Debug dettagliato del primo documento
+      if (docs.length > 0) {
+        console.log('🎓 DOCX: Primo documento dettagli:', {
+          id: docs[0].id,
+          title: docs[0].title,
+          type: docs[0].type,
+          category: docs[0].category,
+          status: docs[0].status,
+          description: docs[0].description
+        });
+      }
+      
+      
       if (docs.length === 0) {
         console.log('⚠️ DOCX: Nessun documento trovato nel database!');
         console.log('⚠️ DOCX: Verifica che la tabella documents contenga dati');
@@ -299,6 +312,20 @@ export default function Docx() {
     const matchesType = selectedType === 'all' || doc.type === selectedType;
     const matchesCategory = selectedCategory === 'all' || doc.category === selectedCategory;
     
+    // Debug filtri per ogni documento
+    console.log('🔍 DOCX: Filtro documento:', {
+      title: doc.title,
+      searchTerm,
+      matchesSearch,
+      selectedType,
+      docType: doc.type,
+      matchesType,
+      selectedCategory,
+      docCategory: doc.category,
+      matchesCategory,
+      finalResult: matchesSearch && matchesType && matchesCategory
+    });
+    
     return matchesSearch && matchesType && matchesCategory;
   });
 
@@ -474,6 +501,35 @@ export default function Docx() {
               <p className="text-gray-600">Caricamento documenti...</p>
             </div>
           ) : documents.length > 0 ? (
+            <>
+              {/* Debug Info Panel */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                <h4 className="font-semibold text-blue-800 mb-2">🔍 Debug Info:</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-blue-600 font-medium">Documenti DB:</span>
+                    <div className="text-blue-800">{documents.length}</div>
+                  </div>
+                  <div>
+                    <span className="text-blue-600 font-medium">Filtrati:</span>
+                    <div className="text-blue-800">{filteredDocuments.length}</div>
+                  </div>
+                  <div>
+                    <span className="text-blue-600 font-medium">Tipo Filtro:</span>
+                    <div className="text-blue-800">{selectedType}</div>
+                  </div>
+                  <div>
+                    <span className="text-blue-600 font-medium">Categoria Filtro:</span>
+                    <div className="text-blue-800">{selectedCategory}</div>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-blue-700">
+                  Permessi: {userPermissions.join(', ') || 'Nessuno'} | 
+                  Sezioni: {userSections.join(', ') || 'Nessuna'} | 
+                  Ruolo: {profile?.role}
+                </div>
+              </div>
+              
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredDocuments.map((doc) => (
                 <div
@@ -552,11 +608,35 @@ export default function Docx() {
                 </div>
               ))}
             </div>
+            </>
           ) : (
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 text-center">
               <FileText className="h-12 w-12 mx-auto mb-4 text-yellow-500" />
               <h3 className="text-lg font-semibold text-yellow-800 mb-2">
                 Nessun documento trovato
+              </h3>
+              <p className="text-yellow-700 mb-4">
+                La tabella documents potrebbe essere vuota o i filtri sono troppo restrittivi
+              </p>
+              <div className="bg-white rounded-lg p-4 text-left text-sm">
+                <h4 className="font-semibold text-gray-900 mb-2">🔍 Debug Info:</h4>
+                <div className="space-y-1 text-gray-600">
+                  <div>• Documenti totali: {documents.length}</div>
+                  <div>• Documenti filtrati: {filteredDocuments.length}</div>
+                  <div>• Permessi: {userPermissions.join(', ') || 'Nessuno'}</div>
+                  <div>• Sezioni: {userSections.join(', ') || 'Nessuna'}</div>
+                  <div>• Ruolo: {profile?.role || 'Non definito'}</div>
+                  <div>• Filtro tipo: {selectedType}</div>
+                  <div>• Filtro categoria: {selectedCategory}</div>
+                  <div>• Termine ricerca: "{searchTerm}"</div>
+                </div>
+              </div>
+              <button
+                onClick={loadDocuments}
+                className="mt-4 bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+              >
+                🔄 Ricarica Documenti
+              </button>
               </h3>
               <p className="text-yellow-700 mb-4">
                 La tabella documents potrebbe essere vuota o i filtri sono troppo restrittivi
