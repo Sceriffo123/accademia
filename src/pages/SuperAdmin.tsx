@@ -47,7 +47,7 @@ export default function SuperAdmin() {
   const [activeTab, setActiveTab] = useState<'permissions' | 'roles' | 'system' | 'database'>('permissions');
   const [permissions, setPermissions] = useState<any[]>([]);
   const [roleMatrix, setRoleMatrix] = useState<Map<string, any>>(new Map());
-  const [databaseTables, setDatabaseTables] = useState<DatabaseTable[]>([]);
+  const [databaseTables, setDatabaseTables] = useState<any[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['users']));
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -108,7 +108,7 @@ export default function SuperAdmin() {
     try {
       setLoading(true);
       const [allPermissions, matrix] = await Promise.all([
-        getAllPermissions(),
+        getAllPermissionsFromDB(),
         getRolePermissionsMatrix()
       ]);
       
