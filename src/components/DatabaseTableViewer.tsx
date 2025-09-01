@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAllTables, getTableStructure, getTableRecords } from '../lib/neonDatabase';
+import { neon } from '@neondatabase/serverless';
 import { 
   Database, 
   Eye, 
@@ -9,9 +10,14 @@ import {
   CheckCircle, 
   AlertCircle,
   X,
-  Search
+  Search,
+  Edit3,
+  Save,
+  Plus,
+  Trash2
 } from 'lucide-react';
 
+const sql = neon(import.meta.env.VITE_DATABASE_URL || '');
 export default function DatabaseTableViewer() {
   const [tables, setTables] = useState<string[]>([]);
   const [selectedTable, setSelectedTable] = useState<string>('');
@@ -22,6 +28,11 @@ export default function DatabaseTableViewer() {
   const [error, setError] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingRecord, setEditingRecord] = useState<any>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState<any>({});
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addFormData, setAddFormData] = useState<any>({});
 
   useEffect(() => {
     loadTables();
@@ -68,6 +79,265 @@ export default function DatabaseTableViewer() {
     }
   }
 
+  function handleEditRecord(record: any) {
+    setEditingRecord(record);
+    setEditFormData({ ...record });
+    setShowEditModal(true);
+  }
+
+  function handleAddRecord() {
+    const newRecord: any = {};
+    tableStructure.forEach(column => {
+      if (column.column_name !== 'id' && column.column_name !== 'created_at' && column.column_name !== 'updated_at') {
+        newRecord[column.column_name] = column.column_default || '';
+      }
+    });
+    setAddFormData(newRecord);
+    setShowAddModal(true);
+  }
+
+  async function handleSaveEdit() {
+    if (!editingRecord || !selectedTable) return;
+    
+    try {
+      console.log('🎓 DATABASE: Salvataggio modifiche record...');
+      
+      // Costruisci query UPDATE dinamica
+      const updates = [];
+      const values = [];
+      
+      Object.keys(editFormData).forEach(key => {
+        if (key !== 'id' && key !== 'created_at') {
+          updates.push(`${key} = $${values.length + 1}`);
+          values.push(editFormData[key]);
+        }
+      });
+      
+      if (updates.length === 0) return;
+      
+      // Aggiungi updated_at se la colonna esiste
+      const hasUpdatedAt = tableStructure.some(col => col.column_name === 'updated_at');
+      if (hasUpdatedAt) {
+        updates.push('updated_at = NOW()');
+      }
+      
+      values.push(editingRecord.id);
+      
+      await sql`
+        UPDATE ${sql.unsafe(selectedTable)}
+        SET ${sql.unsafe(updates.join(', '))}
+        WHERE id = ${editingRecord.id}
+      `;
+      
+      // Ricarica dati tabella
+      const newData = await getTableRecords(selectedTable, 1000);
+      setTableData(newData);
+      setShowEditModal(false);
+      setEditingRecord(null);
+      
+      console.log('✅ DATABASE: Record aggiornato con successo');
+      
+    } catch (error) {
+      console.error('❌ DATABASE: Errore salvataggio:', error);
+      setError('Errore durante il salvataggio delle modifiche');
+    }
+  }
+
+  async function handleSaveAdd() {
+    if (!selectedTable) return;
+    
+    try {
+      console.log('🎓 DATABASE: Aggiunta nuovo record...');
+      
+      const columns = Object.keys(addFormData).filter(key => addFormData[key] !== '');
+      const values = columns.map(key => addFormData[key]);
+      const placeholders = columns.map((_, index) => `$${index + 1}`).join(', ');
+      
+      await sql`
+        INSERT INTO ${sql.unsafe(selectedTable)} (${sql.unsafe(columns.join(', '))})
+        VALUES (${sql.unsafe(placeholders)})
+      `;
+      
+      // Ricarica dati tabella
+      const newData = await getTableRecords(selectedTable, 1000);
+      setTableData(newData);
+      setShowAddModal(false);
+      setAddFormData({});
+      
+      console.log('✅ DATABASE: Nuovo record aggiunto con successo');
+      
+    } catch (error) {
+      console.error('❌ DATABASE: Errore aggiunta record:', error);
+      setError('Errore durante l\'aggiunta del nuovo record');
+    }
+  }
+
+  async function handleDeleteRecord(record: any) {
+    if (!selectedTable || !confirm('Sei sicuro di voler eliminare questo record?')) return;
+    
+    try {
+      console.log('🎓 DATABASE: Eliminazione record...');
+      
+      await sql`
+        DELETE FROM ${sql.unsafe(selectedTable)}
+        WHERE id = ${record.id}
+      `;
+      
+      // Ricarica dati tabella
+      const newData = await getTableRecords(selectedTable, 1000);
+      setTableData(newData);
+      
+      console.log('✅ DATABASE: Record eliminato con successo');
+      
+    } catch (error) {
+      console.error('❌ DATABASE: Errore eliminazione:', error);
+      setError('Errore durante l\'eliminazione del record');
+    }
+  }
+
+  function renderFormField(columnName: string, value: any, onChange: (value: any) => void) {
+    const column = tableStructure.find(col => col.column_name === columnName);
+    if (!column) return null;
+    
+    // Campi non modificabili
+    if (['id', 'created_at', 'updated_at'].includes(columnName)) {
+      return (
+        <input
+          type="text"
+          value={value || ''}
+          disabled
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
+        />
+      );
+    }
+    
+    // Campo ruolo con select
+    if (columnName === 'role') {
+      return (
+        <select
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        >
+          <option value="">Seleziona ruolo</option>
+          <option value="superadmin">Super Amministratore</option>
+          <option value="admin">Amministratore</option>
+          <option value="operator">Operatore</option>
+          <option value="user">Utente</option>
+          <option value="guest">Ospite</option>
+        </select>
+      );
+    }
+    
+    // Campo status con select
+    if (columnName === 'status') {
+      return (
+        <select
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        >
+          <option value="">Seleziona stato</option>
+          <option value="active">Attivo</option>
+          <option value="draft">Bozza</option>
+          <option value="archived">Archiviato</option>
+        </select>
+      );
+    }
+    
+    // Campo type per documenti
+    if (columnName === 'type' && selectedTable === 'documents') {
+      return (
+        <select
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        >
+          <option value="">Seleziona tipo</option>
+          <option value="template">Template</option>
+          <option value="form">Modulo</option>
+          <option value="guide">Guida</option>
+          <option value="report">Report</option>
+        </select>
+      );
+    }
+    
+    // Campo type per normative
+    if (columnName === 'type' && selectedTable === 'normatives') {
+      return (
+        <select
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        >
+          <option value="">Seleziona tipo</option>
+          <option value="law">Legge</option>
+          <option value="regulation">Regolamento</option>
+          <option value="ruling">Sentenza</option>
+        </select>
+      );
+    }
+    
+    // Campo booleano
+    if (column.data_type === 'boolean') {
+      return (
+        <select
+          value={value?.toString() || 'false'}
+          onChange={(e) => onChange(e.target.value === 'true')}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        >
+          <option value="false">False</option>
+          <option value="true">True</option>
+        </select>
+      );
+    }
+    
+    // Campo numerico
+    if (column.data_type.includes('int') || column.data_type.includes('numeric')) {
+      return (
+        <input
+          type="number"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        />
+      );
+    }
+    
+    // Campo data
+    if (column.data_type.includes('date') || column.data_type.includes('timestamp')) {
+      return (
+        <input
+          type="datetime-local"
+          value={value ? new Date(value).toISOString().slice(0, 16) : ''}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        />
+      );
+    }
+    
+    // Campo testo lungo
+    if (column.data_type === 'text' || (column.character_maximum_length && column.character_maximum_length > 255)) {
+      return (
+        <textarea
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          rows={3}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        />
+      );
+    }
+    
+    // Campo testo normale
+    return (
+      <input
+        type="text"
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+      />
+    );
+  }
   const filteredTables = tables.filter(table => 
     table.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -265,6 +535,24 @@ export default function DatabaseTableViewer() {
                       <Table className="h-5 w-5 text-green-600 mr-2" />
                       Dati Tabella ({tableData.length} record)
                     </h4>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={handleAddRecord}
+                          className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
+                        >
+                          <Plus className="h-4 w-4" />
+                          <span>Aggiungi Record</span>
+                        </button>
+                        <button
+                          onClick={() => handleViewTable(selectedTable)}
+                          className="flex items-center space-x-2 border border-gray-300 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          <span>Aggiorna</span>
+                        </button>
+                      </div>
+                    </div>
                     {tableData.length > 0 ? (
                       <div className="overflow-x-auto">
                         <table className="w-full border border-gray-200 rounded-lg text-sm">
@@ -275,6 +563,7 @@ export default function DatabaseTableViewer() {
                                   {key}
                                 </th>
                               ))}
+                              <th className="px-3 py-2 text-center font-medium text-gray-700">Azioni</th>
                             </tr>
                           </thead>
                           <tbody className="bg-white">
@@ -287,6 +576,24 @@ export default function DatabaseTableViewer() {
                                     </div>
                                   </td>
                                 ))}
+                                <td className="px-3 py-2 text-center">
+                                  <div className="flex items-center justify-center space-x-2">
+                                    <button
+                                      onClick={() => handleEditRecord(row)}
+                                      className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                      title="Modifica record"
+                                    >
+                                      <Edit3 className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteRecord(row)}
+                                      className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                      title="Elimina record"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -301,6 +608,106 @@ export default function DatabaseTableViewer() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Record Modal */}
+      {showEditModal && editingRecord && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">
+                Modifica Record - {selectedTable}
+              </h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto max-h-[calc(90vh-160px)] p-6">
+              <div className="space-y-4">
+                {Object.keys(editFormData).map((key) => (
+                  <div key={key}>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {key}
+                    </label>
+                    {renderFormField(key, editFormData[key], (value) => 
+                      setEditFormData({ ...editFormData, [key]: value })
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+              >
+                <Save className="h-4 w-4" />
+                <span>Salva Modifiche</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Record Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">
+                Aggiungi Record - {selectedTable}
+              </h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto max-h-[calc(90vh-160px)] p-6">
+              <div className="space-y-4">
+                {Object.keys(addFormData).map((key) => (
+                  <div key={key}>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {key}
+                    </label>
+                    {renderFormField(key, addFormData[key], (value) => 
+                      setAddFormData({ ...addFormData, [key]: value })
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleSaveAdd}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Aggiungi Record</span>
+              </button>
             </div>
           </div>
         </div>
