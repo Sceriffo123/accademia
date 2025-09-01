@@ -569,7 +569,7 @@ export async function getDocumentsWithFilters(filters: {
     
     const whereClause = whereConditions.join(' AND ');
     
-    const result = await sql(
+    const result = await sql.query(
       `SELECT 
         d.*,
         u.full_name as uploader_name,
@@ -578,7 +578,7 @@ export async function getDocumentsWithFilters(filters: {
       LEFT JOIN users u ON d.uploaded_by = u.id
       WHERE ${whereClause}
       ORDER BY d.created_at DESC`,
-      ...params
+      params
     );
     
     return result as Document[];
