@@ -10,7 +10,6 @@ import ControlCenter from './pages/ControlCenter';
 import Normatives from './pages/Normatives';
 import Docx from './pages/Docx';
 import Education from './pages/Education';
-import CourseViewer from './pages/CourseViewer';
 import ProtectedRoute from './components/ProtectedRoute';
 import GlobalErrorHandler from './lib/errorHandler';
 import DatabaseCheck from './components/DatabaseCheck';
