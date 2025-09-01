@@ -593,7 +593,7 @@ export async function getRolePermissionsFromDB(roleName: string): Promise<string
       SELECT p.name
       FROM permissions p
       JOIN role_permissions rp ON p.id = rp.permission_id
-      JOIN roles r ON rp.role_id = r.id
+      JOIN roles r ON CAST(rp.role_id AS TEXT) = CAST(r.id AS TEXT)
       WHERE r.name = ${roleName} AND rp.granted = TRUE
     `;
     return result.map(row => row.name);
@@ -610,7 +610,7 @@ export async function getRoleSectionsFromDB(roleName: string): Promise<string[]>
       SELECT s.name
       FROM sections s
       JOIN role_sections rs ON s.id = rs.section_id
-      JOIN roles r ON rs.role_id = r.id
+      JOIN roles r ON CAST(rs.role_id AS TEXT) = CAST(r.id AS TEXT)
       WHERE r.name = ${roleName} AND rs.visible = TRUE
     `;
     return result.map(row => row.name);
@@ -626,7 +626,7 @@ export async function updateRolePermissionInDB(roleName: string, permissionName:
     
     await sql`
       INSERT INTO role_permissions (role_id, permission_id, granted)
-      SELECT r.id, p.id, ${granted}
+      SELECT CAST(r.id AS UUID), CAST(p.id AS UUID), ${granted}
       FROM roles r, permissions p
       WHERE r.name = ${roleName} AND p.name = ${permissionName}
       ON CONFLICT (role_id, permission_id)
