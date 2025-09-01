@@ -186,7 +186,7 @@ export async function getAllUsers(excludeSuperAdmin: boolean = false, currentUse
     // Aggiungi l'ID come ultimo parametro per la WHERE clause
     values.push(id);
     
-    const query = `
+    const updateQuery = `
       UPDATE users 
       SET ${updates.join(', ')} 
       WHERE id = $${values.length}
@@ -196,7 +196,7 @@ export async function getAllUsers(excludeSuperAdmin: boolean = false, currentUse
     console.log('🎓 NEON: Query generata:', query);
     console.log('🎓 NEON: Parametri:', values);
     
-    const result = await sql(query, ...values);
+    const updateResult = await sql(updateQuery, ...values);
     
     // Log audit successo
     await writeAuditLog('USER_UPDATE', 'SUCCESS', {
