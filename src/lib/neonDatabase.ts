@@ -164,7 +164,7 @@ export async function getAllUsers(excludeSuperAdmin: boolean = false, currentUse
     
     query += ' ORDER BY created_at DESC';
     
-    const result = await sql(query, ...params);
+    const result = await sql.query(query, params);
     console.log('🎓 NEON: Utenti recuperati:', result.length);
     return result;
   } catch (error) {
