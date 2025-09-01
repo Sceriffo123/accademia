@@ -152,10 +152,12 @@ export default function DatabaseTableViewer() {
       const columns = Object.keys(addFormData).filter(key => addFormData[key] !== '');
       const values = columns.map(key => addFormData[key]);
       
-      await sql`
-        INSERT INTO ${sql.unsafe(selectedTable)} (${sql.unsafe(columns.join(', '))})
-        VALUES (${sql.join(values, ', ')})
-      `;
+      const placeholders = values.map((_, index) => `$${index + 1}`).join(', ');
+      
+      await sql(
+        `INSERT INTO ${selectedTable} (${columns.join(', ')}) VALUES (${placeholders})`,
+        ...values
+      );
       
       // Ricarica dati tabella
       const newData = await getTableRecords(selectedTable, 1000);
