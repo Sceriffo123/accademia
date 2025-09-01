@@ -36,13 +36,11 @@ export default function Navigation() {
       console.log('🎓 NAVIGATION: Caricamento sezioni per ruolo:', profile?.role);
       const sections = await getUserSections(profile?.role || '');
       console.log('🎓 NAVIGATION: Sezioni caricate dal database:', sections);
-      console.log('🎓 NAVIGATION: Numero sezioni:', sections.length);
       setVisibleSections(sections);
-      console.log('🎓 NAVIGATION: Sezioni salvate nello stato');
     } catch (error) {
       console.error('Errore caricamento sezioni visibili:', error);
       // Fallback ai default se il database non è disponibile
-      setVisibleSections(['dashboard', 'normatives', 'education']);
+      setVisibleSections(['dashboard', 'normatives', 'education', 'docx']);
     }
   }
 
@@ -62,26 +60,7 @@ export default function Navigation() {
     setIsMenuOpen(false);
   };
 
-  const navItems = [
-    { to: '/dashboard', icon: Home, label: 'Dashboard', section: 'dashboard' },
-    { to: '/normative', icon: FileText, label: 'Normative', section: 'normatives' },
-    { to: '/education', icon: GraduationCap, label: 'Formazione', section: 'education' },
-  ].filter(item => visibleSections.includes(item.section));
-
-  // Aggiungi Documenti solo se la sezione è visibile
-  if (visibleSections.includes('docx')) {
-    navItems.push({ to: '/docx', icon: FileIcon, label: 'Documenti', section: 'docx' });
-  }
-
-  // Aggiungi sezioni amministrative se visibili
-  if (visibleSections.includes('admin') && (profile?.role === 'admin' || profile?.role === 'superadmin')) {
-    navItems.push({ to: '/admin', icon: Settings, label: 'Admin', section: 'admin' });
-  }
-  
-  if (visibleSections.includes('superadmin') && profile?.role === 'superadmin') {
-    navItems.push({ to: '/superadmin', icon: Crown, label: 'SuperAdmin', section: 'superadmin' });
-  }
-
+  // Se non c'è utente, mostra menu pubblico
   if (!user) {
     return (
       <nav className="bg-white shadow-sm border-b">
@@ -111,11 +90,39 @@ export default function Navigation() {
     );
   }
 
+  // Costruisci menu items basato su sezioni visibili
+  const navItems = [];
+  
+  if (visibleSections.includes('dashboard')) {
+    navItems.push({ to: '/dashboard', icon: Home, label: 'Dashboard' });
+  }
+  
+  if (visibleSections.includes('normatives')) {
+    navItems.push({ to: '/normative', icon: FileText, label: 'Normative' });
+  }
+  
+  if (visibleSections.includes('education')) {
+    navItems.push({ to: '/education', icon: GraduationCap, label: 'Formazione' });
+  }
+  
+  if (visibleSections.includes('docx')) {
+    navItems.push({ to: '/docx', icon: FileIcon, label: 'Documenti' });
+  }
+
+  // Aggiungi sezioni amministrative se visibili
+  if (visibleSections.includes('admin') && (profile?.role === 'admin' || profile?.role === 'superadmin')) {
+    navItems.push({ to: '/admin', icon: Settings, label: 'Admin' });
+  }
+  
+  if (visibleSections.includes('superadmin') && profile?.role === 'superadmin') {
+    navItems.push({ to: '/superadmin', icon: Crown, label: 'SuperAdmin' });
+  }
+
   return (
-    <>
     <nav className="bg-white shadow-sm border-b">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
+          {/* Logo */}
           <Link to="/dashboard" className="flex items-center space-x-2">
             <GraduationCap className="h-8 w-8 text-blue-800" />
             <span className="text-xl font-bold text-gray-900">Accademia TPL</span>
@@ -142,6 +149,7 @@ export default function Navigation() {
               );
             })}
             
+            {/* User Section */}
             <div className="flex items-center space-x-3 pl-6 border-l border-gray-200">
               <div className="flex items-center space-x-2">
                 <User className="h-5 w-5 text-gray-500" />
@@ -208,6 +216,5 @@ export default function Navigation() {
         )}
       </div>
     </nav>
-    </>
   );
 }
