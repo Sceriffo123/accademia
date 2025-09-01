@@ -12,7 +12,7 @@ import Docx from './pages/Docx';
 import Education from './pages/Education';
 import ProtectedRoute from './components/ProtectedRoute';
 import GlobalErrorHandler from './lib/errorHandler';
-import DatabaseCheck from './components/DatabaseCheck';
+// import DatabaseCheck from './components/DatabaseCheck';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Register from './pages/Register';
@@ -25,7 +25,7 @@ GlobalErrorHandler.getInstance().initialize();
 function App() {
   return (
     <AuthProvider>
-      <DatabaseCheck />
+      {/* <DatabaseCheck /> */}
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
