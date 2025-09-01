@@ -30,6 +30,9 @@ interface AuditLogEntry {
   timestamp: string;
   operation: string;
   status: 'SUCCESS' | 'ERROR' | 'VERIFICATION_FAILED' | 'WARNING';
+}
+
+export default function SystemAlertPanel() {
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [isVisible, setIsVisible] = useState(true);

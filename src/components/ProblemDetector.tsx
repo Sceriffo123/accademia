@@ -15,6 +15,9 @@ import {
   ExternalLink,
   Copy,
   RefreshCw
+} from 'lucide-react';
+
+export default function ProblemDetector() {
   const [problems, setProblems] = useState<Problem[]>([]);
   const [isVisible, setIsVisible] = useState(false);
   const [expandedProblem, setExpandedProblem] = useState<string | null>(null);
