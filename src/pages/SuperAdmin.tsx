@@ -1338,7 +1338,7 @@ export default function SuperAdmin() {
                 </button>
                 <button
                   onClick={confirmMigration}
-                  className="px-4 py-2 text-sm font-medium text-white bg-amber-600 border border-transparent rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                 >
                   Conferma Migrazione
                 </button>
