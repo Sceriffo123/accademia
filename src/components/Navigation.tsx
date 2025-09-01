@@ -91,11 +91,11 @@ export default function Navigation() {
   }
 
   // Costruisci menu items basato su sezioni visibili - CORREZIONE: usa let invece di const
-  let navItems = [
+  let navItems = [];
   
   if (visibleSections.includes('dashboard')) {
     navItems.push({ to: '/dashboard', icon: Home, label: 'Dashboard' });
-  ];
+  }
   
   // Aggiungi sezioni condizionali PRIMA del filtro
   if (visibleSections.includes('documents')) {
