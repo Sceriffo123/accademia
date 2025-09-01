@@ -914,7 +914,7 @@ export async function updateRolePermissionInDB(roleName: string, permissionName:
       FROM roles r, permissions p
       WHERE r.name = ${roleName} AND p.name = ${permissionName}
       ON CONFLICT (role_id, permission_id)
-      DO UPDATE SET granted = ${granted}, updated_at = NOW()
+      DO UPDATE SET granted = ${granted}
     `;
     
     console.log('✅ NEON: Risultato aggiornamento permesso:', result);
@@ -952,7 +952,7 @@ export async function updateRoleSectionInDB(roleName: string, sectionName: strin
       FROM roles r, sections s
       WHERE r.name = ${roleName} AND s.name = ${sectionName}
       ON CONFLICT (role_id, section_id)
-      DO UPDATE SET visible = ${visible}, updated_at = NOW()
+      DO UPDATE SET visible = ${visible}
     `;
     
     console.log('✅ NEON: Risultato aggiornamento sezione:', result);

@@ -209,8 +209,10 @@ export default function ControlCenter() {
       await loadSystemData();
       
       return success;
-    } catch (error) {
-      addDebugLog('error', 'PERMISSION_TEST', `Errore: ${error}`);
+    } catch (error: any) {
+      const errorDetails = error?.message || error?.stack || JSON.stringify(error);
+      addDebugLog('error', 'PERMISSION_TEST', `ERRORE CATTURATO: ${errorDetails}`);
+      console.error('🚨 CONTROL CENTER: Errore test permessi:', error);
       return false;
     }
   };
@@ -224,9 +226,12 @@ export default function ControlCenter() {
         `Risultato operazione: ${success ? 'SUCCESS' : 'FAILED'}`);
       
       await loadSystemData();
+      
       return success;
-    } catch (error) {
-      addDebugLog('error', 'SECTION_TEST', `Errore: ${error}`);
+    } catch (error: any) {
+      const errorDetails = error?.message || error?.stack || JSON.stringify(error);
+      addDebugLog('error', 'SECTION_TEST', `ERRORE CATTURATO: ${errorDetails}`);
+      console.error('🚨 CONTROL CENTER: Errore test sezioni:', error);
       return false;
     }
   };
