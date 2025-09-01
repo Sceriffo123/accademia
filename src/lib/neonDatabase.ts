@@ -955,14 +955,6 @@ async function createMainTables(): Promise<void> {
   try {
     console.log('🎓 NEON: Creazione tabelle principali...');
     
-    // Drop e ricrea tabelle per assicurare tipi corretti
-    await sql`DROP TABLE IF EXISTS role_sections CASCADE`;
-    await sql`DROP TABLE IF EXISTS role_permissions CASCADE`;
-    await sql`DROP TABLE IF EXISTS user_role_overrides CASCADE`;
-    await sql`DROP TABLE IF EXISTS permissions CASCADE`;
-    await sql`DROP TABLE IF EXISTS roles CASCADE`;
-    await sql`DROP TABLE IF EXISTS sections CASCADE`;
-    
     // Crea tabella users
     await sql`
       CREATE TABLE IF NOT EXISTS users (
