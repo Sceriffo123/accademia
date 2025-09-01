@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
-import DatabaseInit from './components/DatabaseInit';
+import DatabaseCheck from './components/DatabaseCheck';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -18,8 +18,8 @@ import Docx from './pages/Docx';
 function App() {
   return (
     <AuthProvider>
+      <DatabaseCheck />
       <Router>
-        <DatabaseInit />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
