@@ -48,6 +48,7 @@ export default function SystemAlertPanel() {
   useEffect(() => {
     // Listener per system alerts
     const handleSystemAlert = (event: CustomEvent) => {
+      try {
       const { type, message, details } = event.detail;
       const newAlert: SystemAlert = {
         id: Date.now().toString(),
@@ -67,10 +68,14 @@ export default function SystemAlertPanel() {
         setIsExpanded(true);
         setIsVisible(true);
       }
+      } catch (e) {
+        // Ignore errors in alert handler
+      }
     };
     
     // Listener per audit logs
     const handleAuditLog = (event: CustomEvent) => {
+      try {
       const logEntry = event.detail;
       setAuditLogs(prev => [logEntry, ...prev.slice(0, 99)]); // Max 100 logs
       
@@ -91,35 +96,45 @@ export default function SystemAlertPanel() {
         setIsExpanded(true);
         setIsVisible(true);
       }
+      } catch (e) {
+        // Ignore errors in audit handler
+      }
     };
     
     // Listener per errori console
     const originalConsoleError = console.error;
-    console.error = (...args: any[]) => {
-      const errorText = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
-      
-      // Cattura errori critici
-      if (errorText.includes('🚨') || errorText.includes('NeonDbError') || 
-          errorText.includes('Failed to load') || errorText.includes('bind message')) {
+    
+    const consoleErrorHandler = (...args: any[]) => {
+      try {
+        const errorText = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
         
-        const newAlert: SystemAlert = {
-          id: Date.now().toString() + '_console',
-          timestamp: new Date().toLocaleTimeString(),
-          type: 'error',
-          title: 'Console Error Detected',
-          message: errorText.substring(0, 200) + (errorText.length > 200 ? '...' : ''),
-          details: { fullError: errorText, args },
-          source: 'CONSOLE',
-          acknowledged: false
-        };
-        
-        setAlerts(prev => [newAlert, ...prev.slice(0, 49)]);
-        setIsExpanded(true);
-        setIsVisible(true);
+        // Cattura errori critici
+        if (errorText.includes('🚨') || errorText.includes('NeonDbError') || 
+            errorText.includes('Failed to load') || errorText.includes('bind message')) {
+          
+          const newAlert: SystemAlert = {
+            id: Date.now().toString() + '_console',
+            timestamp: new Date().toLocaleTimeString(),
+            type: 'error',
+            title: 'Console Error Detected',
+            message: errorText.substring(0, 200) + (errorText.length > 200 ? '...' : ''),
+            details: { fullError: errorText, args },
+            source: 'CONSOLE',
+            acknowledged: false
+          };
+          
+          setAlerts(prev => [newAlert, ...prev.slice(0, 49)]);
+          setIsExpanded(true);
+          setIsVisible(true);
+        }
+      } catch (e) {
+        // Ignore errors in console handler
       }
       
       originalConsoleError.apply(console, args);
     };
+    
+    console.error = consoleErrorHandler;
     
     if (typeof window !== 'undefined') {
       window.addEventListener('systemAlert', handleSystemAlert as EventListener);
@@ -133,7 +148,7 @@ export default function SystemAlertPanel() {
       }
       console.error = originalConsoleError;
     };
-  }, []);
+  }, []); // Empty dependency array - only run once
 
   const getAlertTitle = (type: string, message: string): string => {
     if (message.includes('Database')) return 'Database Error';

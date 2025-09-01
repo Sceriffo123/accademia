@@ -51,17 +51,31 @@ export default function ProblemDetector() {
   useEffect(() => {
     // Intercetta errori console
     const originalConsoleError = console.error;
-    console.error = (...args: any[]) => {
-      const errorText = args.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-      ).join(' ');
-      
-      analyzeProblem(errorText, args);
+    
+    const consoleErrorHandler = (...args: any[]) => {
+      try {
+        const errorText = args.map(arg => 
+          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+        ).join(' ');
+        
+        analyzeProblem(errorText, args);
+      } catch (e) {
+        // Ignore errors in error handler
+      }
+      } catch (e) {
+        // Ignore errors in error handler
+      }
+      } catch (e) {
+        // Ignore errors in error handler to prevent loops
+      }
       originalConsoleError.apply(console, args);
     };
+    
+    console.error = consoleErrorHandler;
 
     // Intercetta errori JavaScript
     const handleError = (event: ErrorEvent) => {
+      try {
       const problem: Problem = {
         id: Date.now().toString(),
         severity: 'error',
@@ -90,6 +104,7 @@ export default function ProblemDetector() {
 
     // Intercetta promise rejections
     const handlePromiseRejection = (event: PromiseRejectionEvent) => {
+      try {
       const problem: Problem = {
         id: Date.now().toString() + '_promise',
         severity: 'error',
@@ -120,7 +135,7 @@ export default function ProblemDetector() {
       window.removeEventListener('error', handleError);
       window.removeEventListener('unhandledrejection', handlePromiseRejection);
     };
-  }, []);
+  }, []); // Empty dependency array - only run once
 
   const analyzeProblem = (errorText: string, args: any[]) => {
     let problem: Problem | null = null;
