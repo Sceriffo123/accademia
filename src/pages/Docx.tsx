@@ -537,7 +537,10 @@ export default function Docx() {
               <p className="text-gray-600">Caricamento documenti...</p>
             </div>
           ) : filteredDocuments.length > 0 ? (
-            <></>
+            <>
+              {/* Debug Info Panel */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                <h4 className="font-semibold text-blue-800 mb-2">🔍 Debug Info:</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <span className="text-blue-600 font-medium">Documenti DB:</span>
