@@ -469,8 +469,7 @@ export async function seedPermissionsData(): Promise<void> {
       ('superadmin', 'Super Amministratore', 'Accesso completo al sistema', 1),
       ('admin', 'Amministratore', 'Gestione utenti e contenuti', 2),
       ('operator', 'Operatore', 'Gestione contenuti', 3),
-      ('user', 'Utente', 'Accesso base', 4),
-      ('guest', 'Ospite', 'Accesso limitato', 5)
+      ('user', 'Utente', 'Accesso base', 4)
     `;
 
     // Inserisci permessi per normative
@@ -563,7 +562,7 @@ export async function getAllRolesFromDB(): Promise<Role[]> {
     console.log('🎓 NEON: Recupero ruoli dal database');
     const result = await sql`
       SELECT * FROM roles
-      ORDER BY level
+      ORDER BY level ASC
     `;
     return result as Role[];
   } catch (error) {
