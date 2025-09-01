@@ -82,76 +82,17 @@ export default function SuperAdmin() {
     setNotifications(prev => prev.filter(n => n.id !== id));
   }
 
-  // Funzioni di migrazione database
+  // Funzioni di migrazione database (temporaneamente disabilitate)
   async function handleCheckMigration() {
-    setMigrationStatus('checking');
-    setMigrationMessage('Verifica stato database...');
-    
-    try {
-      const { checkDatabaseStatus } = await import('../lib/checkMigration');
-      const status = await checkDatabaseStatus();
-      
-      if (status) {
-        if (!status.coursesTableExists) {
-          setMigrationMessage('Tabella courses mancante - Migrazione necessaria');
-          setMigrationStatus('error');
-          addNotification('error', 'Migrazione Necessaria', 'La tabella courses non esiste nel database');
-        } else if (status.coursesPermissionsCount === 0) {
-          setMigrationMessage('Permessi courses mancanti - Migrazione necessaria');
-          setMigrationStatus('error');
-          addNotification('error', 'Migrazione Necessaria', 'I permessi per i corsi non sono configurati');
-        } else {
-          setMigrationMessage('Database allineato correttamente');
-          setMigrationStatus('success');
-          addNotification('success', 'Database OK', 'Tutte le tabelle e permessi sono configurati correttamente');
-        }
-      } else {
-        setMigrationMessage('Errore durante la verifica');
-        setMigrationStatus('error');
-        addNotification('error', 'Errore Verifica', 'Impossibile verificare lo stato del database');
-      }
-    } catch (error) {
-      console.error('Errore verifica migrazione:', error);
-      setMigrationMessage('Errore durante la verifica');
-      setMigrationStatus('error');
-      addNotification('error', 'Errore Sistema', 'Si è verificato un errore durante la verifica');
-    }
-    
-    setTimeout(() => setMigrationStatus('idle'), 3000);
+    addNotification('info', 'Funzione Temporaneamente Disabilitata', 'La verifica migrazione sarà implementata in una versione futura');
   }
 
   async function handleForceMigration() {
-    setShowMigrationModal(true);
+    addNotification('info', 'Funzione Temporaneamente Disabilitata', 'La migrazione forzata sarà implementata in una versione futura');
   }
 
   async function confirmMigration() {
-    setShowMigrationModal(false);
-    setMigrationStatus('migrating');
-    setMigrationMessage('Esecuzione migrazione database...');
-    
-    try {
-      const { forceMigration } = await import('../lib/checkMigration');
-      const success = await forceMigration();
-      
-      if (success) {
-        setMigrationMessage('Migrazione completata con successo');
-        setMigrationStatus('success');
-        addNotification('success', 'Migrazione Completata', 'Il database è stato aggiornato correttamente');
-        // Ricarica i dati del database
-        loadDatabaseData();
-      } else {
-        setMigrationMessage('Errore durante la migrazione');
-        setMigrationStatus('error');
-        addNotification('error', 'Errore Migrazione', 'La migrazione del database è fallita');
-      }
-    } catch (error) {
-      console.error('Errore migrazione:', error);
-      setMigrationMessage('Errore durante la migrazione');
-      setMigrationStatus('error');
-      addNotification('error', 'Errore Sistema', 'Si è verificato un errore durante la migrazione');
-    }
-    
-    setTimeout(() => setMigrationStatus('idle'), 3000);
+    addNotification('info', 'Funzione Temporaneamente Disabilitata', 'La migrazione sarà implementata in una versione futura');
   }
 
   // Solo SuperAdmin può accedere
