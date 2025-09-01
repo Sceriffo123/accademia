@@ -1,14 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  getDocuments, 
-  getDocumentStats, 
-  getDocumentCategories,
-  updateDocumentDownloadCount,
-  deleteDocument as deleteDocumentAPI,
-  updateDocument as updateDocumentAPI
-} from '../lib/api';
-import { getUserPermissions, getUserSections, getUserById } from '../lib/neonDatabase';
+import { getAllDocuments, getUserPermissions, getUserSections, getUserById, updateDocument } from '../lib/neonDatabase';
 import { downloadGoogleDriveFile, isGoogleDriveUrl } from '../lib/driveDownload';
 import { 
   FileText, 
@@ -66,14 +58,6 @@ export default function Docx() {
   const [uploaderName, setUploaderName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [documentStats, setDocumentStats] = useState<any>({
-    totalDocuments: 0,
-    totalDownloads: 0,
-    documentsByType: [],
-    documentsByCategory: [],
-    recentDocuments: 0
-  });
-  const [categories, setCategories] = useState<string[]>([]);
 
   useEffect(() => {
     if (selectedDocument?.uploaded_by) {
@@ -87,23 +71,9 @@ export default function Docx() {
     if (profile?.role) {
       loadUserPermissions();
       loadUserSections();
+      loadDocuments();
     }
   }, [profile?.role]);
-
-  useEffect(() => {
-    if (userPermissions.includes('documents.view') && userSections.includes('documents')) {
-      loadDocuments();
-      loadDocumentStats();
-      loadCategories();
-    }
-  }, [userPermissions, userSections]);
-
-  useEffect(() => {
-    // Ricarica documenti quando cambiano i filtri
-    if (userPermissions.includes('documents.view')) {
-      loadDocuments();
-    }
-  }, [searchTerm, selectedType, selectedCategory]);
 
   async function loadUserPermissions() {
     try {
@@ -128,62 +98,19 @@ export default function Docx() {
   async function loadDocuments() {
     try {
       console.log('🎓 DOCX: Inizio caricamento documenti...');
-      console.log('🎓 DOCX: Permessi utente:', userPermissions);
-      console.log('🎓 DOCX: Sezioni utente:', userSections);
       setLoading(true);
-      
-      // Usa i filtri attuali per recuperare i documenti
-      const filters = {
-        searchTerm: searchTerm || undefined,
-        type: selectedType !== 'all' ? selectedType : undefined,
-        category: selectedCategory !== 'all' ? selectedCategory : undefined
-      };
-      
-      const docs = await getDocuments(filters);
+      const docs = await getAllDocuments();
       console.log('🎓 DOCX: Documenti caricati dal database:', docs);
-      console.log('🎓 DOCX: Numero documenti trovati:', docs.length);
-      
-      // Carica i nomi degli uploader per ogni documento
-      const docsWithUploaders = await Promise.all(
-        docs.map(async (doc) => {
-          if (doc.uploaded_by) {
-            const uploaderName = await getUserName(doc.uploaded_by);
-            return { ...doc, uploader_name: uploaderName };
-          }
-          return { ...doc, uploader_name: 'Sistema' };
-        })
-      );
-      
-      setDocuments(docs);
-      console.log('🎓 DOCX: Documenti con uploader salvati nello stato');
+      console.log('🎓 DOCX: Numero documenti:', docs.length);
+      // Cast per risolvere il problema dei tipi
+      setDocuments(docs as unknown as Document[]);
+      console.log('🎓 DOCX: Documenti salvati nello stato');
     } catch (error) {
       console.error('🚨 DOCX: Errore caricamento documenti:', error);
       setDocuments([]);
     } finally {
       setLoading(false);
       console.log('🎓 DOCX: Caricamento completato');
-    }
-  }
-
-  async function loadDocumentStats() {
-    try {
-      console.log('🎓 DOCX: Caricamento statistiche documenti...');
-      const stats = await getDocumentStats();
-      setDocumentStats(stats);
-      console.log('🎓 DOCX: Statistiche caricate:', stats);
-    } catch (error) {
-      console.error('🚨 DOCX: Errore caricamento statistiche:', error);
-    }
-  }
-
-  async function loadCategories() {
-    try {
-      console.log('🎓 DOCX: Caricamento categorie documenti...');
-      const cats = await getDocumentCategories();
-      setCategories(cats);
-      console.log('🎓 DOCX: Categorie caricate:', cats);
-    } catch (error) {
-      console.error('🚨 DOCX: Errore caricamento categorie:', error);
     }
   }
 
@@ -219,9 +146,12 @@ export default function Docx() {
       }
 
       console.log('🔄 Inizio download documento:', doc.filename);
-      
-      // Incrementa contatore download
-      await updateDocumentDownloadCount(doc.id);
+
+      // Valida che il documento abbia un ID valido
+      if (!doc.id) {
+        console.error('❌ ID documento non valido');
+        return;
+      }
 
       // Genera PDF del documento
       const { generatePDF } = await import('../lib/pdfGenerator');
@@ -234,9 +164,6 @@ export default function Docx() {
       URL.revokeObjectURL(url);
       
       console.log('✅ Download PDF completato con successo');
-      
-      // Ricarica documenti per aggiornare il contatore
-      loadDocuments();
 
     } catch (error) {
       console.error('❌ Errore durante il download PDF:', error);
@@ -297,9 +224,8 @@ export default function Docx() {
     
     try {
       console.log('💾 Salvataggio modifiche documento:', editingDocument.title);
-      await updateDocumentAPI(editingDocument.id, editingDocument);
+      await updateDocument(editingDocument.id, editingDocument);
       loadDocuments();
-      loadDocumentStats(); // Ricarica anche le statistiche
       setIsEditMode(false);
       setEditingDocument(null);
 
@@ -358,15 +284,15 @@ export default function Docx() {
   const filteredDocuments = documents.filter(doc => {
     const matchesSearch = searchTerm === '' || 
       doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (doc.description && doc.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      doc.filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (doc.tags && doc.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase())));
+      (doc.description && doc.description.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesType = selectedType === 'all' || doc.type === selectedType;
     const matchesCategory = selectedCategory === 'all' || doc.category === selectedCategory;
     
     return matchesSearch && matchesType && matchesCategory;
   });
+
+  const categories = [...new Set(documents.map(d => d.category))];
 
   const getTypeLabel = (type: string) => {
     switch (type) {
@@ -389,10 +315,10 @@ export default function Docx() {
   };
 
   const stats = [
-    { label: 'Documenti Totali', value: documentStats.totalDocuments.toString(), icon: FileText, color: 'bg-blue-500' },
-    { label: 'Download Totali', value: documentStats.totalDownloads.toString(), icon: Download, color: 'bg-green-500' },
-    { label: 'Template Disponibili', value: documentStats.documentsByType.find(t => t.type === 'template')?.count.toString() || '0', icon: FolderOpen, color: 'bg-purple-500' },
-    { label: 'Guide Operative', value: documentStats.documentsByType.find(t => t.type === 'guide')?.count.toString() || '0', icon: Eye, color: 'bg-orange-500' }
+    { label: 'Documenti Totali', value: documents.length.toString(), icon: FileText, color: 'bg-blue-500' },
+    { label: 'Download Totali', value: documents.reduce((sum, doc) => sum + (doc.download_count || 0), 0).toString(), icon: Download, color: 'bg-green-500' },
+    { label: 'Template Disponibili', value: documents.filter(d => d.type === 'template').length.toString(), icon: FolderOpen, color: 'bg-purple-500' },
+    { label: 'Guide Operative', value: documents.filter(d => d.type === 'guide').length.toString(), icon: Eye, color: 'bg-orange-500' }
   ];
 
   return (
@@ -569,7 +495,7 @@ export default function Docx() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-1">
                         <User className="h-3 w-3" />
-                        <span>{(doc as any).uploader_name || 'Sistema'}</span>
+                        <span>{doc.uploaded_by || 'Sistema'}</span>
                       </div>
                       <span>{doc.file_size ? `${doc.file_size} KB` : 'N/A'}</span>
                     </div>
@@ -659,8 +585,8 @@ export default function Docx() {
               <div className="space-y-6">
                 {/* Document Header */}
                 <div className="bg-gray-50 rounded-xl p-6">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
-                    <div className="flex items-center space-x-4 mb-4 md:mb-0">
+                  <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center justify-between mb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
                       <div className="p-4 bg-blue-100 rounded-xl">
                         <FileText className="h-6 w-6 text-blue-600" />
                       </div>
@@ -668,22 +594,22 @@ export default function Docx() {
                         <h2 className="text-2xl font-bold text-gray-900 mb-1">
                           {selectedDocument.title}
                         </h2>
-                        <div className="flex items-center space-x-3">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                           <span className={`px-3 py-1 rounded-full text-sm font-medium ${getTypeColor(selectedDocument.type)}`}>
                             {getTypeLabel(selectedDocument.type)}
                           </span>
-                          <span className="text-sm text-gray-600">
+                          <span className="text-xs sm:text-sm text-gray-600">
                             Categoria: {selectedDocument.category}
                           </span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {canView && (
                         <>
                           <button
                             onClick={() => handleDownloadDocument(selectedDocument)}
-                            className="flex items-center space-x-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                            className="flex items-center space-x-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                             title="Scarica PDF"
                           >
                             <Download className="h-4 w-4" />
@@ -692,7 +618,7 @@ export default function Docx() {
                           {selectedDocument.file_path && (
                             <button
                               onClick={() => handleDownloadOriginalFile(selectedDocument)}
-                              className="flex items-center space-x-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                              className="flex items-center space-x-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
                               title={isGoogleDriveUrl(selectedDocument.file_path) ? "Scarica da Google Drive" : "Scarica file originale"}
                             >
                               {isGoogleDriveUrl(selectedDocument.file_path) ? (
@@ -715,7 +641,7 @@ export default function Docx() {
                       {canEdit && (
                         <button
                           onClick={() => handleEditDocument(selectedDocument)}
-                          className="flex items-center space-x-1 px-3 py-1.5 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                          className="flex items-center space-x-1 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm"
                         >
                           <Edit3 className="h-4 w-4" />
                           <span>Modifica</span>
@@ -813,32 +739,32 @@ export default function Docx() {
                 )}
 
                 {/* Document Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="bg-white border border-gray-200 rounded-xl p-6">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                       <Info className="h-5 w-5 text-blue-600 mr-2" />
                       Dettagli Documento
                     </h4>
                     <div className="space-y-3">
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Nome file:</span>
-                        <span className="font-medium text-gray-900">{selectedDocument.filename || 'N/A'}</span>
+                        <span className="font-medium text-gray-900 break-all">{selectedDocument.filename || 'N/A'}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Dimensione:</span>
                         <span className="font-medium text-gray-900">
                           {selectedDocument.file_size ? `${selectedDocument.file_size} KB` : 'N/A'}
                         </span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Tipo MIME:</span>
-                        <span className="font-medium text-gray-900">{selectedDocument.mime_type || 'N/A'}</span>
+                        <span className="font-medium text-gray-900 break-all text-xs sm:text-sm">{selectedDocument.mime_type || 'N/A'}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Versione:</span>
                         <span className="font-medium text-gray-900">{selectedDocument.version || 'N/A'}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Stato:</span>
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                           selectedDocument.status === 'active' ? 'bg-green-100 text-green-800' :
@@ -859,13 +785,13 @@ export default function Docx() {
                       Informazioni Upload
                     </h4>
                     <div className="space-y-3">
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Caricato da:</span>
                         <span className="font-medium text-gray-900">{uploaderName || 'Caricamento...'}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Data upload:</span>
-                        <span className="font-medium text-gray-900">
+                        <span className="font-medium text-gray-900 text-sm">
                           {new Date(selectedDocument.created_at).toLocaleDateString('it-IT', {
                             year: 'numeric',
                             month: 'long',
@@ -875,9 +801,9 @@ export default function Docx() {
                           })}
                         </span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Ultima modifica:</span>
-                        <span className="font-medium text-gray-900">
+                        <span className="font-medium text-gray-900 text-sm">
                           {new Date(selectedDocument.updated_at).toLocaleDateString('it-IT', {
                             year: 'numeric',
                             month: 'long',
@@ -887,10 +813,18 @@ export default function Docx() {
                           })}
                         </span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                         <span className="text-gray-600">Download:</span>
                         <span className="font-medium text-gray-900">{selectedDocument.download_count || 0}</span>
                       </div>
+                      {selectedDocument.file_path && (
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                          <span className="text-gray-600">File originale:</span>
+                          <span className="font-medium text-gray-900 text-xs">
+                            {isGoogleDriveUrl(selectedDocument.file_path) ? '📁 Google Drive' : '🔗 Link esterno'}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -926,7 +860,7 @@ export default function Docx() {
                       {selectedDocument.tags.map((tag, index) => (
                         <span
                           key={index}
-                          className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                          className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs sm:text-sm font-medium"
                         >
                           {tag}
                         </span>
