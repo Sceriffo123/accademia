@@ -1416,9 +1416,7 @@ export async function getTableStructure(tableName: string): Promise<any[]> {
   }
 }
 
-// === INIZIALIZZAZIONE DATABASE ===
-
-async function createMainTables(): Promise<void> {
+export async function createMainTables(): Promise<void> {
   try {
     console.log('🎓 NEON: Creazione tabelle principali...');
     
@@ -1433,6 +1431,12 @@ async function createMainTables(): Promise<void> {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       )
+    `;
+    
+    // Aggiungi colonna updated_at se non esiste (per database esistenti)
+    await sql`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()
     `;
 
     // Crea tabella normatives
@@ -1519,36 +1523,16 @@ export async function updateUser(id: string, data: Partial<User>): Promise<User 
       values.push(data.role);
     }
     
-    // Aggiungi sempre updated_at
-    updates.push('updated_at = NOW()');
+    if (updates.length === 0) return null;
     
-    if (updates.length === 1) { // Solo updated_at
-      console.log('🎓 NEON: Nessun campo da aggiornare');
-      return null;
-    }
-
-    // Aggiungi l'ID come ultimo parametro per la WHERE clause
-    values.push(id);
-
-    const updateQuery = `
+    const result = await sql`
       UPDATE users 
-      SET ${updates.join(', ')} 
-      WHERE id = $${values.length}
-      RETURNING id, email, full_name, role, created_at, updated_at
+      SET ${sql.unsafe(updates.join(', '))}
+      WHERE id = ${id}
+      RETURNING id, email, full_name, role, created_at
     `;
-
-    console.log('🎓 NEON: Query di aggiornamento:', updateQuery);
-    console.log('🎓 NEON: Valori:', values);
-
-    const result = await sql.query(updateQuery, values);
     
-    if (result.rows && result.rows.length > 0) {
-      console.log('✅ NEON: Utente aggiornato con successo:', result.rows[0]);
-      return result.rows[0];
-    } else {
-      console.error('❌ NEON: Nessun utente aggiornato');
-      return null;
-    }
+    return result[0] as User || null;
   } catch (error) {
     console.error('🚨 NEON: Errore aggiornamento utente:', error);
     throw error;
@@ -1764,6 +1748,6 @@ export async function checkDatabaseTables(): Promise<{ tables: string[], error?:
     return { tables };
   } catch (error) {
     console.error('🚨 NEON: Errore verifica tabelle:', error);
-    return { tables: [], error: error.message };
+    return { tables: [], error: (error as Error).message };
   }
 }
