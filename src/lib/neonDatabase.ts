@@ -347,37 +347,359 @@ export async function updateDocument(id: string, data: Partial<Document>): Promi
   }
 }
 
+// === SISTEMA PERMESSI BASATO SU DATABASE NEON ===
+
+export interface Permission {
+  id: string;
+  name: string;
+  description?: string;
+  category: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Role {
+  id: string;
+  name: string;
+  display_name: string;
+  description?: string;
+  level: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Section {
+  id: string;
+  name: string;
+  display_name: string;
+  description?: string;
+  created_at: string;
+}
+
+// Inizializza le tabelle del sistema permessi
+export async function initializePermissionsSystem(): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Inizializzazione sistema permessi...');
+    
+    // Crea tabella permissions
+    await sql`
+      CREATE TABLE IF NOT EXISTS permissions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(100) UNIQUE NOT NULL,
+        description TEXT,
+        category VARCHAR(50) NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+
+    // Crea tabella roles
+    await sql`
+      CREATE TABLE IF NOT EXISTS roles (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(50) UNIQUE NOT NULL,
+        display_name VARCHAR(100) NOT NULL,
+        description TEXT,
+        level INTEGER NOT NULL DEFAULT 5,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+
+    // Crea tabella role_permissions
+    await sql`
+      CREATE TABLE IF NOT EXISTS role_permissions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
+        permission_id UUID REFERENCES permissions(id) ON DELETE CASCADE,
+        granted BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(role_id, permission_id)
+      )
+    `;
+
+    // Crea tabella sections
+    await sql`
+      CREATE TABLE IF NOT EXISTS sections (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(50) UNIQUE NOT NULL,
+        display_name VARCHAR(100) NOT NULL,
+        description TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+
+    // Crea tabella role_sections
+    await sql`
+      CREATE TABLE IF NOT EXISTS role_sections (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
+        section_id UUID REFERENCES sections(id) ON DELETE CASCADE,
+        visible BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(role_id, section_id)
+      )
+    `;
+
+    // Crea tabella user_role_overrides per override specifici
+    await sql`
+      CREATE TABLE IF NOT EXISTS user_role_overrides (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        permission_id UUID REFERENCES permissions(id) ON DELETE CASCADE,
+        granted BOOLEAN NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(user_id, permission_id)
+      )
+    `;
+
+    console.log('🎓 NEON: Tabelle sistema permessi create');
+    return true;
+  } catch (error) {
+    console.error('🚨 NEON: Errore inizializzazione sistema permessi:', error);
+    return false;
+  }
+}
+
+// Inserisce i dati base del sistema permessi
+export async function seedPermissionsData(): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Inserimento dati base sistema permessi...');
+    
+    // Inserisci ruoli base
+    await sql`
+      INSERT INTO roles (name, display_name, description, level) VALUES
+      ('superadmin', 'Super Amministratore', 'Accesso completo al sistema', 1),
+      ('admin', 'Amministratore', 'Gestione utenti e contenuti', 2),
+      ('operator', 'Operatore', 'Gestione contenuti', 3),
+      ('user', 'Utente', 'Accesso base', 4),
+      ('guest', 'Ospite', 'Accesso limitato', 5)
+      ON CONFLICT (name) DO NOTHING
+    `;
+
+    // Inserisci permessi per normative
+    await sql`
+      INSERT INTO permissions (name, description, category) VALUES
+      ('normatives.view', 'Può visualizzare le normative', 'normatives'),
+      ('normatives.create', 'Può creare nuove normative', 'normatives'),
+      ('normatives.edit', 'Può modificare normative esistenti', 'normatives'),
+      ('normatives.delete', 'Può eliminare normative', 'normatives'),
+      ('normatives.publish', 'Può pubblicare normative', 'normatives')
+      ON CONFLICT (name) DO NOTHING
+    `;
+
+    // Inserisci permessi per documenti
+    await sql`
+      INSERT INTO permissions (name, description, category) VALUES
+      ('documents.view', 'Può visualizzare i documenti', 'documents'),
+      ('documents.create', 'Può creare nuovi documenti', 'documents'),
+      ('documents.edit', 'Può modificare documenti esistenti', 'documents'),
+      ('documents.delete', 'Può eliminare documenti', 'documents'),
+      ('documents.upload', 'Può caricare nuovi documenti', 'documents')
+      ON CONFLICT (name) DO NOTHING
+    `;
+
+    // Inserisci permessi per utenti
+    await sql`
+      INSERT INTO permissions (name, description, category) VALUES
+      ('users.view', 'Può visualizzare la lista utenti', 'users'),
+      ('users.create', 'Può creare nuovi utenti', 'users'),
+      ('users.edit', 'Può modificare utenti esistenti', 'users'),
+      ('users.delete', 'Può eliminare utenti', 'users'),
+      ('users.manage_roles', 'Può modificare i ruoli utente', 'users')
+      ON CONFLICT (name) DO NOTHING
+    `;
+
+    // Inserisci permessi per formazione
+    await sql`
+      INSERT INTO permissions (name, description, category) VALUES
+      ('education.view', 'Può visualizzare i corsi', 'education'),
+      ('education.create', 'Può creare nuovi corsi', 'education'),
+      ('education.edit', 'Può modificare corsi esistenti', 'education'),
+      ('education.delete', 'Può eliminare corsi', 'education'),
+      ('education.enroll', 'Può iscriversi ai corsi', 'education')
+      ON CONFLICT (name) DO NOTHING
+    `;
+
+    // Inserisci permessi per sistema
+    await sql`
+      INSERT INTO permissions (name, description, category) VALUES
+      ('system.settings', 'Accesso alle impostazioni sistema', 'system'),
+      ('system.permissions', 'Può modificare i permessi', 'system'),
+      ('system.logs', 'Può visualizzare i log di sistema', 'system'),
+      ('system.backup', 'Può fare backup del sistema', 'system')
+      ON CONFLICT (name) DO NOTHING
+    `;
+
+    // Inserisci sezioni dell'interfaccia
+    await sql`
+      INSERT INTO sections (name, display_name, description) VALUES
+      ('dashboard', 'Dashboard', 'Pannello principale'),
+      ('normatives', 'Normative', 'Gestione normative'),
+      ('documents', 'Documenti', 'Gestione documenti'),
+      ('education', 'Formazione', 'Corsi e formazione'),
+      ('users', 'Utenti', 'Gestione utenti'),
+      ('admin', 'Amministrazione', 'Pannello amministrativo'),
+      ('superadmin', 'Super Admin', 'Pannello super amministrativo'),
+      ('reports', 'Report', 'Gestione report')
+      ON CONFLICT (name) DO NOTHING
+    `;
+
+    console.log('🎓 NEON: Dati base sistema permessi inseriti');
+    return true;
+  } catch (error) {
+    console.error('🚨 NEON: Errore inserimento dati base:', error);
+    return false;
+  }
+}
+
+// === FUNZIONI GESTIONE PERMESSI DAL DATABASE ===
+
+export async function getAllPermissionsFromDB(): Promise<Permission[]> {
+  try {
+    console.log('🎓 NEON: Recupero permessi dal database');
+    const result = await sql`
+      SELECT * FROM permissions
+      ORDER BY category, name
+    `;
+    return result as Permission[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero permessi:', error);
+    return [];
+  }
+}
+
+export async function getAllRolesFromDB(): Promise<Role[]> {
+  try {
+    console.log('🎓 NEON: Recupero ruoli dal database');
+    const result = await sql`
+      SELECT * FROM roles
+      ORDER BY level
+    `;
+    return result as Role[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero ruoli:', error);
+    return [];
+  }
+}
+
+export async function getAllSectionsFromDB(): Promise<Section[]> {
+  try {
+    console.log('🎓 NEON: Recupero sezioni dal database');
+    const result = await sql`
+      SELECT * FROM sections
+      ORDER BY name
+    `;
+    return result as Section[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero sezioni:', error);
+    return [];
+  }
+}
+
+export async function getRolePermissionsFromDB(roleName: string): Promise<string[]> {
+  try {
+    console.log('🎓 NEON: Recupero permessi per ruolo dal database:', roleName);
+    const result = await sql`
+      SELECT p.name
+      FROM permissions p
+      JOIN role_permissions rp ON p.id = rp.permission_id
+      JOIN roles r ON rp.role_id = r.id
+      WHERE r.name = ${roleName} AND rp.granted = TRUE
+    `;
+    return result.map(row => row.name);
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero permessi ruolo:', error);
+    return [];
+  }
+}
+
+export async function getRoleSectionsFromDB(roleName: string): Promise<string[]> {
+  try {
+    console.log('🎓 NEON: Recupero sezioni per ruolo dal database:', roleName);
+    const result = await sql`
+      SELECT s.name
+      FROM sections s
+      JOIN role_sections rs ON s.id = rs.section_id
+      JOIN roles r ON rs.role_id = r.id
+      WHERE r.name = ${roleName} AND rs.visible = TRUE
+    `;
+    return result.map(row => row.name);
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero sezioni ruolo:', error);
+    return [];
+  }
+}
+
+export async function updateRolePermissionInDB(roleName: string, permissionName: string, granted: boolean): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Aggiornamento permesso ruolo:', { roleName, permissionName, granted });
+    
+    await sql`
+      INSERT INTO role_permissions (role_id, permission_id, granted)
+      SELECT r.id, p.id, ${granted}
+      FROM roles r, permissions p
+      WHERE r.name = ${roleName} AND p.name = ${permissionName}
+      ON CONFLICT (role_id, permission_id)
+      DO UPDATE SET granted = ${granted}, created_at = NOW()
+    `;
+    
+    return true;
+  } catch (error) {
+    console.error('🚨 NEON: Errore aggiornamento permesso ruolo:', error);
+    return false;
+  }
+}
+
+export async function updateRoleSectionInDB(roleName: string, sectionName: string, visible: boolean): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Aggiornamento sezione ruolo:', { roleName, sectionName, visible });
+    
+    await sql`
+      INSERT INTO role_sections (role_id, section_id, visible)
+      SELECT r.id, s.id, ${visible}
+      FROM roles r, sections s
+      WHERE r.name = ${roleName} AND s.name = ${sectionName}
+      ON CONFLICT (role_id, section_id)
+      DO UPDATE SET visible = ${visible}, created_at = NOW()
+    `;
+    
+    return true;
+  } catch (error) {
+    console.error('🚨 NEON: Errore aggiornamento sezione ruolo:', error);
+    return false;
+  }
+}
+
+export async function getPermissionsMatrixFromDB(): Promise<Map<string, { permissions: string[], sections: string[] }>> {
+  try {
+    console.log('🎓 NEON: Recupero matrice completa permessi dal database');
+    
+    const matrix = new Map();
+    const roles = await getAllRolesFromDB();
+    
+    for (const role of roles) {
+      const permissions = await getRolePermissionsFromDB(role.name);
+      const sections = await getRoleSectionsFromDB(role.name);
+      matrix.set(role.name, { permissions, sections });
+    }
+    
+    return matrix;
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero matrice permessi:', error);
+    return new Map();
+  }
+}
+
 // === FUNZIONI PERMESSI ===
 
 export async function getUserPermissions(role: string): Promise<string[]> {
   try {
     console.log('🎓 NEON: Recupero permessi per ruolo:', role);
     
-    // Permessi basati sul ruolo
-    const rolePermissions: Record<string, string[]> = {
-      'superadmin': [
-        'users.view', 'users.create', 'users.edit', 'users.delete', 'users.manage_roles',
-        'normatives.view', 'normatives.create', 'normatives.edit', 'normatives.delete',
-        'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.upload',
-        'system.settings', 'system.permissions', 'system.logs'
-      ],
-      'admin': [
-        'users.view', 'users.create', 'users.edit',
-        'normatives.view', 'normatives.create', 'normatives.edit', 'normatives.delete',
-        'documents.view', 'documents.create', 'documents.edit', 'documents.upload',
-        'system.logs'
-      ],
-      'operator': [
-        'normatives.view', 'normatives.create',
-        'documents.view', 'documents.create', 'documents.upload'
-      ],
-      'user': [
-        'normatives.view',
-        'documents.view'
-      ]
-    };
-    
-    return rolePermissions[role] || [];
+    // Recupera permessi dal database Neon
+    return await getRolePermissionsFromDB(role);
   } catch (error) {
     console.error('🚨 NEON: Errore recupero permessi:', error);
     return [];
@@ -388,15 +710,8 @@ export async function getUserSections(role: string): Promise<string[]> {
   try {
     console.log('🎓 NEON: Recupero sezioni per ruolo:', role);
     
-    // Sezioni visibili basate sul ruolo
-    const roleSections: Record<string, string[]> = {
-      'superadmin': ['dashboard', 'normatives', 'education', 'documents', 'admin', 'superadmin'],
-      'admin': ['dashboard', 'normatives', 'education', 'documents', 'admin'],
-      'operator': ['dashboard', 'normatives', 'education', 'documents'],
-      'user': ['dashboard', 'normatives', 'education', 'documents']
-    };
-    
-    return roleSections[role] || ['dashboard'];
+    // Recupera sezioni dal database Neon
+    return await getRoleSectionsFromDB(role);
   } catch (error) {
     console.error('🚨 NEON: Errore recupero sezioni:', error);
     return ['dashboard'];
@@ -552,34 +867,16 @@ export async function getAllTables(): Promise<string[]> {
 }
 
 export async function getRolePermissionsMatrix() {
-  // Converte l'array in Map per compatibilità con SuperAdmin
-  const matrix = new Map();
-  DEFAULT_ROLE_PERMISSIONS.forEach(rolePerms => {
-    matrix.set(rolePerms.role, rolePerms);
-  });
-  return matrix;
+  // Recupera matrice dal database Neon
+  return await getPermissionsMatrixFromDB();
 }
 
 export async function updateRolePermission(role: string, permission: string, granted: boolean): Promise<boolean> {
-  try {
-    console.log('🎓 NEON: Aggiornamento permesso ruolo:', { role, permission, granted });
-    // Placeholder function - implementazione da completare
-    return true;
-  } catch (error) {
-    console.error('🚨 NEON: Errore aggiornamento permesso ruolo:', error);
-    return false;
-  }
+  return await updateRolePermissionInDB(role, permission, granted);
 }
 
 export async function updateRoleSection(role: string, section: string, granted: boolean): Promise<boolean> {
-  try {
-    console.log('🎓 NEON: Aggiornamento sezione ruolo:', { role, section, granted });
-    // Placeholder function - implementazione da completare
-    return true;
-  } catch (error) {
-    console.error('🚨 NEON: Errore aggiornamento sezione ruolo:', error);
-    return false;
-  }
+  return await updateRoleSectionInDB(role, section, visible);
 }
 
 export async function getTableRecords(tableName: string, limit: number = 100): Promise<any[]> {

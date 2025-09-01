@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import DatabaseTableViewer from '../components/DatabaseTableViewer';
 import { 
-  getAllUsers, 
-  getAllPermissions, 
-  getRolePermissionsMatrix,
-  updateRolePermission,
-  updateRoleSection,
+  getAllUsers,
+  getAllPermissionsFromDB,
+  getAllRolesFromDB,
+  getAllSectionsFromDB,
+  getPermissionsMatrixFromDB,
+  updateRolePermissionInDB,
+  updateRoleSectionInDB,
+  initializePermissionsSystem,
+  seedPermissionsData,
   getUsersCount,
   getNormativesCount,
   getDocumentsCount,
@@ -14,7 +18,16 @@ import {
   getTableRecords,
   getTableStructure
 } from '../lib/neonDatabase';
-import { PERMISSIONS, DEFAULT_ROLE_PERMISSIONS, PERMISSION_CATEGORIES } from '../lib/permissions';
+import { 
+  groupPermissionsByCategory,
+  getCategoryDisplayName,
+  getCategoryDescription,
+  getRoleColor,
+  getRoleDisplayName,
+  type Permission,
+  type Role,
+  type Section
+} from '../lib/permissions';
 import { 
   Crown, 
   Users, 
@@ -41,18 +54,13 @@ import {
   ChevronRight
 } from 'lucide-react';
 
-interface PermissionMatrix {
-  [role: string]: {
-    permissions: string[];
-    sections: string[];
-  };
-}
-
 export default function SuperAdmin() {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<'permissions' | 'users' | 'database' | 'system'>('permissions');
   const [users, setUsers] = useState<any[]>([]);
-  const [permissions, setPermissions] = useState<string[]>([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
   const [roleMatrix, setRoleMatrix] = useState<Map<string, any>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
@@ -73,13 +81,34 @@ export default function SuperAdmin() {
     full_name: '',
     role: 'user' as 'user' | 'admin' | 'superadmin' | 'operator'
   });
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['normatives']));
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [initializingSystem, setInitializingSystem] = useState(false);
 
   useEffect(() => {
     if (profile?.role === 'superadmin') {
+      initializeSystemIfNeeded();
       loadAllData();
     }
   }, [profile]);
+
+  async function initializeSystemIfNeeded() {
+    try {
+      setInitializingSystem(true);
+      console.log('🎓 SUPERADMIN: Inizializzazione sistema permessi...');
+      
+      // Inizializza le tabelle se non esistono
+      await initializePermissionsSystem();
+      
+      // Inserisci i dati base se non esistono
+      await seedPermissionsData();
+      
+      console.log('🎓 SUPERADMIN: Sistema permessi inizializzato');
+    } catch (error) {
+      console.error('🚨 SUPERADMIN: Errore inizializzazione sistema:', error);
+    } finally {
+      setInitializingSystem(false);
+    }
+  }
 
   async function loadAllData() {
     setLoading(true);
@@ -109,9 +138,14 @@ export default function SuperAdmin() {
 
   async function loadPermissionsData() {
     try {
-      const permissionsData = await getAllPermissions();
-      const matrix = await getRolePermissionsMatrix();
+      const permissionsData = await getAllPermissionsFromDB();
+      const rolesData = await getAllRolesFromDB();
+      const sectionsData = await getAllSectionsFromDB();
+      const matrix = await getPermissionsMatrixFromDB();
+      
       setPermissions(permissionsData);
+      setRoles(rolesData);
+      setSections(sectionsData);
       setRoleMatrix(matrix);
     } catch (error) {
       console.error('Errore caricamento permessi:', error);
@@ -142,7 +176,7 @@ export default function SuperAdmin() {
 
   async function handlePermissionToggle(role: string, permission: string, granted: boolean) {
     try {
-      await updateRolePermission(role, permission, granted);
+      await updateRolePermissionInDB(role, permission, granted);
       await loadPermissionsData(); // Ricarica i dati
     } catch (error) {
       console.error('Errore aggiornamento permesso:', error);
@@ -151,7 +185,7 @@ export default function SuperAdmin() {
 
   async function handleSectionToggle(role: string, section: string, granted: boolean) {
     try {
-      await updateRoleSection(role, section, granted);
+      await updateRoleSectionInDB(role, section, granted);
       await loadPermissionsData(); // Ricarica i dati
     } catch (error) {
       console.error('Errore aggiornamento sezione:', error);
@@ -221,33 +255,8 @@ export default function SuperAdmin() {
     setExpandedCategories(newExpanded);
   }
 
-  const roles = ['superadmin', 'admin', 'operator', 'user'];
-  const sections = ['dashboard', 'normatives', 'education', 'documents', 'admin', 'superadmin'];
-
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'superadmin': return 'bg-purple-100 text-purple-800';
-      case 'admin': return 'bg-red-100 text-red-800';
-      case 'operator': return 'bg-yellow-100 text-yellow-800';
-      case 'user': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'superadmin': return 'Super Amministratore';
-      case 'admin': return 'Amministratore';
-      case 'operator': return 'Operatore';
-      case 'user': return 'Utente';
-      default: return role;
-    }
-  };
-
-  const getPermissionLabel = (permissionId: string) => {
-    const permission = PERMISSIONS.find(p => p.id === permissionId);
-    return permission?.name || permissionId;
-  };
+  const roleNames = roles.map(r => r.name);
+  const sectionNames = sections.map(s => s.name);
 
   const hasPermission = (role: string, permissionId: string): boolean => {
     const roleData = roleMatrix.get(role);
@@ -256,7 +265,7 @@ export default function SuperAdmin() {
 
   const hasSection = (role: string, section: string): boolean => {
     const roleData = roleMatrix.get(role);
-    return roleData?.visibleSections?.includes(section) || false;
+    return roleData?.sections?.includes(section) || false;
   };
 
   if (loading) {
@@ -284,6 +293,13 @@ export default function SuperAdmin() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
+          {initializingSystem && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg mb-4 flex items-center space-x-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span>Inizializzazione sistema permessi in corso...</span>
+            </div>
+          )}
+          
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-3 bg-purple-100 rounded-xl">
               <Crown className="h-8 w-8 text-purple-600" />
@@ -384,9 +400,9 @@ export default function SuperAdmin() {
                           <h4 className="font-medium text-gray-900">Permesso</h4>
                         </div>
                         {roles.map(role => (
-                          <div key={role} className="col-span-2 text-center">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(role)}`}>
-                              {getRoleLabel(role)}
+                          <div key={role.name} className="col-span-2 text-center">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(role.name)}`}>
+                              {getRoleDisplayName(role.name)}
                             </span>
                           </div>
                         ))}
@@ -394,7 +410,7 @@ export default function SuperAdmin() {
                     </div>
 
                     {/* Categorie di permessi */}
-                    {Object.entries(PERMISSION_CATEGORIES).map(([categoryKey, category]) => (
+                    {Object.entries(groupPermissionsByCategory(permissions)).map(([categoryKey, categoryPermissions]) => (
                       <div key={categoryKey} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                         {/* Header categoria */}
                         <button
@@ -408,19 +424,19 @@ export default function SuperAdmin() {
                               <ChevronRight className="h-4 w-4 text-gray-500" />
                             )}
                             <div className="text-left">
-                              <h3 className="font-semibold text-gray-900">{category.name}</h3>
-                              <p className="text-sm text-gray-600">{category.description}</p>
+                              <h3 className="font-semibold text-gray-900">{getCategoryDisplayName(categoryKey)}</h3>
+                              <p className="text-sm text-gray-600">{getCategoryDescription(categoryKey)}</p>
                             </div>
                           </div>
                           <span className="text-sm text-gray-500">
-                            {category.permissions.length} permessi
+                            {categoryPermissions.length} permessi
                           </span>
                         </button>
 
                         {/* Permessi della categoria */}
                         {expandedCategories.has(categoryKey) && (
                           <div className="border-t border-gray-200">
-                            {category.permissions.map((permission) => (
+                            {categoryPermissions.map((permission) => (
                               <div key={permission.id} className="grid grid-cols-12 gap-4 items-center p-4 border-b border-gray-100 hover:bg-gray-50">
                                 <div className="col-span-4">
                                   <div className="font-medium text-gray-900 text-sm">
@@ -431,11 +447,11 @@ export default function SuperAdmin() {
                                   </div>
                                 </div>
                                 {roles.map(role => {
-                                  const granted = hasPermission(role, permission.id);
+                                  const granted = hasPermission(role.name, permission.name);
                                   return (
-                                    <div key={role} className="col-span-2 text-center">
+                                    <div key={role.name} className="col-span-2 text-center">
                                       <button
-                                        onClick={() => handlePermissionToggle(role, permission.id, !granted)}
+                                        onClick={() => handlePermissionToggle(role.name, permission.name, !granted)}
                                         className={`p-2 rounded-lg transition-colors ${
                                           granted 
                                             ? 'bg-green-100 text-green-600 hover:bg-green-200' 
@@ -474,9 +490,9 @@ export default function SuperAdmin() {
                           <h4 className="font-medium text-gray-900">Sezione</h4>
                         </div>
                         {roles.map(role => (
-                          <div key={role} className="col-span-2 text-center">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(role)}`}>
-                              {getRoleLabel(role)}
+                          <div key={role.name} className="col-span-2 text-center">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(role.name)}`}>
+                              {getRoleDisplayName(role.name)}
                             </span>
                           </div>
                         ))}
@@ -486,24 +502,23 @@ export default function SuperAdmin() {
                     {/* Sezioni */}
                     <div className="divide-y divide-gray-100">
                       {sections.map((section) => (
-                        <div key={section} className="grid grid-cols-12 gap-4 items-center p-4 hover:bg-gray-50">
+                        <div key={section.name} className="grid grid-cols-12 gap-4 items-center p-4 hover:bg-gray-50">
                           <div className="col-span-4">
                             <div className="font-medium text-gray-900 text-sm capitalize">
-                              {section === 'normatives' ? 'Normative' :
-                               section === 'documents' ? 'Documenti' :
-                               section === 'education' ? 'Formazione' :
-                               section === 'users' ? 'Utenti' :
-                               section === 'admin' ? 'Amministrazione' :
-                               section === 'superadmin' ? 'Super Admin' :
-                               section === 'dashboard' ? 'Dashboard' : section}
+                              {section.display_name}
                             </div>
+                            {section.description && (
+                              <div className="text-xs text-gray-500">
+                                {section.description}
+                              </div>
+                            )}
                           </div>
                           {roles.map(role => {
-                            const visible = hasSection(role, section);
+                            const visible = hasSection(role.name, section.name);
                             return (
-                              <div key={role} className="col-span-2 text-center">
+                              <div key={role.name} className="col-span-2 text-center">
                                 <button
-                                  onClick={() => handleSectionToggle(role, section, !visible)}
+                                  onClick={() => handleSectionToggle(role.name, section.name, !visible)}
                                   className={`p-2 rounded-lg transition-colors ${
                                     visible 
                                       ? 'bg-green-100 text-green-600 hover:bg-green-200' 
@@ -555,7 +570,7 @@ export default function SuperAdmin() {
                           <td className="px-4 py-3 text-gray-600">{user.email}</td>
                           <td className="px-4 py-3">
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
-                              {getRoleLabel(user.role)}
+                              {getRoleDisplayName(user.role)}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-gray-600 text-sm">
