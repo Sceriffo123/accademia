@@ -107,15 +107,25 @@ export default function SuperAdmin() {
   async function loadPermissionsData() {
     try {
       setLoading(true);
+      console.log('🔄 SuperAdmin: Caricamento dati dal database...');
+      
       const [allPermissions, matrix] = await Promise.all([
         getAllPermissionsFromDB(),
         getRolePermissionsMatrix()
       ]);
       
+      console.log('✅ SuperAdmin: Permessi caricati:', allPermissions.length);
+      console.log('✅ SuperAdmin: Matrix caricata:', matrix);
+      
       setPermissions(allPermissions);
       setRoleMatrix(matrix);
+      
+      addNotification('success', 'Dati Caricati', 
+        `${allPermissions.length} permessi e ${matrix.size} ruoli caricati dal database`);
     } catch (error) {
-      console.error('Errore caricamento permessi:', error);
+      console.error('🚨 SuperAdmin: Errore caricamento permessi:', error);
+      addNotification('error', 'Errore Database', 
+        'Impossibile caricare permessi e ruoli dal database');
     } finally {
       setLoading(false);
     }
@@ -257,30 +267,25 @@ export default function SuperAdmin() {
     const roleData = roleMatrix.get(role);
     const isVisible = roleData?.sections.includes(section);
     
+    console.log(`🔄 SuperAdmin: Toggle sezione ${section} per ruolo ${role} (attualmente: ${isVisible ? 'visibile' : 'nascosta'})`);
+    
     try {
+      // Chiama la funzione database reale
       const success = await updateRoleSection(role, section, !isVisible);
+      
       if (success) {
-        // Aggiorna immediatamente lo stato locale
-        const newMatrix = new Map(roleMatrix);
-        const currentRoleData = newMatrix.get(role);
-        if (currentRoleData) {
-          if (!isVisible) {
-            // Aggiungi sezione
-            currentRoleData.sections = [...currentRoleData.sections, section];
-          } else {
-            // Rimuovi sezione
-            currentRoleData.sections = currentRoleData.sections.filter(s => s !== section);
-          }
-          newMatrix.set(role, currentRoleData);
-          setRoleMatrix(newMatrix);
-        }
+        console.log(`✅ SuperAdmin: Database aggiornato con successo`);
+        
+        // Ricarica i dati dal database per sincronizzazione
+        await loadPermissionsData();
         
         setHasChanges(true);
         addNotification('success', 'Sezione Aggiornata', 
           `${section} ${!isVisible ? 'abilitata' : 'disabilitata'} per ${role}`);
       } else {
+        console.log(`❌ SuperAdmin: Aggiornamento database fallito`);
         addNotification('error', 'Errore Aggiornamento', 
-          'Operazione fallita - controlla i Debug Logs');
+          'Operazione fallita - controlla i Debug Logs nel Centro di Controllo');
       }
     } catch (error: any) {
       console.error('🚨 SUPERADMIN: Errore aggiornamento sezione:', error);
