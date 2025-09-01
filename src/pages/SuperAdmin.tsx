@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { 
-  getAllPermissions, 
+  getAllPermissionsFromDB, 
   getRolePermissionsMatrix, 
   updateRolePermission, 
   updateRoleSection,
   getAllTables,
   getTableStructure,
-  getTableRecords,
-  type DatabaseTable
+  getTableRecords
 } from '../lib/neonDatabase';
 import { 
   Shield, 
