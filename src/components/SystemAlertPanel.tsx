@@ -30,17 +30,16 @@ interface AuditLogEntry {
   timestamp: string;
   operation: string;
   status: 'SUCCESS' | 'ERROR' | 'VERIFICATION_FAILED' | 'WARNING';
-  data: any;
-  user?: string;
-}
-
-export default function SystemAlertPanel() {
-  const { profile } = useAuth();
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [isVisible, setIsVisible] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'alerts' | 'audit'>('alerts');
+
+  // Solo per admin e superadmin
+  if (!profile || !['admin', 'superadmin'].includes(profile.role)) {
+    return null;
+  }
 
   // Solo per admin e superadmin
   if (!profile || !['admin', 'superadmin'].includes(profile.role)) {

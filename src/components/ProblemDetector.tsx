@@ -32,16 +32,15 @@ interface Problem {
     steps: string[];
     code?: string;
   };
-  timestamp: string;
-  resolved: boolean;
-}
-
-export default function ProblemDetector() {
-  const { profile } = useAuth();
   const [problems, setProblems] = useState<Problem[]>([]);
   const [isVisible, setIsVisible] = useState(false);
   const [expandedProblem, setExpandedProblem] = useState<string | null>(null);
   const [isMinimized, setIsMinimized] = useState(true);
+
+  // Solo per admin e superadmin
+  if (!profile || !['admin', 'superadmin'].includes(profile.role)) {
+    return null;
+  }
 
   // Solo per admin e superadmin
   if (!profile || !['admin', 'superadmin'].includes(profile.role)) {
