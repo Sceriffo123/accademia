@@ -1523,12 +1523,6 @@ export async function updateUser(id: string, data: Partial<User>): Promise<User 
     if (updates.length === 1) { // Solo updated_at
       console.log('🎓 NEON: Nessun campo da aggiornare');
       return null;
-    }
-    
-    // Aggiungi l'ID come ultimo parametro per la WHERE clause
-    values.push(id);
-    
-    const updateQuery = `
       UPDATE users 
       SET ${updates.join(', ')} 
       WHERE id = $${values.length}
