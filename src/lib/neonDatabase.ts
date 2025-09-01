@@ -1527,6 +1527,7 @@ export async function updateUser(id: string, data: Partial<User>): Promise<User 
       SET ${updates.join(', ')} 
       WHERE id = $${values.length}
       RETURNING id, email, full_name, role, created_at, updated_at
+    }
     `;
     
     console.log('🎓 NEON: Query generata:', updateQuery);
@@ -1776,5 +1777,7 @@ export async function checkDatabaseTables(): Promise<{ tables: string[], error?:
   } catch (error) {
     console.error('🚨 NEON: Errore verifica tabelle:', error);
     return { tables: [], error: error.message };
+  }
+}
   }
 }
