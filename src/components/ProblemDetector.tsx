@@ -15,32 +15,10 @@ import {
   ExternalLink,
   Copy,
   RefreshCw
-} from 'lucide-react';
-
-interface Problem {
-  id: string;
-  severity: 'error' | 'warning' | 'info';
-  category: 'database' | 'syntax' | 'runtime' | 'security' | 'performance';
-  title: string;
-  description: string;
-  file?: string;
-  line?: number;
-  column?: number;
-  code?: string;
-  solution?: {
-    title: string;
-    steps: string[];
-    code?: string;
-  };
   const [problems, setProblems] = useState<Problem[]>([]);
   const [isVisible, setIsVisible] = useState(false);
   const [expandedProblem, setExpandedProblem] = useState<string | null>(null);
   const [isMinimized, setIsMinimized] = useState(true);
-
-  // Solo per admin e superadmin
-  if (!profile || !['admin', 'superadmin'].includes(profile.role)) {
-    return null;
-  }
 
   // Solo per admin e superadmin
   if (!profile || !['admin', 'superadmin'].includes(profile.role)) {
@@ -497,6 +475,25 @@ const ${variableName} = [];
       )}
     </div>
   );
+}
+
+interface Problem {
+  id: string;
+  severity: 'error' | 'warning' | 'info';
+  category: 'database' | 'syntax' | 'runtime' | 'security' | 'performance';
+  title: string;
+  description: string;
+  file?: string;
+  line?: number;
+  column?: number;
+  code?: string;
+  solution?: {
+    title: string;
+    steps: string[];
+    code?: string;
+  };
+  timestamp: string;
+  resolved: boolean;
 }
 
 export default React
