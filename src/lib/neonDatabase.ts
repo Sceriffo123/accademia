@@ -959,7 +959,8 @@ async function getRoleSectionsFromDB(role: string): Promise<string[]> {
         'dashboard',
         'users',
         'normatives',
-        'documents',  // ← AGGIUNTA LA SEZIONE DOCUMENTS!
+        'documents',
+        'education',
         'courses',
         'modules',
         'quizzes',
@@ -971,6 +972,7 @@ async function getRoleSectionsFromDB(role: string): Promise<string[]> {
         'users',
         'normatives',
         'documents',
+        'education',
         'courses',
         'modules',
         'quizzes',
@@ -979,12 +981,14 @@ async function getRoleSectionsFromDB(role: string): Promise<string[]> {
       'operator': [
         'dashboard',
         'normatives',
+        'education',
         'courses'
       ],
       'user': [
         'dashboard',
         'normatives',
-        'documents'
+        'documents',
+        'education'
       ],
       'guest': [
         'dashboard'
