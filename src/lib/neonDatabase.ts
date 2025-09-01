@@ -1190,7 +1190,7 @@ export async function updateRolePermission(role: string, permission: string, gra
 }
 
 export async function updateRoleSection(role: string, section: string, granted: boolean): Promise<boolean> {
-  return await updateRoleSectionInDB(role, section, visible);
+  return await updateRoleSectionInDB(role, section, granted);
 }
 
 export async function getTableRecords(tableName: string, limit: number = 100): Promise<any[]> {
