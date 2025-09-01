@@ -480,7 +480,6 @@ const ${variableName} = [];
   );
 }
 
-interface Problem {
   id: string;
   severity: 'error' | 'warning' | 'info';
   category: 'database' | 'syntax' | 'runtime' | 'security' | 'performance';
