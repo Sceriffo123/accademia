@@ -17,7 +17,27 @@ import {
   RefreshCw
 } from 'lucide-react';
 
+interface Problem {
+  id: string;
+  severity: 'error' | 'warning' | 'info';
+  category: 'database' | 'syntax' | 'runtime' | 'security' | 'performance';
+  title: string;
+  description: string;
+  file?: string;
+  line?: number;
+  column?: number;
+  code?: string;
+  solution?: {
+    title: string;
+    steps: string[];
+    code?: string;
+  };
+  timestamp: string;
+  resolved: boolean;
+}
+
 export default function ProblemDetector() {
+  const { profile } = useAuth();
   const [problems, setProblems] = useState<Problem[]>([]);
   const [isVisible, setIsVisible] = useState(false);
   const [expandedProblem, setExpandedProblem] = useState<string | null>(null);
@@ -479,23 +499,3 @@ const ${variableName} = [];
     </div>
   );
 }
-
-  id: string;
-  severity: 'error' | 'warning' | 'info';
-  category: 'database' | 'syntax' | 'runtime' | 'security' | 'performance';
-  title: string;
-  description: string;
-  file?: string;
-  line?: number;
-  column?: number;
-  code?: string;
-  solution?: {
-    title: string;
-    steps: string[];
-    code?: string;
-  };
-  timestamp: string;
-  resolved: boolean;
-}
-
-export default React
