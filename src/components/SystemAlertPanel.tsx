@@ -33,10 +33,6 @@ interface AuditLogEntry {
 }
 
 export default function SystemAlertPanel() {
-  const { profile } = useAuth();
-}
-
-export default function SystemAlertPanel() {
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [isVisible, setIsVisible] = useState(true);
