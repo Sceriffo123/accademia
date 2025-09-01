@@ -9,8 +9,8 @@ import {
   getAllTables,
   getTableStructure,
   getTableRecords,
-  getUserSections,
-  getUserPermissions
+  updateRolePermission,
+  updateRoleSection
 } from '../lib/neonDatabase';
 import { 
   Activity,
@@ -192,11 +192,46 @@ export default function ControlCenter() {
     }
   };
 
+  const testPermissionOperation = async (role: string, permission: string, granted: boolean) => {
+    addDebugLog('info', 'PERMISSION_TEST', `Test: ${role} -> ${permission} = ${granted}`);
+    
+    try {
+      // Test diretto della funzione
+      const success = await updateRolePermission(role, permission, granted);
+      addDebugLog(success ? 'success' : 'error', 'PERMISSION_TEST', 
+        `Risultato operazione: ${success ? 'SUCCESS' : 'FAILED'}`);
+      
+      // Ricarica dati per verificare persistenza
+      await loadSystemData();
+      
+      return success;
+    } catch (error) {
+      addDebugLog('error', 'PERMISSION_TEST', `Errore: ${error}`);
+      return false;
+    }
+  };
+
+  const testSectionOperation = async (role: string, section: string, visible: boolean) => {
+    addDebugLog('info', 'SECTION_TEST', `Test: ${role} -> ${section} = ${visible}`);
+    
+    try {
+      const success = await updateRoleSection(role, section, visible);
+      addDebugLog(success ? 'success' : 'error', 'SECTION_TEST', 
+        `Risultato operazione: ${success ? 'SUCCESS' : 'FAILED'}`);
+      
+      await loadSystemData();
+      return success;
+    } catch (error) {
+      addDebugLog('error', 'SECTION_TEST', `Errore: ${error}`);
+      return false;
+    }
+  };
+
   const tabs = [
     { id: 'overview', label: 'Panoramica', icon: Monitor },
     { id: 'database', label: 'Database', icon: Database },
     { id: 'permissions', label: 'Permessi', icon: Shield },
-    { id: 'performance', label: 'Performance', icon: BarChart3 },
+    { id: 'test', label: 'Test CRUD', icon: Zap },
     { id: 'debug', label: 'Debug Logs', icon: Bug },
     { id: 'network', label: 'Connessioni', icon: Network }
   ];
@@ -399,11 +434,96 @@ export default function ControlCenter() {
             </div>
           )}
 
+          {/* Test CRUD Tab */}
+          {activeTab === 'test' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-lg shadow-sm border">
+                <div className="p-4 border-b">
+                  <h3 className="text-lg font-semibold text-gray-900">Test Matrice Permessi</h3>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <select className="border rounded-lg px-3 py-2" id="test-role">
+                      <option value="">Seleziona Ruolo</option>
+                      {Array.from(roleMatrix.keys()).map(role => (
+                        <option key={role} value={role}>{role}</option>
+                      ))}
+                    </select>
+                    <input 
+                      type="text" 
+                      placeholder="Nome Permesso" 
+                      className="border rounded-lg px-3 py-2"
+                      id="test-permission"
+                    />
+                    <select className="border rounded-lg px-3 py-2" id="test-granted">
+                      <option value="true">Abilitato</option>
+                      <option value="false">Disabilitato</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const role = (document.getElementById('test-role') as HTMLSelectElement)?.value;
+                      const permission = (document.getElementById('test-permission') as HTMLInputElement)?.value;
+                      const granted = (document.getElementById('test-granted') as HTMLSelectElement)?.value === 'true';
+                      if (role && permission) testPermissionOperation(role, permission, granted);
+                    }}
+                    className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+                  >
+                    Test Aggiornamento Permesso
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-sm border">
+                <div className="p-4 border-b">
+                  <h3 className="text-lg font-semibold text-gray-900">Test Visibilità Sezioni</h3>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <select className="border rounded-lg px-3 py-2" id="test-section-role">
+                      <option value="">Seleziona Ruolo</option>
+                      {Array.from(roleMatrix.keys()).map(role => (
+                        <option key={role} value={role}>{role}</option>
+                      ))}
+                    </select>
+                    <input 
+                      type="text" 
+                      placeholder="Nome Sezione" 
+                      className="border rounded-lg px-3 py-2"
+                      id="test-section"
+                    />
+                    <select className="border rounded-lg px-3 py-2" id="test-visible">
+                      <option value="true">Visibile</option>
+                      <option value="false">Nascosta</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const role = (document.getElementById('test-section-role') as HTMLSelectElement)?.value;
+                      const section = (document.getElementById('test-section') as HTMLInputElement)?.value;
+                      const visible = (document.getElementById('test-visible') as HTMLSelectElement)?.value === 'true';
+                      if (role && section) testSectionOperation(role, section, visible);
+                    }}
+                    className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700"
+                  >
+                    Test Aggiornamento Sezione
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Debug Logs Tab */}
           {activeTab === 'debug' && (
             <div className="bg-white rounded-lg shadow-sm border">
-              <div className="p-4 border-b">
+              <div className="p-4 border-b flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">Debug Logs Real-time</h3>
+                <button
+                  onClick={() => setDebugLogs([])}
+                  className="px-3 py-1 bg-gray-100 text-gray-600 rounded text-sm hover:bg-gray-200"
+                >
+                  Pulisci Log
+                </button>
               </div>
               <div className="p-4 max-h-96 overflow-y-auto">
                 {debugLogs.length === 0 ? (
