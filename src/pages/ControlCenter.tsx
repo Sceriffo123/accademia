@@ -1,34 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { 
   getAllPermissionsFromDB, 
-  getAllRolesFromDB,
+  getAllRolesFromDB, 
   getAllSectionsFromDB,
   getRolePermissionsMatrix,
+  updateRolePermission,
+  updateRoleSection,
   getAllTables,
   getTableStructure,
-  getTableRecords,
-  updateRolePermission,
-  updateRoleSection
+  getTableRecords
 } from '../lib/neonDatabase';
 import { 
-  Activity,
-  Database,
-  Users,
-  Shield,
-  Settings,
-  Eye,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  Clock,
-  BarChart3,
-  Network,
-  Zap,
-  RefreshCw,
-  Monitor,
-  Bug
+  Monitor, Database, Shield, Zap, Bug, 
+  Users, FileText, Settings, 
+  AlertTriangle, CheckCircle, XCircle, 
+  Info, RefreshCw, Search, Eye, 
+  Clock, Server, Cpu
 } from 'lucide-react';
 
 interface SystemMetrics {
@@ -79,6 +68,23 @@ export default function ControlCenter() {
       loadSystemData();
       startRealTimeMonitoring();
     }
+    
+    // Listener per system alerts
+    const handleSystemAlert = (event: CustomEvent) => {
+      const { type, message, details } = event.detail;
+      addDebugLog(type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info', 
+        'SYSTEM_ALERT', `${message} - ${JSON.stringify(details)}`);
+    };
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('systemAlert', handleSystemAlert as EventListener);
+    }
+    
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('systemAlert', handleSystemAlert as EventListener);
+      }
+    };
   }, [profile]);
 
   // Verifica accesso SuperAdmin
@@ -187,6 +193,30 @@ export default function ControlCenter() {
     }
   };
 
+  const runIntegrityCheck = async () => {
+    try {
+      addDebugLog('info', 'INTEGRITY_CHECK', 'Avvio verifica integrità database...');
+      const { verifyDatabaseIntegrity } = await import('../lib/auditLogger');
+      const { sql } = await import('../lib/neonDatabase');
+      
+      const result = await verifyDatabaseIntegrity(sql);
+      
+      if (result.isValid) {
+        addDebugLog('success', 'INTEGRITY_CHECK', 'Database integro - Nessun problema rilevato');
+      } else {
+        addDebugLog('error', 'INTEGRITY_CHECK', `Problemi rilevati: ${result.errors.join(', ')}`);
+        if (result.warnings.length > 0) {
+          addDebugLog('warning', 'INTEGRITY_CHECK', `Avvisi: ${result.warnings.join(', ')}`);
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      addDebugLog('error', 'INTEGRITY_CHECK', `Errore verifica integrità: ${error}`);
+      return { isValid: false, errors: [String(error)], warnings: [] };
+    }
+  };
+
   const getLogIcon = (type: DebugLog['type']) => {
     switch (type) {
       case 'success': return <CheckCircle className="h-4 w-4 text-green-500" />;
@@ -240,9 +270,9 @@ export default function ControlCenter() {
     { id: 'overview', label: 'Panoramica', icon: Monitor },
     { id: 'database', label: 'Database', icon: Database },
     { id: 'permissions', label: 'Permessi', icon: Shield },
+    { id: 'integrity', label: 'Integrità DB', icon: Shield },
     { id: 'test', label: 'Test CRUD', icon: Zap },
-    { id: 'debug', label: 'Debug Logs', icon: Bug },
-    { id: 'network', label: 'Connessioni', icon: Network }
+    { id: 'debug', label: 'Debug Logs', icon: Bug }
   ];
 
   if (isLoading) {
@@ -521,6 +551,71 @@ export default function ControlCenter() {
                   >
                     Test Aggiornamento Sezione
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Database Integrity Tab */}
+          {activeTab === 'integrity' && (
+            <div className="bg-white rounded-lg shadow-sm border">
+              <div className="p-4 border-b">
+                <h3 className="text-lg font-semibold text-gray-900">Verifica Integrità Database</h3>
+                <p className="text-sm text-gray-600 mt-1">Controlli automatici di integrità e coerenza del database</p>
+              </div>
+              <div className="p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-gray-900">Controllo Manuale</h4>
+                    <p className="text-sm text-gray-600">Esegui una verifica completa dell'integrità del database</p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={runIntegrityCheck}
+                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Shield className="h-4 w-4" />
+                      <span>Verifica Integrità</span>
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const { exportTableSchema } = await import('../lib/neonDatabase');
+                          const schema = await exportTableSchema();
+                          addDebugLog('info', 'SCHEMA_EXPORT', `Schema esportato: ${schema.length} colonne`);
+                          console.table(schema);
+                        } catch (error) {
+                          addDebugLog('error', 'SCHEMA_EXPORT', `Errore export schema: ${error}`);
+                        }
+                      }}
+                      className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      <Database className="h-4 w-4" />
+                      <span>Export Schema</span>
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <h5 className="font-medium text-green-900 mb-2">Controlli Automatici</h5>
+                    <ul className="text-sm text-green-700 space-y-1">
+                      <li>• Esistenza tabelle critiche</li>
+                      <li>• Integrità referenziale</li>
+                      <li>• Ruolo SuperAdmin presente</li>
+                      <li>• Permessi critici configurati</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h5 className="font-medium text-blue-900 mb-2">Monitoraggio Real-time</h5>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                      <li>• Verifica dopo ogni modifica</li>
+                      <li>• Alert automatici per anomalie</li>
+                      <li>• Log audit dettagliati</li>
+                      <li>• Sincronizzazione stato locale</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,20 +1,27 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
-import DatabaseCheck from './components/DatabaseCheck';
-import ProtectedRoute from './components/ProtectedRoute';
-import Layout from './components/Layout';
-import Home from './pages/Home';
+import Navigation from './components/Navigation';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
-import Normatives from './pages/Normatives';
-import NormativeDetail from './pages/NormativeDetail';
-import Education from './pages/Education';
 import Admin from './pages/Admin';
 import SuperAdmin from './pages/SuperAdmin';
 import ControlCenter from './pages/ControlCenter';
+import Normatives from './pages/Normatives';
 import Docx from './pages/Docx';
+import Education from './pages/Education';
+import CourseViewer from './pages/CourseViewer';
+import ProtectedRoute from './components/ProtectedRoute';
+import GlobalErrorHandler from './lib/errorHandler';
+import DatabaseCheck from './components/DatabaseCheck';
+import Layout from './components/Layout';
+import Home from './pages/Home';
+import Register from './pages/Register';
+import NormativeDetail from './pages/NormativeDetail';
+import './App.css';
+
+// Inizializza gestione errori globale
+GlobalErrorHandler.getInstance().initialize();
 
 function App() {
   return (

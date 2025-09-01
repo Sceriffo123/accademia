@@ -1,7 +1,35 @@
 import { neon } from '@neondatabase/serverless';
+import { writeAuditLog, createSystemAlert, verifyDatabaseIntegrity } from './auditLogger';
+
+const sql = neon(import.meta.env.VITE_DATABASE_URL!);
+
+export { sql };
+
+// Funzione per esportare schema tabelle per debugging
+export async function exportTableSchema(): Promise<any> {
+  try {
+    const schema = await sql`
+      SELECT 
+        table_name,
+        column_name,
+        data_type,
+        is_nullable,
+        column_default
+      FROM information_schema.columns 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('users', 'roles', 'permissions', 'role_permissions', 'role_sections')
+      ORDER BY table_name, ordinal_position
+    `;
+    
+    return schema;
+  } catch (error) {
+    console.error('🚨 NEON: Errore export schema:', error);
+    throw error;
+  }
+}
 
 // Inizializza connessione Neon
-const sql = neon(import.meta.env.VITE_DATABASE_URL || '');
+// const sql = neon(import.meta.env.VITE_DATABASE_URL || '');
 
 export interface User {
   id: string;
@@ -891,19 +919,16 @@ export async function updateRolePermissionInDB(roleName: string, permissionName:
   try {
     console.log('🎓 NEON: Aggiornamento permesso ruolo:', { roleName, permissionName, granted });
     
-    // Prima verifica se ruolo e permesso esistono
-    const roleCheck = await sql`SELECT id, name FROM roles WHERE name = ${roleName}`;
-    const permissionCheck = await sql`SELECT id, name FROM permissions WHERE name = ${permissionName}`;
-    
-    console.log('🔍 NEON: Ruolo trovato:', roleCheck);
-    console.log('🔍 NEON: Permesso trovato:', permissionCheck);
-    
-    if (roleCheck.length === 0) {
+    // Verifica esistenza ruolo
+    const roleExists = await sql`SELECT id FROM roles WHERE name = ${roleName}`;
+    if (roleExists.length === 0) {
       console.error('🚨 NEON: Ruolo non trovato:', roleName);
       return false;
     }
     
-    if (permissionCheck.length === 0) {
+    // Verifica esistenza permesso
+    const permissionExists = await sql`SELECT id FROM permissions WHERE name = ${permissionName}`;
+    if (permissionExists.length === 0) {
       console.error('🚨 NEON: Permesso non trovato:', permissionName);
       return false;
     }
@@ -917,10 +942,64 @@ export async function updateRolePermissionInDB(roleName: string, permissionName:
       DO UPDATE SET granted = ${granted}
     `;
     
-    console.log('✅ NEON: Risultato aggiornamento permesso:', result);
-    return true;
+    // Verifica che la modifica sia stata effettivamente applicata
+    const verification = await sql`
+      SELECT rp.granted, r.name as role_name, p.name as permission_name
+      FROM role_permissions rp
+      JOIN roles r ON r.id = rp.role_id
+      JOIN permissions p ON p.id = rp.permission_id
+      WHERE r.name = ${roleName} AND p.name = ${permissionName}
+    `;
+    
+    if (verification.length > 0 && verification[0].granted === granted) {
+      console.log('✅ NEON: Verifica DB confermata - Permesso aggiornato correttamente');
+      
+      // Verifica integrità database dopo la modifica
+      const integrityCheck = await verifyDatabaseIntegrity(sql);
+      if (!integrityCheck.isValid) {
+        console.error('🚨 NEON: Problemi di integrità rilevati:', integrityCheck.errors);
+        createSystemAlert('error', 'Database Integrity Issues Detected', {
+          operation: 'PERMISSION_UPDATE',
+          errors: integrityCheck.errors,
+          warnings: integrityCheck.warnings
+        });
+      }
+      
+      // Log audit
+      await writeAuditLog('PERMISSION_UPDATE', 'SUCCESS', {
+        role: roleName,
+        permission: permissionName,
+        granted,
+        verified: true,
+        dbState: verification[0].granted,
+        integrityCheck: integrityCheck.isValid
+      });
+      return true;
+    } else {
+      console.error('🚨 NEON: Verifica DB fallita - Stato non corrispondente');
+      await writeAuditLog('PERMISSION_UPDATE', 'VERIFICATION_FAILED', {
+        role: roleName,
+        permission: permissionName,
+        granted,
+        verified: false,
+        expected: granted,
+        actual: verification[0]?.granted
+      });
+      createSystemAlert('error', 'Database Verification Failed', {
+        operation: 'PERMISSION_UPDATE',
+        role: roleName,
+        permission: permissionName
+      });
+      return false;
+    }
   } catch (error) {
     console.error('🚨 NEON: Errore aggiornamento permesso ruolo:', error);
+    await writeAuditLog('PERMISSION_UPDATE', 'ERROR', {
+      role: roleName,
+      permission: permissionName,
+      granted,
+      error: error instanceof Error ? error.message : String(error)
+    });
     return false;
   }
 }
@@ -938,15 +1017,27 @@ export async function updateRoleSectionInDB(roleName: string, sectionName: strin
     
     if (roleCheck.length === 0) {
       console.error('🚨 NEON: Ruolo non trovato:', roleName);
+      await writeAuditLog('SECTION_UPDATE', 'ERROR', {
+        role: roleName,
+        section: sectionName,
+        visible,
+        error: 'Role not found'
+      });
       return false;
     }
     
     if (sectionCheck.length === 0) {
       console.error('🚨 NEON: Sezione non trovata:', sectionName);
+      await writeAuditLog('SECTION_UPDATE', 'ERROR', {
+        role: roleName,
+        section: sectionName,
+        visible,
+        error: 'Section not found'
+      });
       return false;
     }
     
-    const result = await sql`
+    await sql`
       INSERT INTO role_sections (role_id, section_id, visible)
       SELECT CAST(r.id AS UUID), CAST(s.id AS UUID), ${visible}
       FROM roles r, sections s
@@ -955,10 +1046,64 @@ export async function updateRoleSectionInDB(roleName: string, sectionName: strin
       DO UPDATE SET visible = ${visible}
     `;
     
-    console.log('✅ NEON: Risultato aggiornamento sezione:', result);
-    return true;
+    // Verifica che la modifica sia stata applicata
+    const verification = await sql`
+      SELECT rs.visible, r.name as role_name, s.name as section_name
+      FROM role_sections rs
+      JOIN roles r ON r.id = rs.role_id
+      JOIN sections s ON s.id = rs.section_id
+      WHERE r.name = ${roleName} AND s.name = ${sectionName}
+    `;
+    
+    if (verification.length > 0 && verification[0].visible === visible) {
+      console.log('✅ NEON: Verifica DB confermata - Sezione aggiornata correttamente');
+      
+      // Verifica integrità database dopo la modifica
+      const integrityCheck = await verifyDatabaseIntegrity(sql);
+      if (!integrityCheck.isValid) {
+        console.error('🚨 NEON: Problemi di integrità rilevati:', integrityCheck.errors);
+        createSystemAlert('error', 'Database Integrity Issues Detected', {
+          operation: 'SECTION_UPDATE',
+          errors: integrityCheck.errors,
+          warnings: integrityCheck.warnings
+        });
+      }
+      
+      // Log audit
+      await writeAuditLog('SECTION_UPDATE', 'SUCCESS', {
+        role: roleName,
+        section: sectionName,
+        visible,
+        verified: true,
+        dbState: verification[0].visible,
+        integrityCheck: integrityCheck.isValid
+      });
+      return true;
+    } else {
+      console.error('🚨 NEON: Verifica DB fallita - Stato sezione non corrispondente');
+      await writeAuditLog('SECTION_UPDATE', 'VERIFICATION_FAILED', {
+        role: roleName,
+        section: sectionName,
+        visible,
+        verified: false,
+        expected: visible,
+        actual: verification[0]?.visible
+      });
+      createSystemAlert('error', 'Section Update Verification Failed', {
+        operation: 'SECTION_UPDATE',
+        role: roleName,
+        section: sectionName
+      });
+      return false;
+    }
   } catch (error) {
     console.error('🚨 NEON: Errore aggiornamento sezione ruolo:', error);
+    await writeAuditLog('SECTION_UPDATE', 'ERROR', {
+      role: roleName,
+      section: sectionName,
+      visible,
+      error: error instanceof Error ? error.message : String(error)
+    });
     return false;
   }
 }
