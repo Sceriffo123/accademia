@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Navigation from './Navigation';
 import SystemAlertPanel from './SystemAlertPanel';
+import ProblemDetector from './ProblemDetector';
 
 export default function Layout() {
   return (
@@ -11,6 +12,7 @@ export default function Layout() {
         <Outlet />
       </main>
       <SystemAlertPanel />
+      <ProblemDetector />
     </div>
   );
 }
