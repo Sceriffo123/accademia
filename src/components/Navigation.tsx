@@ -91,13 +91,13 @@ export default function Navigation() {
   }
 
   // Costruisci menu items basato su sezioni visibili - CORREZIONE: usa let invece di const
-  let navItems = [];
-  
-  if (visibleSections.includes('dashboard')) {
-    navItems.push({ to: '/dashboard', icon: Home, label: 'Dashboard' });
-  }
-  
-  // Aggiungi sezioni condizionali PRIMA del filtro
+  let navItems = [
+    { to: '/dashboard', icon: Home, label: 'Dashboard', section: 'dashboard' },
+    { to: '/normative', icon: FileText, label: 'Normative', section: 'normatives' },
+    { to: '/education', icon: GraduationCap, label: 'Formazione', section: 'education' },
+  ].filter(item => visibleSections.includes(item.section));
+
+  // Aggiungi Documenti solo se la sezione è visibile
   if (visibleSections.includes('documents')) {
     navItems.push({ to: '/docx', icon: FileIcon, label: 'Documenti', section: 'documents' });
   }
