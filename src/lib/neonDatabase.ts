@@ -258,7 +258,7 @@ export async function getRecentNormativesCount(days: number = 30): Promise<numbe
   try {
     const result = await sql`
       SELECT COUNT(*) as count FROM normatives 
-      WHERE created_at >= NOW() - INTERVAL '${days} days'
+      WHERE created_at >= NOW() - (INTERVAL '1 day' * ${days})
     `;
     return parseInt(result[0].count);
   } catch (error) {
