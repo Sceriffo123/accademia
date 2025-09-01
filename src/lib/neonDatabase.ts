@@ -1020,6 +1020,9 @@ export async function initializeDatabase(): Promise<boolean> {
     await seedPermissionsData();
     await insertDefaultAdmin();
     
+    // 4. Pulisci ruoli non necessari
+    await cleanupUnwantedRoles();
+    
     console.log('🎓 NEON: Database inizializzato completamente');
     return true;
   } catch (error) {
@@ -1040,6 +1043,29 @@ async function insertDefaultAdmin(): Promise<void> {
     console.log('🎓 NEON: Admin di default inserito');
   } catch (error) {
     console.error('🚨 NEON: Errore inserimento admin:', error);
+  }
+}
+
+// Rimuove ruoli non necessari come "guest"
+async function cleanupUnwantedRoles(): Promise<void> {
+  try {
+    console.log('🎓 NEON: Pulizia ruoli non necessari...');
+    
+    // Rimuovi il ruolo "guest" se esiste
+    const result = await sql`
+      DELETE FROM roles 
+      WHERE name = 'guest'
+      RETURNING name
+    `;
+    
+    if (result.length > 0) {
+      console.log('🎓 NEON: Ruolo "guest" rimosso dal database');
+    } else {
+      console.log('🎓 NEON: Ruolo "guest" non presente nel database');
+    }
+    
+  } catch (error) {
+    console.error('🚨 NEON: Errore pulizia ruoli:', error);
   }
 }
 
