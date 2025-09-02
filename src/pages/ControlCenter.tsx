@@ -1381,8 +1381,8 @@ export default function ControlCenter() {
                                   </div>
                                   <div className="text-xs text-gray-600">
                                     <div><strong>User:</strong> {log.user_id || 'N/A'}</div>
-                                    {log.details && <div><strong>Dettagli:</strong> {log.details}</div>}
-                                    {log.ip_address && <div><strong>IP:</strong> {log.ip_address}</div>}
+                                    {log.details && <div><strong>Dettagli:</strong> {typeof log.details === 'object' ? JSON.stringify(log.details) : log.details}</div>}
+                                    {log.ip_address && <div><strong>IP:</strong> {typeof log.ip_address === 'object' ? (log.ip_address.ip || JSON.stringify(log.ip_address)) : log.ip_address}</div>}
                                   </div>
                                 </div>
                               ))}
