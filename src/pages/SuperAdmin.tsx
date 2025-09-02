@@ -248,13 +248,9 @@ export default function SuperAdmin() {
     setExpandedCategories(newExpanded);
   };
 
-  const togglePermission = async (role: string, permissionId: string) => {
+  const togglePermission = async (role: string, permissionName: string) => {
     const roleData = roleMatrix.get(role);
-    const hasPermission = roleData?.permissions.includes(permissionId);
-    
-    // Trova il nome del permesso dall'ID
-    const permission = permissions.find(p => p.id === permissionId);
-    const permissionName = permission?.name || permissionId;
+    const hasPermission = roleData?.permissions.includes(permissionName);
     
     console.log(`🔄 SuperAdmin: Toggle permesso ${permissionName} per ruolo ${role} (attualmente: ${hasPermission ? 'abilitato' : 'disabilitato'})`);
     
@@ -597,7 +593,7 @@ export default function SuperAdmin() {
                                     return (
                                       <td key={role} className="py-3 px-3 text-center">
                                         <button
-                                          onClick={() => !isDisabled && togglePermission(role, permission.id)}
+                                          onClick={() => !isDisabled && togglePermission(role, permission.name)}
                                           disabled={isDisabled}
                                           className={`p-2 rounded-full transition-all transform hover:scale-105 ${
                                             hasPermission 
