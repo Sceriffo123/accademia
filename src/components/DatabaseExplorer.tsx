@@ -13,7 +13,8 @@ import {
   getAllTables,
   getTableStructure,
   getTableRecords,
-  getUsersCount
+  getUsersCount,
+  getAllTableRelations
 } from '../lib/neonDatabase';
 
 interface TableInfo {
@@ -127,18 +128,31 @@ export default function DatabaseExplorer() {
       setLoading(true);
       setSelectedTable(tableName);
       
-      const [structure, relations, records] = await Promise.all([
+      console.log(`🔄 DatabaseExplorer: Caricando dettagli per tabella ${tableName}...`);
+      
+      // Carica struttura e record prima, relazioni dopo per evitare blocchi
+      const [structure, records] = await Promise.all([
         getTableStructure(tableName),
-        getAllTableRelations(),
         getTableRecords(tableName, 50)
       ]);
 
+      console.log(`✅ DatabaseExplorer: Struttura e record caricati per ${tableName}`, {
+        columns: structure.length,
+        records: records.length
+      });
+
       const recordCount = await getRecordCount(tableName);
       
-      // Filtra relazioni per questa tabella
-      const tableRelations = relations.filter(
-        (rel: any) => rel.table_name === tableName || rel.foreign_table_name === tableName
-      );
+      // Carica relazioni separatamente per evitare errori
+      let tableRelations: any[] = [];
+      try {
+        const relations = await getAllTableRelations();
+        tableRelations = relations.filter(
+          (rel: any) => rel.table_name === tableName || rel.foreign_table_name === tableName
+        );
+      } catch (relationError) {
+        console.warn('⚠️ DatabaseExplorer: Errore caricamento relazioni (continuando senza):', relationError);
+      }
 
       setTableInfo({
         name: tableName,
@@ -151,8 +165,13 @@ export default function DatabaseExplorer() {
       });
 
       setTableData(records);
+      console.log(`✅ DatabaseExplorer: Dettagli tabella ${tableName} caricati con successo`);
     } catch (error) {
-      console.error('Errore caricamento dettagli tabella:', error);
+      console.error('❌ DatabaseExplorer: Errore caricamento dettagli tabella:', error);
+      // Anche in caso di errore, mostra almeno la tabella selezionata
+      setSelectedTable(tableName);
+      setTableInfo(null);
+      setTableData([]);
     } finally {
       setLoading(false);
     }
