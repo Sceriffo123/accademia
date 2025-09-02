@@ -199,18 +199,27 @@ export default function ControlCenter() {
 
   const loadTableData = async (tableName: string) => {
     try {
-      addDebugLog('info', 'TABLE_INSPECT', `Caricamento dati tabella: ${tableName}`);
+      addDebugLog('info', 'TABLE_INSPECT', `🔄 INIZIO Caricamento dati tabella: ${tableName}`);
+      console.log(`🔄 Centro di Controllo: Caricando ${tableName}...`);
+      
       const [records, structure] = await Promise.all([
         getTableRecords(tableName, 50),
         getTableStructure(tableName)
       ]);
+      
+      console.log(`✅ Centro di Controllo: Caricati ${records.length} record da ${tableName}`, records);
+      
       setTableData(records);
       setTableRecords(records);
       setTableStructure(structure);
       setSelectedTable(tableName);
-      addDebugLog('success', 'TABLE_INSPECT', `Caricati ${records.length} record da ${tableName}`);
+      
+      addDebugLog('success', 'TABLE_INSPECT', `✅ COMPLETATO: Caricati ${records.length} record da ${tableName}`);
     } catch (error) {
-      addDebugLog('error', 'TABLE_INSPECT', `Errore caricamento ${tableName}: ${error}`);
+      console.error(`❌ Centro di Controllo: Errore caricamento ${tableName}:`, error);
+      addDebugLog('error', 'TABLE_INSPECT', `❌ ERRORE caricamento ${tableName}: ${error}`);
+      setTableData([]);
+      setSelectedTable('');
     }
   };
 
@@ -478,18 +487,48 @@ export default function ControlCenter() {
                 </div>
               </div>
               
-              {selectedTable && (
-                <div className="bg-white rounded-lg shadow-sm border">
-                  <div className="p-4 border-b">
-                    <h3 className="text-lg font-semibold text-gray-900">Dati: {selectedTable}</h3>
-                  </div>
-                  <div className="p-4 max-h-96 overflow-auto">
-                    <pre className="text-xs text-gray-700 whitespace-pre-wrap">
-                      {JSON.stringify(tableData.slice(0, 5), null, 2)}
-                    </pre>
-                  </div>
+              <div className="bg-white rounded-lg shadow-sm border">
+                <div className="p-4 border-b">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {selectedTable ? `Dati: ${selectedTable}` : 'Seleziona una tabella'}
+                  </h3>
                 </div>
-              )}
+                <div className="p-4 max-h-96 overflow-auto">
+                  <div className="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                    <strong>🔍 DEBUG INFO:</strong><br/>
+                    selectedTable: "{selectedTable}"<br/>
+                    tableData length: {tableData?.length || 0}<br/>
+                    tableData exists: {tableData ? 'YES' : 'NO'}<br/>
+                    databaseTables count: {databaseTables.length}
+                  </div>
+                  
+                  {selectedTable ? (
+                    tableData && tableData.length > 0 ? (
+                      <div>
+                        <p className="text-sm text-green-600 mb-2 font-medium">✅ Record trovati: {tableData.length}</p>
+                        <div className="bg-gray-50 p-3 rounded">
+                          <pre className="text-xs text-gray-700 whitespace-pre-wrap overflow-x-auto">
+                            {JSON.stringify(tableData.slice(0, 5), null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-orange-600 bg-orange-50 rounded border border-orange-200">
+                        <p className="font-medium">⚠️ Tabella selezionata ma nessun dato</p>
+                        <p className="text-xs mt-2">Tabella: <strong>{selectedTable}</strong></p>
+                        <p className="text-xs">Array length: <strong>{tableData?.length || 0}</strong></p>
+                        <p className="text-xs">Type of tableData: <strong>{typeof tableData}</strong></p>
+                        <p className="text-xs">tableData is Array: <strong>{Array.isArray(tableData) ? 'YES' : 'NO'}</strong></p>
+                      </div>
+                    )
+                  ) : (
+                    <div className="text-center py-8 text-blue-600 bg-blue-50 rounded border border-blue-200">
+                      <p className="font-medium">👆 Clicca su una tabella per visualizzarne i dati</p>
+                      <p className="text-xs mt-2">Tabelle disponibili: {databaseTables.length}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
