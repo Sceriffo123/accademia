@@ -19,7 +19,15 @@ import {
   getActivityLogsStructure,
   getActivityLogsSample,
   clearActivityLogs,
-  writeActivityLog
+  writeActivityLog,
+  getUsersCount,
+  getAllRolesFromDB,
+  getAllPermissionsFromDB,
+  getAllSectionsFromDB,
+  getTableStructure,
+  getAllTables,
+  getTableRecords,
+  getRolePermissionsMatrix
 } from '../lib/neonDatabase';
 import { 
   RefreshCw, 
@@ -39,7 +47,8 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
-  Info
+  Info,
+  Eye
 } from 'lucide-react';
 
 interface SystemMetrics {
@@ -172,18 +181,19 @@ export default function ControlCenter() {
       addDebugLog('info', 'SYSTEM_LOAD', 'Caricamento dati sistema iniziato');
 
       // Carica metriche sistema
-      const [roles, permissions, sections, matrix, tables, relations, completeInfo] = await Promise.all([
+      const [roles, permissions, sections, matrix, tables, relations, completeInfo, usersCount] = await Promise.all([
         getAllRolesFromDB(),
         getAllPermissionsFromDB(),
         getAllSectionsFromDB(),
         getRolePermissionsMatrix(),
         getAllTables(),
         getAllTableRelations(),
-        getCompleteTableInfo()
+        getCompleteTableInfo(),
+        getUsersCount()
       ]);
 
       setSystemMetrics({
-        totalUsers: 0, // Da implementare
+        totalUsers: usersCount,
         totalRoles: roles.length,
         totalPermissions: permissions.length,
         totalSections: sections.length,
@@ -622,8 +632,8 @@ export default function ControlCenter() {
               <div className="bg-white p-6 rounded-lg shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">Ruoli Sistema</p>
-                    <p className="text-2xl font-bold text-gray-900">{systemMetrics?.totalRoles}</p>
+                    <p className="text-sm text-gray-600">Utenti Totali</p>
+                    <p className="text-2xl font-bold text-gray-900">{systemMetrics?.totalUsers || 0}</p>
                   </div>
                   <Users className="h-8 w-8 text-blue-500" />
                 </div>
@@ -633,7 +643,7 @@ export default function ControlCenter() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Permessi Totali</p>
-                    <p className="text-2xl font-bold text-gray-900">{systemMetrics?.totalPermissions}</p>
+                    <p className="text-2xl font-bold text-gray-900">{systemMetrics?.totalPermissions || 0}</p>
                   </div>
                   <Shield className="h-8 w-8 text-green-500" />
                 </div>
@@ -642,8 +652,8 @@ export default function ControlCenter() {
               <div className="bg-white p-6 rounded-lg shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">Sezioni Menu</p>
-                    <p className="text-2xl font-bold text-gray-900">{systemMetrics?.totalSections}</p>
+                    <p className="text-sm text-gray-600">Ruoli Sistema</p>
+                    <p className="text-2xl font-bold text-gray-900">{systemMetrics?.totalRoles || 0}</p>
                   </div>
                   <Settings className="h-8 w-8 text-purple-500" />
                 </div>
