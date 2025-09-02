@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   GraduationCap, 
   PlayCircle, 
@@ -25,81 +25,30 @@ interface Course {
 
 export default function Education() {
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const courses: Course[] = [
-    {
-      id: '1',
-      title: 'Normative di Base del Trasporto Locale',
-      description: 'Introduzione alle principali normative che regolano il trasporto pubblico locale non di linea',
-      duration: '2 ore',
-      level: 'beginner',
-      enrollments: 245,
-      rating: 4.8,
-      completed: false,
-      locked: false,
-      modules: 6
-    },
-    {
-      id: '2',
-      title: 'Licenze e Autorizzazioni',
-      description: 'Procedure per ottenere e mantenere le licenze necessarie per operare nel settore',
-      duration: '3 ore',
-      level: 'intermediate',
-      enrollments: 189,
-      rating: 4.9,
-      completed: false,
-      locked: false,
-      modules: 8
-    },
-    {
-      id: '3',
-      title: 'Sicurezza e Responsabilità',
-      description: 'Normative sulla sicurezza, responsabilità civile e penale degli operatori',
-      duration: '2.5 ore',
-      level: 'intermediate',
-      enrollments: 156,
-      rating: 4.7,
-      completed: false,
-      locked: false,
-      modules: 7
-    },
-    {
-      id: '4',
-      title: 'Gestione Documenti e Adempimenti',
-      description: 'Come gestire correttamente documenti, registri e adempimenti obbligatori',
-      duration: '1.5 ore',
-      level: 'beginner',
-      enrollments: 203,
-      rating: 4.6,
-      completed: true,
-      locked: false,
-      modules: 5
-    },
-    {
-      id: '5',
-      title: 'Controlli e Sanzioni',
-      description: 'Normative sui controlli, procedure sanzionatorie e ricorsi',
-      duration: '2 ore',
-      level: 'advanced',
-      enrollments: 98,
-      rating: 4.9,
-      completed: false,
-      locked: true,
-      modules: 6
-    },
-    {
-      id: '6',
-      title: 'Evoluzione Normativa 2024',
-      description: 'Aggiornamenti e novità normative introdotte nel 2024',
-      duration: '1 ora',
-      level: 'advanced',
-      enrollments: 67,
-      rating: 5.0,
-      completed: false,
-      locked: true,
-      modules: 4
+  // Caricamento corsi dal database (da implementare)
+  useEffect(() => {
+    loadCourses();
+  }, []);
+
+  const loadCourses = async () => {
+    try {
+      setLoading(true);
+      // TODO: Sostituire con getCourses() dal database
+      // const coursesData = await getCourses();
+      // setCourses(coursesData);
+      
+      // Temporaneo: array vuoto per evitare errori
+      setCourses([]);
+    } catch (error) {
+      console.error('Errore caricamento corsi:', error);
+      setCourses([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const filteredCourses = selectedLevel === 'all' 
     ? courses 
@@ -142,7 +91,7 @@ export default function Education() {
             <div className="p-3 bg-blue-100 rounded-xl w-fit mx-auto mb-3">
               <GraduationCap className="h-6 w-6 text-blue-800" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900">6</h3>
+            <h3 className="text-2xl font-bold text-gray-900">{courses.length}</h3>
             <p className="text-gray-600">Corsi Disponibili</p>
           </div>
           
@@ -150,7 +99,7 @@ export default function Education() {
             <div className="p-3 bg-green-100 rounded-xl w-fit mx-auto mb-3">
               <CheckCircle className="h-6 w-6 text-green-800" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900">1</h3>
+            <h3 className="text-2xl font-bold text-gray-900">{courses.filter(c => c.completed).length}</h3>
             <p className="text-gray-600">Corsi Completati</p>
           </div>
           
@@ -158,7 +107,7 @@ export default function Education() {
             <div className="p-3 bg-purple-100 rounded-xl w-fit mx-auto mb-3">
               <Clock className="h-6 w-6 text-purple-800" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900">12h</h3>
+            <h3 className="text-2xl font-bold text-gray-900">0h</h3>
             <p className="text-gray-600">Ore di Formazione</p>
           </div>
         </div>
@@ -174,10 +123,11 @@ export default function Education() {
               <label className="text-sm font-medium text-gray-700">
                 Filtra per livello:
               </label>
-              <select
-                value={selectedLevel}
+              <select 
+                value={selectedLevel} 
                 onChange={(e) => setSelectedLevel(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                title="Filtra corsi per livello"
               >
                 <option value="all">Tutti i livelli</option>
                 <option value="beginner">Base</option>
@@ -189,8 +139,20 @@ export default function Education() {
         </div>
 
         {/* Courses Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCourses.map((course) => (
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-3 text-gray-600">Caricamento corsi...</span>
+          </div>
+        ) : courses.length === 0 ? (
+          <div className="text-center py-12">
+            <GraduationCap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Nessun corso disponibile</h3>
+            <p className="text-gray-600">I corsi saranno presto disponibili.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredCourses.map((course) => (
             <div
               key={course.id}
               className={`bg-white rounded-xl shadow-sm border transition-all duration-300 overflow-hidden ${
@@ -267,10 +229,11 @@ export default function Education() {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        )}
 
         {/* No results */}
-        {filteredCourses.length === 0 && (
+        {!loading && filteredCourses.length === 0 && (
           <div className="text-center py-12 text-gray-500">
             <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
             <p className="text-lg">Nessun corso trovato</p>
