@@ -18,14 +18,18 @@ import {
   getCompleteTableInfo,
   generateDatabaseDocumentation,
   generateSingleTableDocumentation,
-  downloadDatabaseDocumentation
+  downloadDatabaseDocumentation,
+  analyzeActivityLogs,
+  getActivityLogsStructure,
+  getActivityLogsSample,
+  clearActivityLogs
 } from '../lib/neonDatabase';
 import { 
   Monitor, Database, Shield, Zap, Bug, 
   Users, FileText, Settings, 
   AlertTriangle, CheckCircle, XCircle, 
   RefreshCw, Search, Eye, 
-  Clock, Download
+  Clock, Download, Trash2, Activity
 } from 'lucide-react';
 
 interface SystemMetrics {
@@ -85,8 +89,13 @@ export default function ControlCenter() {
   const [tableRelations, setTableRelations] = useState<any[]>([]);
   const [completeTableInfo, setCompleteTableInfo] = useState<any[]>([]);
   const [explorerLoading, setExplorerLoading] = useState(false);
-  const [recordsPage, setRecordsPage] = useState(1);
+  const [recordsPage, setRecordsPage] = useState(0);
   const [recordsPerPage] = useState(50);
+
+  const [activityLogsAnalysis, setActivityLogsAnalysis] = useState<any>(null);
+  const [activityLogsStructure, setActivityLogsStructure] = useState<any[]>([]);
+  const [activityLogsSample, setActivityLogsSample] = useState<any[]>([]);
+  const [activityLogsLoading, setActivityLogsLoading] = useState(false);
 
   useEffect(() => {
     if (profile?.role === 'superadmin') {
@@ -285,6 +294,69 @@ export default function ControlCenter() {
     }
   };
 
+  const loadActivityLogsAnalysis = async () => {
+    try {
+      setActivityLogsLoading(true);
+      addDebugLog('info', 'ACTIVITY_LOGS', 'Caricamento analisi activity_logs...');
+      
+      const [analysis, structure, sample] = await Promise.all([
+        analyzeActivityLogs(),
+        getActivityLogsStructure(),
+        getActivityLogsSample(20)
+      ]);
+      
+      setActivityLogsAnalysis(analysis);
+      setActivityLogsStructure(structure);
+      setActivityLogsSample(sample);
+      
+      addDebugLog('success', 'ACTIVITY_LOGS', `Analisi completata: ${analysis?.total_records || 0} record totali`);
+    } catch (error) {
+      addDebugLog('error', 'ACTIVITY_LOGS', `Errore analisi activity_logs: ${error}`);
+    } finally {
+      setActivityLogsLoading(false);
+    }
+  };
+
+  const handleClearActivityLogs = async () => {
+    try {
+      setActivityLogsLoading(true);
+      addDebugLog('info', 'ACTIVITY_LOGS', 'Conteggio record prima della cancellazione...');
+      
+      // Prima conta i record attuali
+      const analysis = await analyzeActivityLogs();
+      const recordCount = analysis?.total_records || 0;
+      
+      if (recordCount === 0) {
+        addDebugLog('info', 'ACTIVITY_LOGS', 'La tabella activity_logs è già vuota');
+        return;
+      }
+      
+      // Conferma con il numero esatto di record
+      const confirmMessage = `⚠️ ATTENZIONE: Stai per cancellare ${recordCount.toLocaleString()} record dalla tabella activity_logs.\n\nQuesta operazione è IRREVERSIBILE.\n\nConfermi la cancellazione di tutti i ${recordCount.toLocaleString()} record?`;
+      
+      if (!confirm(confirmMessage)) {
+        addDebugLog('info', 'ACTIVITY_LOGS', 'Cancellazione annullata dall\'utente');
+        return;
+      }
+      
+      addDebugLog('warning', 'ACTIVITY_LOGS', `Avvio svuotamento di ${recordCount.toLocaleString()} record...`);
+      
+      const result = await clearActivityLogs();
+      
+      if (result.success) {
+        addDebugLog('success', 'ACTIVITY_LOGS', result.message);
+        // Ricarica l'analisi dopo lo svuotamento
+        await loadActivityLogsAnalysis();
+      } else {
+        addDebugLog('error', 'ACTIVITY_LOGS', result.message);
+      }
+    } catch (error) {
+      addDebugLog('error', 'ACTIVITY_LOGS', `Errore svuotamento: ${error}`);
+    } finally {
+      setActivityLogsLoading(false);
+    }
+  };
+
   const runIntegrityCheck = async () => {
     try {
       addDebugLog('info', 'INTEGRITY_CHECK', 'Avvio verifica integrità database...');
@@ -408,12 +480,12 @@ export default function ControlCenter() {
 
   const tabs = [
     { id: 'overview', label: 'Panoramica', icon: Monitor },
-    { id: 'database', label: 'Database', icon: Database },
-    { id: 'explorer', label: 'DB Explorer', icon: Search },
+    { id: 'users', label: 'Utenti', icon: Users },
     { id: 'permissions', label: 'Permessi', icon: Shield },
-    { id: 'integrity', label: 'Integrità DB', icon: Shield },
-    { id: 'test', label: 'Test CRUD', icon: Zap },
-    { id: 'debug', label: 'Debug Logs', icon: Bug }
+    { id: 'test-crud', label: 'Test CRUD', icon: Zap },
+    { id: 'debug', label: 'Debug', icon: Bug },
+    { id: 'explorer', label: 'DB Explorer', icon: Database },
+    { id: 'activity-logs', label: 'Activity Logs', icon: Activity }
   ];
 
   if (isLoading) {
@@ -1151,6 +1223,211 @@ export default function ControlCenter() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Activity Logs Tab */}
+          {activeTab === 'activity-logs' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-lg shadow-sm border">
+                <div className="p-4 border-b">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <Activity className="mr-2" size={20} />
+                      Gestione Activity Logs
+                    </h3>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={loadActivityLogsAnalysis}
+                        disabled={activityLogsLoading}
+                        className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      >
+                        <RefreshCw className={`mr-2 ${activityLogsLoading ? 'animate-spin' : ''}`} size={16} />
+                        Analizza
+                      </button>
+                      <button
+                        onClick={handleClearActivityLogs}
+                        disabled={activityLogsLoading || !activityLogsAnalysis?.total_records}
+                        className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 className="mr-2" size={16} />
+                        Svuota Tabella
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {activityLogsLoading ? (
+                  <div className="p-8 text-center">
+                    <RefreshCw className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+                    <p className="text-gray-600">Caricamento analisi activity_logs...</p>
+                  </div>
+                ) : activityLogsAnalysis ? (
+                  <div className="p-6">
+                    {/* Statistiche Overview */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <div className="flex items-center">
+                          <Database className="h-8 w-8 text-blue-600 mr-3" />
+                          <div>
+                            <p className="text-2xl font-bold text-blue-900">{activityLogsAnalysis.total_records?.toLocaleString()}</p>
+                            <p className="text-sm text-blue-600">Record Totali</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <div className="flex items-center">
+                          <Users className="h-8 w-8 text-green-600 mr-3" />
+                          <div>
+                            <p className="text-2xl font-bold text-green-900">{activityLogsAnalysis.unique_users}</p>
+                            <p className="text-sm text-green-600">Utenti Unici</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                        <div className="flex items-center">
+                          <Clock className="h-8 w-8 text-yellow-600 mr-3" />
+                          <div>
+                            <p className="text-2xl font-bold text-yellow-900">{activityLogsAnalysis.last_24h}</p>
+                            <p className="text-sm text-yellow-600">Ultime 24h</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                        <div className="flex items-center">
+                          <Activity className="h-8 w-8 text-purple-600 mr-3" />
+                          <div>
+                            <p className="text-2xl font-bold text-purple-900">{activityLogsAnalysis.last_7_days}</p>
+                            <p className="text-sm text-purple-600">Ultimi 7 giorni</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Range temporale */}
+                    <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                      <h4 className="font-semibold text-gray-900 mb-2">📅 Range Temporale</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium">Record più vecchio:</span>
+                          <span className="ml-2 text-gray-600">
+                            {activityLogsAnalysis.oldest_record ? new Date(activityLogsAnalysis.oldest_record).toLocaleString('it-IT') : 'N/A'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Record più recente:</span>
+                          <span className="ml-2 text-gray-600">
+                            {activityLogsAnalysis.newest_record ? new Date(activityLogsAnalysis.newest_record).toLocaleString('it-IT') : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Struttura Tabella */}
+                      <div className="bg-white rounded-lg border">
+                        <div className="p-4 border-b">
+                          <h4 className="font-semibold text-gray-900">🔧 Struttura Tabella</h4>
+                        </div>
+                        <div className="p-4">
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full text-sm">
+                              <thead>
+                                <tr className="border-b">
+                                  <th className="text-left py-2">Colonna</th>
+                                  <th className="text-left py-2">Tipo</th>
+                                  <th className="text-left py-2">Nullable</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {activityLogsStructure.map((column, index) => (
+                                  <tr key={index} className="border-b">
+                                    <td className="py-2 font-medium">{column.column_name}</td>
+                                    <td className="py-2 text-gray-600">{column.data_type}</td>
+                                    <td className="py-2">
+                                      {column.is_nullable === 'YES' ? '✅' : '❌'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Campione Record */}
+                      <div className="bg-white rounded-lg border">
+                        <div className="p-4 border-b">
+                          <h4 className="font-semibold text-gray-900">📋 Ultimi Record</h4>
+                        </div>
+                        <div className="p-4 max-h-96 overflow-y-auto">
+                          {activityLogsSample.length > 0 ? (
+                            <div className="space-y-3">
+                              {activityLogsSample.map((log, index) => (
+                                <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-medium text-gray-900">
+                                      {log.action || log.operation || 'Attività'}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      {log.created_at ? new Date(log.created_at).toLocaleString('it-IT') : 'N/A'}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-600">
+                                    <div><strong>User:</strong> {log.user_id || 'N/A'}</div>
+                                    {log.details && <div><strong>Dettagli:</strong> {log.details}</div>}
+                                    {log.ip_address && <div><strong>IP:</strong> {log.ip_address}</div>}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 text-center py-4">Nessun record trovato</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Azioni disponibili */}
+                    <div className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <h4 className="font-semibold text-yellow-900 mb-2">⚠️ Azioni Manutenzione</h4>
+                      <p className="text-yellow-700 text-sm mb-3">
+                        La tabella activity_logs contiene <strong>{activityLogsAnalysis.total_records?.toLocaleString()}</strong> record. 
+                        Un numero elevato può impattare le performance del database.
+                      </p>
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={handleClearActivityLogs}
+                          disabled={activityLogsLoading}
+                          className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 className="mr-2" size={16} />
+                          Svuota Completamente
+                        </button>
+                        <span className="text-sm text-yellow-600">
+                          ⚠️ Questa operazione è irreversibile
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center">
+                    <Activity className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Analisi Activity Logs</h3>
+                    <p className="text-gray-600 mb-4">Clicca "Analizza" per visualizzare statistiche dettagliate sulla tabella activity_logs</p>
+                    <button
+                      onClick={loadActivityLogsAnalysis}
+                      className="flex items-center mx-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <RefreshCw className="mr-2" size={16} />
+                      Inizia Analisi
+                    </button>
                   </div>
                 )}
               </div>

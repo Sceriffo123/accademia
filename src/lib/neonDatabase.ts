@@ -2052,6 +2052,98 @@ export async function generateSingleTableDocumentation(tableName: string): Promi
   }
 }
 
+export async function analyzeActivityLogs(): Promise<any> {
+  try {
+    console.log('🎓 NEON: Analisi activity_logs...');
+    
+    const result = await sql`
+      SELECT 
+        COUNT(*) as total_records,
+        COUNT(DISTINCT user_id) as unique_users,
+        MIN(created_at) as oldest_record,
+        MAX(created_at) as newest_record,
+        COUNT(CASE WHEN created_at >= NOW() - INTERVAL '24 hours' THEN 1 END) as last_24h,
+        COUNT(CASE WHEN created_at >= NOW() - INTERVAL '7 days' THEN 1 END) as last_7_days,
+        COUNT(CASE WHEN created_at >= NOW() - INTERVAL '30 days' THEN 1 END) as last_30_days
+      FROM activity_logs
+    `;
+    
+    return result[0];
+  } catch (error) {
+    console.error('🚨 NEON: Errore analisi activity_logs:', error);
+    return null;
+  }
+}
+
+export async function getActivityLogsStructure(): Promise<any[]> {
+  try {
+    console.log('🎓 NEON: Struttura activity_logs...');
+    
+    const result = await sql`
+      SELECT 
+        column_name,
+        data_type,
+        is_nullable,
+        column_default,
+        character_maximum_length
+      FROM information_schema.columns 
+      WHERE table_name = 'activity_logs' 
+      AND table_schema = 'public'
+      ORDER BY ordinal_position
+    `;
+    
+    return result;
+  } catch (error) {
+    console.error('🚨 NEON: Errore struttura activity_logs:', error);
+    return [];
+  }
+}
+
+export async function getActivityLogsSample(limit: number = 10): Promise<any[]> {
+  try {
+    console.log(`🎓 NEON: Campione activity_logs (${limit} record)...`);
+    
+    const result = await sql`
+      SELECT * FROM activity_logs 
+      ORDER BY created_at DESC 
+      LIMIT ${limit}
+    `;
+    
+    return result;
+  } catch (error) {
+    console.error('🚨 NEON: Errore campione activity_logs:', error);
+    return [];
+  }
+}
+
+export async function clearActivityLogs(): Promise<{ success: boolean; deletedCount: number; message: string }> {
+  try {
+    console.log('🎓 NEON: Svuotamento activity_logs...');
+    
+    // Prima conta i record
+    const countResult = await sql`SELECT COUNT(*) as count FROM activity_logs`;
+    const beforeCount = countResult[0].count;
+    
+    // Cancella tutti i record
+    const result = await sql`DELETE FROM activity_logs`;
+    
+    console.log(`🎓 NEON: Cancellati ${beforeCount} record da activity_logs`);
+    
+    return {
+      success: true,
+      deletedCount: parseInt(beforeCount),
+      message: `Eliminati ${beforeCount} record dalla tabella activity_logs`
+    };
+  } catch (error) {
+    console.error('🚨 NEON: Errore svuotamento activity_logs:', error);
+    return {
+      success: false,
+      deletedCount: 0,
+      message: `Errore durante lo svuotamento: ${error}`
+    };
+  }
+}
+
 export function downloadDatabaseDocumentation(content: string, fileName?: string): void {
   try {
     const blob = new Blob([content], { type: 'text/markdown' });
