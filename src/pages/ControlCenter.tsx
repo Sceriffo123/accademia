@@ -25,16 +25,11 @@ import {
   getAllTables, 
   getTableStructure, 
   getTableRecords,
-  getRoles,
-  getPermissions,
   getAllUsers,
   getRolePermissionsMatrix,
   updateRolePermission,
-  verifyDatabaseIntegrity,
   getUsersCount,
-  getDocumentsCount,
-  getRolesCount,
-  getPermissionsCount
+  getDocumentsCount
 } from '../lib/neonDatabase';
 import { addDebugLog } from '../hooks/useDebugLogger';
 import DatabaseExplorer from '../components/DatabaseExplorer';
