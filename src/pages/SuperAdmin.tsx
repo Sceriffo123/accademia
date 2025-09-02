@@ -7,9 +7,6 @@ import {
   getRolePermissionsMatrix, 
   updateRolePermission, 
   updateRoleSection,
-  getAllTables,
-  getTableStructure,
-  getTableRecords
 } from '../lib/neonDatabase';
 import { 
   Shield, 
@@ -20,21 +17,19 @@ import {
   EyeOff,
   Save,
   RotateCcw,
-  Crown,
-  Lock,
-  Unlock,
-  ChevronDown,
-  ChevronRight,
-  CheckCircle,
-  AlertCircle,
   Info,
+  CheckCircle,
+  XCircle,
+  GraduationCap,
   X,
-  Database,
-  Search,
   HelpCircle,
   Wrench,
-  RefreshCw,
-  GraduationCap
+  Crown,
+  ChevronDown,
+  ChevronRight,
+  Lock,
+  Unlock,
+  AlertCircle
 } from 'lucide-react';
 
 interface Notification {
@@ -46,27 +41,14 @@ interface Notification {
 
 export default function SuperAdmin() {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'permissions' | 'roles' | 'system' | 'database'>('permissions');
+  const [activeTab, setActiveTab] = useState<'permissions' | 'roles' | 'system'>('permissions');
   const [permissions, setPermissions] = useState<any[]>([]);
   const [roleMatrix, setRoleMatrix] = useState<Map<string, any>>(new Map());
-  const [databaseTables, setDatabaseTables] = useState<any[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['users']));
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [showSchemaModal, setShowSchemaModal] = useState(false);
-  const [selectedTableStructure, setSelectedTableStructure] = useState<any>(null);
-  const [loadingSchema, setLoadingSchema] = useState(false);
-  const [showExploreModal, setShowExploreModal] = useState(false);
-  const [selectedTableRecords, setSelectedTableRecords] = useState<any>(null);
-  const [loadingRecords, setLoadingRecords] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTableName, setSelectedTableName] = useState('');
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [showMigrationModal, setShowMigrationModal] = useState(false);
-  const [migrationStatus, setMigrationStatus] = useState<'idle' | 'checking' | 'migrating' | 'success' | 'error'>('idle');
-  const [migrationMessage, setMigrationMessage] = useState('');
 
   // Debug Logger Integration
   const debugLogger = useDebugLogger({
@@ -113,15 +95,14 @@ export default function SuperAdmin() {
     if (profile?.role === 'superadmin') {
       debugLogger.logInfo('SuperAdmin panel inizializzato', { userId: profile.id, userRole: profile.role });
       loadPermissionsData();
-      loadDatabaseData();
-    }
+      }
   }, [profile]);
 
   async function loadPermissionsData() {
     try {
       setLoading(true);
       debugLogger.logInfo('Inizio caricamento dati sistema completo');
-      console.log('🔄 SuperAdmin: Caricamento dati dal database...');
+      console.log(' SuperAdmin: Caricamento dati dal database...');
       
       const [allPermissions, matrix] = await Promise.all([
         debugLogger.wrapOperation('getAllPermissionsFromDB', () => getAllPermissionsFromDB()),
@@ -134,8 +115,8 @@ export default function SuperAdmin() {
         matrixSize: matrix?.size || 0
       });
       
-      console.log('✅ SuperAdmin: Permessi caricati:', allPermissions.length);
-      console.log('✅ SuperAdmin: Matrix caricata:', matrix);
+      console.log(' SuperAdmin: Permessi caricati:', allPermissions.length);
+      console.log(' SuperAdmin: Matrix caricata:', matrix);
       
       setPermissions(allPermissions);
       setRoleMatrix(matrix);
@@ -149,7 +130,7 @@ export default function SuperAdmin() {
         operation: 'loadPermissionsData',
         timestamp: new Date().toISOString()
       });
-      console.error('🚨 SuperAdmin: Errore caricamento permessi:', error);
+      console.error(' SuperAdmin: Errore caricamento permessi:', error);
       addNotification('error', 'Errore Database', 
         'Impossibile caricare permessi e ruoli dal database');
     } finally {
@@ -157,87 +138,9 @@ export default function SuperAdmin() {
     }
   }
 
-  async function loadDatabaseData() {
-    try {
-      console.log('🎓 ACCADEMIA: Caricamento metadati database...');
-      const tables = await getAllTables();
-      setDatabaseTables(tables);
-      console.log(`🎓 ACCADEMIA: Caricate ${tables.length} tabelle`);
-    } catch (error) {
-      console.error('🚨 ACCADEMIA: Errore caricamento tabelle database:', error);
-      addNotification('error', 'Errore Database', 'Impossibile caricare le informazioni delle tabelle');
-    }
-  }
 
-  async function loadTableRecords(tableName: string, page: number = 1, search: string = '') {
-    try {
-      setLoadingRecords(true);
-      console.log(`🎓 ACCADEMIA: Caricamento record tabella ${tableName}...`);
-      
-      const result = await getTableRecords(tableName, {
-        page,
-        limit: 20, // Limite più basso per UI migliore
-        search: search.trim(),
-        orderBy: 'created_at',
-        orderDirection: 'DESC'
-      });
-      
-      if (result) {
-        setSelectedTableRecords(result);
-        setSelectedTableName(tableName);
-        setCurrentPage(page);
-        setSearchQuery(search);
-        setShowExploreModal(true);
-        
-        if (result.hiddenColumns.length > 0) {
-          addNotification('info', 'Colonne Nascoste', 
-            `Per sicurezza, ${result.hiddenColumns.length} colonne sensibili sono state nascoste`);
-        }
-        
-        console.log(`🎓 ACCADEMIA: Caricati ${result.records.length} record di ${result.totalCount}`);
-      } else {
-        addNotification('error', 'Errore Caricamento', 'Impossibile caricare i record della tabella');
-      }
-    } catch (error) {
-      console.error('🚨 ACCADEMIA: Errore caricamento record:', error);
-      addNotification('error', 'Errore Sistema', 'Si è verificato un errore durante il caricamento');
-    } finally {
-      setLoadingRecords(false);
-    }
-  }
 
-  function handleSearchRecords(search: string) {
-    if (selectedTableName) {
-      loadTableRecords(selectedTableName, 1, search);
-    }
-  }
 
-  function handlePageChange(newPage: number) {
-    if (selectedTableName) {
-      loadTableRecords(selectedTableName, newPage, searchQuery);
-    }
-  }
-
-  async function loadTableSchema(tableName: string) {
-    try {
-      setLoadingSchema(true);
-      console.log(`🎓 ACCADEMIA: Caricamento schema tabella ${tableName}...`);
-      
-      const structure = await getTableStructure(tableName);
-      if (structure) {
-        setSelectedTableStructure(structure);
-        setShowSchemaModal(true);
-        console.log(`🎓 ACCADEMIA: Schema caricato - ${structure.columns.length} colonne`);
-      } else {
-        addNotification('error', 'Errore Schema', 'Impossibile caricare lo schema della tabella');
-      }
-    } catch (error) {
-      console.error('🚨 ACCADEMIA: Errore caricamento schema:', error);
-      addNotification('error', 'Errore Sistema', 'Si è verificato un errore durante il caricamento');
-    } finally {
-      setLoadingSchema(false);
-    }
-  }
 
   const toggleCategory = (category: string) => {
     const newExpanded = new Set(expandedCategories);
@@ -534,8 +437,7 @@ export default function SuperAdmin() {
               {[
                 { id: 'permissions', label: 'Gestione Permessi', icon: Shield },
                 { id: 'roles', label: 'Visibilità Sezioni', icon: Eye },
-                { id: 'system', label: 'Impostazioni Sistema', icon: Settings },
-                { id: 'database', label: 'Database Tables', icon: Database }
+                { id: 'system', label: 'Impostazioni Sistema', icon: Settings }
               ].map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -709,89 +611,6 @@ export default function SuperAdmin() {
               </div>
             )}
 
-            {activeTab === 'database' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Tabelle Database ({databaseTables.length})
-                  </h3>
-                  <button
-                    onClick={loadDatabaseData}
-                    className="flex items-center space-x-2 border border-gray-300 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    <span>Aggiorna</span>
-                  </button>
-                </div>
-                
-                {databaseTables.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {databaseTables.map((table) => (
-                      <div
-                        key={table.name}
-                        className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center space-x-2">
-                            <div className="p-2 bg-blue-100 rounded-lg">
-                              <Database className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <div>
-                              <h4 className="font-semibold text-gray-900">{table.name}</h4>
-                              <p className="text-xs text-gray-500">{table.schema}</p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Record:</span>
-                            <span className="font-medium text-gray-900">{table.recordCount.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Dimensione:</span>
-                            <span className="font-medium text-gray-900">{table.estimatedSize}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Modificata:</span>
-                            <span className="font-medium text-gray-900">
-                              {new Date(table.lastModified).toLocaleDateString('it-IT')}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        {table.comment && (
-                          <div className="mt-3 pt-3 border-t border-gray-100">
-                            <p className="text-xs text-gray-600">{table.comment}</p>
-                          </div>
-                        )}
-                        
-                        <div className="mt-4 flex items-center space-x-2">
-                          <button 
-                            className="flex-1 bg-blue-50 text-blue-700 px-3 py-2 rounded text-xs font-medium hover:bg-blue-100 transition-colors"
-                            onClick={() => loadTableRecords(table.name)}
-                          >
-                            Esplora
-                          </button>
-                          <button 
-                            className="flex-1 bg-gray-50 text-gray-700 px-3 py-2 rounded text-xs font-medium hover:bg-gray-100 transition-colors"
-                            onClick={() => loadTableSchema(table.name)}
-                          >
-                            Schema
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12 text-gray-500">
-                    <Database className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p className="text-lg">Nessuna tabella trovata</p>
-                    <p className="text-sm">Verificare la connessione al database</p>
-                  </div>
-                )}
-              </div>
-            )}
 
             {activeTab === 'system' && (
               <div className="space-y-6">
@@ -1129,8 +948,9 @@ export default function SuperAdmin() {
           </div>
         </div>
       )}
-      {showExploreModal && selectedTableRecords && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    </div>
+  );
+}
           <div className="bg-white rounded-xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div>
@@ -1138,8 +958,8 @@ export default function SuperAdmin() {
                   Esplora Tabella: {selectedTableName}
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  {selectedTableRecords.totalCount.toLocaleString()} record totali • 
-                  Pagina {selectedTableRecords.page} di {Math.ceil(selectedTableRecords.totalCount / 20)}
+                  {selectedTableRecords.totalCount?.toLocaleString() || '0'} record totali • 
+                  Pagina {selectedTableRecords.page} di {Math.ceil((selectedTableRecords.totalCount || 0) / 20)}
                   {selectedTableRecords.hiddenColumns.length > 0 && (
                     <span className="text-orange-600 ml-2">
                       • {selectedTableRecords.hiddenColumns.length} colonne nascoste per sicurezza
@@ -1233,7 +1053,7 @@ export default function SuperAdmin() {
             {selectedTableRecords.records.length > 0 && (
               <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
                 <div className="text-sm text-gray-600">
-                  Mostrando {((selectedTableRecords.page - 1) * 20) + 1} - {Math.min(selectedTableRecords.page * 20, selectedTableRecords.totalCount)} di {selectedTableRecords.totalCount.toLocaleString()} record
+                  Mostrando {((selectedTableRecords.page - 1) * 20) + 1} - {Math.min(selectedTableRecords.page * 20, selectedTableRecords.totalCount || 0)} di {selectedTableRecords.totalCount?.toLocaleString() || '0'} record
                 </div>
                 <div className="flex items-center space-x-2">
                   <button
@@ -1271,7 +1091,7 @@ export default function SuperAdmin() {
                 </h3>
                 {selectedTableStructure && (
                   <p className="text-sm text-gray-600 mt-1">
-                    {selectedTableStructure.recordCount.toLocaleString()} record • {selectedTableStructure.columns.length} colonne
+                    {selectedTableStructure.recordCount?.toLocaleString() || '0'} record • {selectedTableStructure.columns?.length || 0} colonne
                   </p>
                 )}
               </div>
