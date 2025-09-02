@@ -1,24 +1,41 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
 import { 
-  getAllPermissionsFromDB, 
-  getAllRolesFromDB, 
-  getAllSectionsFromDB,
+  Shield, 
+  Users, 
+  Database, 
+  Activity, 
+  AlertTriangle, 
+  CheckCircle, 
+  XCircle, 
+  Eye,
+  FileText,
+  Settings,
+  Info,
+  Refresh,
+  Search,
+  Server, 
+  Cpu,
+  RefreshCw
+} from 'lucide-react';
+import { 
+  getAllTables, 
+  getTableStructure, 
+  getTableRecords,
+  getRoles,
+  getPermissions,
+  getAllUsers,
   getRolePermissionsMatrix,
   updateRolePermission,
-  updateRoleSection,
-  getAllTables,
-  getTableStructure,
-  getTableRecords
+  verifyDatabaseIntegrity,
+  getUsersCount,
+  getDocumentsCount,
+  getRolesCount,
+  getPermissionsCount
 } from '../lib/neonDatabase';
-import { 
-  Monitor, Database, Shield, Zap, Bug, 
-  Users, FileText, Settings, 
-  AlertTriangle, CheckCircle, XCircle, 
-  Info, RefreshCw, Search, Eye, 
-  Clock, Server, Cpu
-} from 'lucide-react';
+import { addDebugLog } from '../hooks/useDebugLogger';
+import DatabaseExplorer from '../components/DatabaseExplorer';
 
 interface SystemMetrics {
   totalUsers: number;
@@ -460,88 +477,11 @@ export default function ControlCenter() {
                   <Database className="h-8 w-8 text-orange-500" />
                 </div>
               </div>
-            </div>
           )}
 
           {/* Database Tab */}
           {activeTab === 'database' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white rounded-lg shadow-sm border">
-                <div className="p-4 border-b">
-                  <h3 className="text-lg font-semibold text-gray-900">Tabelle Database</h3>
-                </div>
-                <div className="p-4 max-h-96 overflow-y-auto">
-                  {databaseTables.map((table, index) => (
-                    <div
-                      key={table.name || index}
-                      onClick={() => {
-                        console.log(`🖱️ CLICK su tabella:`, table);
-                        console.log(`🖱️ Nome tabella: "${table.name}"`);
-                        console.log(`🖱️ Tipo table.name:`, typeof table.name);
-                        if (table.name) {
-                          loadTableData(table.name);
-                        } else {
-                          console.error('❌ table.name è undefined!', table);
-                        }
-                      }}
-                      className="flex items-center justify-between p-3 hover:bg-gray-50 cursor-pointer rounded-lg border-b border-gray-100"
-                    >
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {table.name || `Tabella ${index + 1} - NOME MANCANTE`}
-                        </p>
-                        <p className="text-sm text-gray-500">{table.records || 0} record</p>
-                        <p className="text-xs text-gray-400">Debug: {JSON.stringify(table)}</p>
-                      </div>
-                      <Eye className="h-4 w-4 text-gray-400" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow-sm border">
-                <div className="p-4 border-b">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {selectedTable ? `Dati: ${selectedTable}` : 'Seleziona una tabella'}
-                  </h3>
-                </div>
-                <div className="p-4 max-h-96 overflow-auto">
-                  <div className="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                    <strong>🔍 DEBUG INFO:</strong><br/>
-                    selectedTable: "{selectedTable}"<br/>
-                    tableData length: {tableData?.length || 0}<br/>
-                    tableData exists: {tableData ? 'YES' : 'NO'}<br/>
-                    databaseTables count: {databaseTables.length}
-                  </div>
-                  
-                  {selectedTable ? (
-                    tableData && tableData.length > 0 ? (
-                      <div>
-                        <p className="text-sm text-green-600 mb-2 font-medium">✅ Record trovati: {tableData.length}</p>
-                        <div className="bg-gray-50 p-3 rounded">
-                          <pre className="text-xs text-gray-700 whitespace-pre-wrap overflow-x-auto">
-                            {JSON.stringify(tableData.slice(0, 5), null, 2)}
-                          </pre>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-orange-600 bg-orange-50 rounded border border-orange-200">
-                        <p className="font-medium">⚠️ Tabella selezionata ma nessun dato</p>
-                        <p className="text-xs mt-2">Tabella: <strong>{selectedTable}</strong></p>
-                        <p className="text-xs">Array length: <strong>{tableData?.length || 0}</strong></p>
-                        <p className="text-xs">Type of tableData: <strong>{typeof tableData}</strong></p>
-                        <p className="text-xs">tableData is Array: <strong>{Array.isArray(tableData) ? 'YES' : 'NO'}</strong></p>
-                      </div>
-                    )
-                  ) : (
-                    <div className="text-center py-8 text-blue-600 bg-blue-50 rounded border border-blue-200">
-                      <p className="font-medium">👆 Clicca su una tabella per visualizzarne i dati</p>
-                      <p className="text-xs mt-2">Tabelle disponibili: {databaseTables.length}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <DatabaseExplorer />
           )}
 
           {/* Permissions Tab */}
