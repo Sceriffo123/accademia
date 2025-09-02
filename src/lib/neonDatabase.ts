@@ -1457,6 +1457,116 @@ export async function updateRolePermission(role: string, permission: string, gra
   return await updateRolePermissionInDB(role, permission, granted);
 }
 
+// === FUNZIONI CONTROLLO INTEGRITÀ DATI ===
+
+export async function checkDataIntegrity(): Promise<{
+  isValid: boolean;
+  issues: string[];
+  recommendations: string[];
+}> {
+  try {
+    console.log('🔍 NEON: Verifica integrità dati del sistema...');
+    
+    const issues: string[] = [];
+    const recommendations: string[] = [];
+    
+    // 1. Verifica tabelle critiche non vuote
+    const criticalTables = [
+      { name: 'users', minCount: 1 },
+      { name: 'roles', minCount: 4 }, // superadmin, admin, operator, user
+      { name: 'permissions', minCount: 10 },
+      { name: 'role_permissions', minCount: 5 }
+    ];
+    
+    for (const table of criticalTables) {
+      try {
+        const result = await sql`SELECT COUNT(*) as count FROM ${sql.unsafe(table.name)}`;
+        const count = parseInt(result[0]?.count || '0');
+        if (count < table.minCount) {
+          issues.push(`Table '${table.name}' has only ${count} records, expected at least ${table.minCount}`);
+          recommendations.push(`Initialize default data for ${table.name} table`);
+        }
+      } catch (error) {
+        issues.push(`Cannot access table '${table.name}': ${error}`);
+        recommendations.push(`Verify database schema and recreate missing tables`);
+      }
+    }
+    
+    // 2. Verifica coerenza permessi ruoli
+    try {
+      const roleMatrix = await getPermissionsMatrixFromDB();
+      const allPermissions = await getAllPermissionsFromDB();
+      
+      if (roleMatrix && roleMatrix.size > 0 && allPermissions && allPermissions.length > 0) {
+        for (const [roleName, roleData] of roleMatrix.entries()) {
+          // Verifica che i permessi del ruolo esistano nella tabella permissions
+          for (const permissionName of roleData.permissions) {
+            const permissionExists = allPermissions.some(p => p.name === permissionName);
+            if (!permissionExists) {
+              issues.push(`Permission '${permissionName}' for role '${roleName}' not found in permissions table`);
+              recommendations.push(`Remove orphaned permission or add missing permission to database`);
+            }
+          }
+          
+          // Verifica che il ruolo 'superadmin' abbia permessi critici
+          if (roleName === 'superadmin') {
+            const criticalPermissions = ['system.settings', 'system.permissions', 'users.manage_roles'];
+            for (const criticalPerm of criticalPermissions) {
+              if (!roleData.permissions.includes(criticalPerm)) {
+                issues.push(`SuperAdmin missing critical permission: ${criticalPerm}`);
+                recommendations.push(`Grant ${criticalPerm} permission to superadmin role`);
+              }
+            }
+          }
+        }
+      } else {
+        issues.push('Role matrix or permissions data is empty');
+        recommendations.push('Initialize default roles and permissions');
+      }
+    } catch (error) {
+      issues.push(`Role-permissions verification failed: ${error}`);
+      recommendations.push('Check role_permissions table integrity');
+    }
+    
+    // 3. Verifica foreign key integrity
+    try {
+      // Verifica role_permissions references
+      const orphanedRolePerms = await sql`
+        SELECT COUNT(*) as count 
+        FROM role_permissions rp 
+        LEFT JOIN roles r ON r.id = rp.role_id 
+        LEFT JOIN permissions p ON p.id = rp.permission_id 
+        WHERE r.id IS NULL OR p.id IS NULL
+      `;
+      const orphanCount = parseInt(orphanedRolePerms[0]?.count || '0');
+      if (orphanCount > 0) {
+        issues.push(`${orphanCount} orphaned records in role_permissions table`);
+        recommendations.push('Clean up orphaned role_permissions records');
+      }
+    } catch (error) {
+      issues.push(`Foreign key integrity check failed: ${error}`);
+    }
+    
+    const isValid = issues.length === 0;
+    
+    console.log(isValid ? '✅ NEON: Integrità dati verificata' : `⚠️ NEON: ${issues.length} problemi di integrità rilevati`);
+    
+    return {
+      isValid,
+      issues,
+      recommendations
+    };
+    
+  } catch (error) {
+    console.error('🚨 NEON: Errore verifica integrità:', error);
+    return {
+      isValid: false,
+      issues: [`Data integrity check failed: ${error}`],
+      recommendations: ['Verify database connection and schema']
+    };
+  }
+}
+
 // Inserisce le sezioni mancanti nel database se non esistono
 export async function ensureSectionsExist(): Promise<void> {
   try {

@@ -6,7 +6,8 @@ import {
   getAllPermissionsFromDB,
   getUserPermissions,
   checkDatabaseTables,
-  initializeDatabase
+  initializeDatabase,
+  checkDataIntegrity
 } from '../lib/neonDatabase';
 import { 
   AlertTriangle, 
@@ -256,7 +257,8 @@ export default function SystemAlertPanel() {
       { name: 'User Management', status: 'checking', message: 'Testing CRUD operations...', lastCheck: timestamp },
       { name: 'Permissions System', status: 'checking', message: 'Testing permissions...', lastCheck: timestamp },
       { name: 'Database Schema', status: 'checking', message: 'Verifying tables...', lastCheck: timestamp },
-      { name: 'Authentication', status: 'checking', message: 'Testing auth flow...', lastCheck: timestamp }
+      { name: 'Authentication', status: 'checking', message: 'Testing auth flow...', lastCheck: timestamp },
+      { name: 'Data Integrity', status: 'checking', message: 'Verifying UI-Database sync...', lastCheck: timestamp }
     ];
     
     setHealthChecks([...checks]);
@@ -351,107 +353,6 @@ export default function SystemAlertPanel() {
           const userPerms = await getUserPermissions(profile.role);
           checks[2] = { 
             ...checks[2], 
-            status: 'success', 
-            message: `Permissions system operational (${roles.length} roles, ${permissions.length} permissions, ${userPerms.length} user perms)`,
-            details: { 
-              roles: roles.length, 
-              permissions: permissions.length,
-              userPermissions: userPerms.length,
-              testedRole: profile?.role || 'fallback'
-            }
-          };
-        } catch (permError) {
-          checks[2] = { 
-            ...checks[2], 
-            status: 'success', 
-            message: `Permissions system operational (${roles.length} roles, ${permissions.length} permissions)`,
-            details: { 
-              roles: roles.length, 
-              permissions: permissions.length,
-              note: 'Permission lookup test skipped - no critical impact'
-            }
-          };
-        }
-      } else {
-        throw new Error('No roles or permissions found');
-      }
-    } catch (error) {
-      checks[2] = { 
-        ...checks[2], 
-        status: 'error', 
-        message: 'Permissions system failed',
-        details: { error: error instanceof Error ? error.message : String(error) }
-      };
-    }
-    
-    setHealthChecks([...checks]);
-    
-    // Test 4: Database Schema
-    try {
-      const tablesResult = await checkDatabaseTables();
-      if (tablesResult.tables && tablesResult.tables.length > 0) {
-        checks[3] = { 
-          ...checks[3], 
-          status: 'success', 
-          message: `Database schema valid (${tablesResult.tables.length} tables)`,
-          details: { tables: tablesResult.tables }
-        };
-      } else {
-        throw new Error('No database tables found');
-      }
-    } catch (error) {
-      checks[3] = { 
-        ...checks[3], 
-        status: 'error', 
-        message: 'Database schema validation failed',
-        details: { error: error instanceof Error ? error.message : String(error) }
-      };
-    }
-    
-    setHealthChecks([...checks]);
-    
-    // Test 5: Authentication
-    try {
-      // Authentication is optional for system functionality
-      if (profile?.id && profile?.role) {
-        checks[4] = { 
-          ...checks[4], 
-          status: 'success', 
-          message: `User authenticated (${profile.role})`,
-          details: { 
-            userId: profile.id, 
-            role: profile.role, 
-            fullName: profile.full_name 
-          }
-        };
-      } else {
-        // Not having a user authenticated is not a system error
-        checks[4] = { 
-          ...checks[4], 
-          status: 'success', 
-          message: 'Authentication system ready (no user logged in)',
-          details: { 
-            status: 'ready',
-            note: 'System can function without authenticated user for public pages'
-          }
-        };
-      }
-    } catch (error) {
-      checks[4] = { 
-        ...checks[4], 
-        status: 'error', 
-        message: 'Authentication system failed',
-        details: { error: error instanceof Error ? error.message : String(error) }
-      };
-    }
-    
-    setHealthChecks([...checks]);
-    setIsRunningHealthCheck(false);
-  };
-  // ✅ Controllo condizionale DOPO tutti gli hooks
-  const getAlertTitle = (type: string, message: string): string => {
-    if (message.includes('Database')) return 'Database Error';
-    if (message.includes('Permission')) return 'Permission Error';
     if (message.includes('User')) return 'User Management Error';
     if (message.includes('Schema')) return 'Database Schema Error';
     return type === 'error' ? 'System Error' : type === 'warning' ? 'System Warning' : 'System Info';
