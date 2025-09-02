@@ -2116,6 +2116,55 @@ export async function getActivityLogsSample(limit: number = 10): Promise<any[]> 
   }
 }
 
+export async function writeActivityLog(
+  userId: string,
+  action: string, 
+  resourceType: string,
+  resourceId?: string,
+  details?: any,
+  ipAddress?: string
+): Promise<{ success: boolean; logId?: string; message: string }> {
+  try {
+    console.log(`🎓 NEON: Registrazione attività - ${action} su ${resourceType}`);
+    
+    const result = await sql`
+      INSERT INTO activity_logs (
+        user_id, 
+        action, 
+        resource_type, 
+        resource_id, 
+        details,
+        ip_address,
+        created_at
+      ) VALUES (
+        ${userId}::uuid,
+        ${action},
+        ${resourceType},
+        ${resourceId ? `${resourceId}::uuid` : null},
+        ${details ? JSON.stringify(details) : '{}'}::jsonb,
+        ${ipAddress || null},
+        NOW()
+      )
+      RETURNING id
+    `;
+    
+    const logId = result[0]?.id;
+    console.log(`✅ NEON: Attività registrata con ID ${logId}`);
+    
+    return {
+      success: true,
+      logId,
+      message: `Attività '${action}' registrata con successo`
+    };
+  } catch (error) {
+    console.error('🚨 NEON: Errore registrazione attività:', error);
+    return {
+      success: false,
+      message: `Errore registrazione attività: ${error}`
+    };
+  }
+}
+
 export async function clearActivityLogs(): Promise<{ success: boolean; deletedCount: number; message: string }> {
   try {
     console.log('🎓 NEON: Svuotamento activity_logs...');
@@ -2139,7 +2188,7 @@ export async function clearActivityLogs(): Promise<{ success: boolean; deletedCo
     return {
       success: false,
       deletedCount: 0,
-      message: `Errore durante lo svuotamento: ${error}`
+      message: `Errore svuotamento: ${error}`
     };
   }
 }

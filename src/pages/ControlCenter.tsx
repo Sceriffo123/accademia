@@ -2,19 +2,15 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { 
-  getAllPermissionsFromDB, 
-  getAllRolesFromDB, 
-  getAllSectionsFromDB,
-  getRolePermissionsMatrix,
+  getTableStats,
+  getUsersData,
+  getRolesData,
+  getPermissionsData,
   updateRolePermission,
   updateRoleSection,
-  getAllTables,
-  getTableStructure,
-  getTableRecords,
-  getTableConstraints,
-  getTableIndexes,
-  getTableStats,
-  getAllTableRelations,
+  getCompleteDatabaseInfo,
+  loadTableDataPaginated,
+  getTableRelations,
   getCompleteTableInfo,
   generateDatabaseDocumentation,
   generateSingleTableDocumentation,
@@ -22,7 +18,8 @@ import {
   analyzeActivityLogs,
   getActivityLogsStructure,
   getActivityLogsSample,
-  clearActivityLogs
+  clearActivityLogs,
+  writeActivityLog
 } from '../lib/neonDatabase';
 import { 
   RefreshCw, 
@@ -360,7 +357,6 @@ export default function ControlCenter() {
       setActivityLogsLoading(true);
       setShowClearModal(false);
       setClearConfirmed(false);
-      
       addDebugLog('warning', 'ACTIVITY_LOGS', `Avvio svuotamento di ${recordsToDelete.toLocaleString()} record...`);
       
       const result = await clearActivityLogs();
@@ -379,10 +375,43 @@ export default function ControlCenter() {
     }
   };
 
-  const cancelClearActivityLogs = () => {
-    setShowClearModal(false);
-    setClearConfirmed(false);
-    addDebugLog('info', 'ACTIVITY_LOGS', 'Cancellazione annullata dall\'utente');
+  const handleTestActivityLogging = async () => {
+    if (!user?.id) {
+      addDebugLog('error', 'ACTIVITY_LOGS', 'Utente non autenticato per il test');
+      return;
+    }
+
+    try {
+      setActivityLogsLoading(true);
+      addDebugLog('info', 'ACTIVITY_LOGS', ' Avvio test logging attività...');
+      
+      // Test diretto della funzione writeActivityLog
+      const testResult = await writeActivityLog(
+        user.id,
+        'test_logging',
+        'control_center',
+        undefined,
+        {
+          test: true,
+          timestamp: new Date().toISOString(),
+          user_agent: navigator.userAgent,
+          action_type: 'manual_test'
+        },
+        undefined
+      );
+      
+      if (testResult.success) {
+        addDebugLog('success', 'ACTIVITY_LOGS', ` Test completato! Log ID: ${testResult.logId}`);
+        // Ricarica l'analisi per vedere il nuovo record
+        await loadActivityLogsAnalysis();
+      } else {
+        addDebugLog('error', 'ACTIVITY_LOGS', ` Test fallito: ${testResult.message}`);
+      }
+    } catch (error) {
+      addDebugLog('error', 'ACTIVITY_LOGS', ` Errore durante test: ${error}`);
+    } finally {
+      setActivityLogsLoading(false);
+    }
   };
 
   const runIntegrityCheck = async () => {
@@ -1429,7 +1458,7 @@ export default function ControlCenter() {
                         La tabella activity_logs contiene <strong>{activityLogsAnalysis.total_records?.toLocaleString()}</strong> record. 
                         Un numero elevato può impattare le performance del database.
                       </p>
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-3 mb-3">
                         <button
                           onClick={handleClearActivityLogs}
                           disabled={activityLogsLoading}
@@ -1441,6 +1470,21 @@ export default function ControlCenter() {
                         <span className="text-sm text-yellow-600">
                           ⚠️ Questa operazione è irreversibile
                         </span>
+                      </div>
+                      
+                      {/* Test Logging Functionality */}
+                      <div className="border-t border-yellow-300 pt-3">
+                        <button
+                          onClick={handleTestActivityLogging}
+                          disabled={activityLogsLoading}
+                          className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                        >
+                          <Activity className="mr-2" size={16} />
+                          🧪 Test Logging
+                        </button>
+                        <p className="text-xs text-yellow-600 mt-1">
+                          Testa se il sistema di logging delle attività funziona correttamente
+                        </p>
                       </div>
                     </div>
                   </div>
