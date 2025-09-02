@@ -1571,7 +1571,7 @@ export async function getTableRecords(tableName: string, limit: number = 100): P
     console.log('🎓 NEON: Recupero record da tabella:', tableName);
     
     // Validazione nome tabella per sicurezza
-    const allowedTables = ['users', 'normatives', 'documents', 'activity_logs', 'course_enrollments', 'course_modules', 'courses', 'user_role_overrides', 'permissions', 'sections', 'role_permissions', 'role_sections', 'roles', 'quizzes', 'quiz_questions'];
+    const allowedTables = ['users', 'normatives', 'documents', 'activity_logs', 'course_enrollments', 'course_modules', 'courses', 'user_role_overrides', 'permissions', 'sections', 'role_permissions', 'role_sections', 'roles', 'quizzes', 'quiz_questions', 'quiz_attempts'];
     if (!allowedTables.includes(tableName)) {
       throw new Error(`Tabella non consentita: ${tableName}`);
     }
