@@ -477,6 +477,7 @@ export default function ControlCenter() {
                   <Database className="h-8 w-8 text-orange-500" />
                 </div>
               </div>
+            </div>
           )}
 
           {/* Database Tab */}
