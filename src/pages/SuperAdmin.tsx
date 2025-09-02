@@ -256,30 +256,23 @@ export default function SuperAdmin() {
     const permission = permissions.find(p => p.id === permissionId);
     const permissionName = permission?.name || permissionId;
     
-    // Aggiorna immediatamente lo stato locale per feedback visivo istantaneo
-    const newRoleMatrix = new Map(roleMatrix);
-    const currentRoleData = newRoleMatrix.get(role);
-    if (currentRoleData) {
-      const newPermissions = hasPermission 
-        ? currentRoleData.permissions.filter(p => p !== permissionId)
-        : [...currentRoleData.permissions, permissionId];
-      
-      newRoleMatrix.set(role, {
-        ...currentRoleData,
-        permissions: newPermissions
-      });
-      setRoleMatrix(newRoleMatrix);
-    }
+    console.log(`🔄 SuperAdmin: Toggle permesso ${permissionName} per ruolo ${role} (attualmente: ${hasPermission ? 'abilitato' : 'disabilitato'})`);
     
     try {
       debugLogger.logInfo('Toggle permesso ruolo', { role, permission: permissionName });
       
+      // Chiama la funzione database reale
       const success = await debugLogger.wrapOperation(
         `updateRolePermission-${role}-${permissionName}`,
         () => updateRolePermission(role, permissionName, !hasPermission)
       );
       
       if (success) {
+        console.log(`✅ SuperAdmin: Database aggiornato con successo`);
+        
+        // Ricarica i dati dal database per sincronizzazione
+        await loadPermissionsData();
+        
         setHasChanges(true);
         
         debugLogger.logSuccess('Permesso ruolo aggiornato', { 
@@ -292,8 +285,6 @@ export default function SuperAdmin() {
         addNotification('success', 'Permesso Aggiornato', 
           `${permissionName} ${!hasPermission ? 'abilitato' : 'disabilitato'} per ${role}`);
       } else {
-        // Rollback dello stato locale se il database update fallisce
-        setRoleMatrix(roleMatrix);
         debugLogger.logError('Aggiornamento permesso fallito', new Error('Database update returned false'), {
           role,
           permission: permissionName,
