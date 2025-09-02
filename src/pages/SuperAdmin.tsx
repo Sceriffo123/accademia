@@ -256,6 +256,21 @@ export default function SuperAdmin() {
     const permission = permissions.find(p => p.id === permissionId);
     const permissionName = permission?.name || permissionId;
     
+    // Aggiorna immediatamente lo stato locale per feedback visivo istantaneo
+    const newRoleMatrix = new Map(roleMatrix);
+    const currentRoleData = newRoleMatrix.get(role);
+    if (currentRoleData) {
+      const newPermissions = hasPermission 
+        ? currentRoleData.permissions.filter(p => p !== permissionId)
+        : [...currentRoleData.permissions, permissionId];
+      
+      newRoleMatrix.set(role, {
+        ...currentRoleData,
+        permissions: newPermissions
+      });
+      setRoleMatrix(newRoleMatrix);
+    }
+    
     try {
       debugLogger.logInfo('Toggle permesso ruolo', { role, permission: permissionName });
       
@@ -265,12 +280,6 @@ export default function SuperAdmin() {
       );
       
       if (success) {
-        // NON aggiornare lo stato locale - ricarica dal database per evitare inconsistenze
-        debugLogger.logInfo('Ricaricamento matrice dal database dopo modifica', { role, permission: permissionName });
-        
-        // Ricarica i dati dal database
-        await loadPermissionsData();
-        
         setHasChanges(true);
         
         debugLogger.logSuccess('Permesso ruolo aggiornato', { 
@@ -283,6 +292,8 @@ export default function SuperAdmin() {
         addNotification('success', 'Permesso Aggiornato', 
           `${permissionName} ${!hasPermission ? 'abilitato' : 'disabilitato'} per ${role}`);
       } else {
+        // Rollback dello stato locale se il database update fallisce
+        setRoleMatrix(roleMatrix);
         debugLogger.logError('Aggiornamento permesso fallito', new Error('Database update returned false'), {
           role,
           permission: permissionName,
@@ -597,11 +608,12 @@ export default function SuperAdmin() {
                                         <button
                                           onClick={() => !isDisabled && togglePermission(role, permission.id)}
                                           disabled={isDisabled}
-                                          className={`p-2 rounded-lg transition-colors ${
+                                          className={`p-2 rounded-full transition-all transform hover:scale-105 ${
                                             hasPermission 
-                                              ? 'bg-green-100 text-green-600 hover:bg-green-200' 
-                                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                              ? 'bg-green-500 text-white shadow-lg shadow-green-200 hover:bg-green-600' 
+                                              : 'bg-gray-300 text-gray-600 hover:bg-gray-400'
                                           } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                          title={`${hasPermission ? 'Disabilita' : 'Abilita'} ${permission.name} per ${role}`}
                                         >
                                           {hasPermission ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                                         </button>
