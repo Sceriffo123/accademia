@@ -74,11 +74,23 @@ export default function SystemAlertPanel() {
 
   // ✅ useEffect SEMPRE chiamato - Hook order consistente
   useEffect(() => {
-    // Initialize database and check status
-    initializeDatabaseStatus();
+    // Initialize database and check status, then run health check
+    const initializeAndCheck = async () => {
+      try {
+        // Prima inizializza il database completamente
+        await initializeDatabaseStatus();
+        
+        // Aspetta un momento per assicurarsi che tutto sia stabile
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Poi esegui il health check
+        await runSystemHealthCheck();
+      } catch (error) {
+        console.error('🚨 SYSTEM: Errore inizializzazione sistema:', error);
+      }
+    };
     
-    // Run initial health check
-    runSystemHealthCheck();
+    initializeAndCheck();
     
     // Run health check every 5 minutes
     const healthCheckInterval = setInterval(() => {
