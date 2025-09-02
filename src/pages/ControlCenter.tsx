@@ -29,9 +29,12 @@ import {
   getRolePermissionsMatrix,
   updateRolePermission,
   getUsersCount,
-  getDocumentsCount
+  getDocumentsCount,
+  getAllRolesFromDB,
+  getAllPermissionsFromDB,
+  getAllSectionsFromDB,
+  updateRoleSection
 } from '../lib/neonDatabase';
-import { addDebugLog } from '../hooks/useDebugLogger';
 import DatabaseExplorer from '../components/DatabaseExplorer';
 
 interface SystemMetrics {
@@ -81,6 +84,19 @@ export default function ControlCenter() {
   const [sectionTestLoading, setSectionTestLoading] = useState(false);
   const [sectionTestResults, setSectionTestResults] = useState<{type: 'success' | 'error', message: string} | null>(null);
   const [realTimeMonitoring, setRealTimeMonitoring] = useState(false);
+
+  // Funzione per aggiungere log di debug
+  const addDebugLog = (type: DebugLog['type'], operation: string, details: string) => {
+    const newLog: DebugLog = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      type,
+      operation,
+      details,
+      user: user?.email || 'Sistema'
+    };
+    setDebugLogs(prev => [newLog, ...prev].slice(0, 100)); // Keep only last 100 logs
+  };
 
   useEffect(() => {
     if (profile?.role === 'superadmin') {
