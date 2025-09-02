@@ -17,6 +17,7 @@ import {
   getAllTableRelations,
   getCompleteTableInfo,
   generateDatabaseDocumentation,
+  generateSingleTableDocumentation,
   downloadDatabaseDocumentation
 } from '../lib/neonDatabase';
 import { 
@@ -269,6 +270,18 @@ export default function ControlCenter() {
       addDebugLog('success', 'EXPORT_DOC', 'Documentazione database esportata e scaricata');
     } catch (error) {
       addDebugLog('error', 'EXPORT_DOC', `Errore export documentazione: ${error}`);
+    }
+  };
+
+  const exportSingleTableDocumentation = async (tableName: string) => {
+    try {
+      addDebugLog('info', 'EXPORT_TABLE', `Generazione documentazione tabella ${tableName}...`);
+      const documentation = await generateSingleTableDocumentation(tableName);
+      const fileName = `table-${tableName}-documentation-${new Date().toISOString().split('T')[0]}.md`;
+      downloadDatabaseDocumentation(documentation, fileName);
+      addDebugLog('success', 'EXPORT_TABLE', `Documentazione tabella ${tableName} esportata`);
+    } catch (error) {
+      addDebugLog('error', 'EXPORT_TABLE', `Errore export tabella ${tableName}: ${error}`);
     }
   };
 
@@ -605,27 +618,42 @@ export default function ControlCenter() {
                       <h3 className="text-lg font-semibold text-gray-900">📋 Tabelle Database</h3>
                     </div>
                     <div className="p-4 max-h-96 overflow-y-auto">
-                      {completeTableInfo.map((table) => (
-                        <div
-                          key={table.table_name}
-                          onClick={() => loadCompleteTableExplorer(table.table_name)}
-                          className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                            selectedTableExplorer === table.table_name
-                              ? 'bg-blue-100 border-blue-300'
-                              : 'hover:bg-gray-50'
+                      {completeTableInfo.map((table, index) => (
+                        <div 
+                          key={index} 
+                          className={`p-4 border rounded-lg transition-all duration-200 hover:shadow-md ${
+                            selectedTableExplorer === table.table_name 
+                              ? 'border-blue-500 bg-blue-50' 
+                              : 'border-gray-200 bg-white hover:border-gray-300'
                           }`}
                         >
                           <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium text-gray-900">{table.table_name}</p>
-                              <p className="text-sm text-gray-500">{table.live_tuples} record</p>
+                            <div 
+                              className="flex items-center space-x-3 flex-1 cursor-pointer"
+                              onClick={() => loadCompleteTableExplorer(table.table_name)}
+                            >
+                              <Database className="h-5 w-5 text-blue-600" />
+                              <div>
+                                <h4 className="font-semibold text-gray-900">{table.table_name}</h4>
+                                <p className="text-sm text-gray-600">{table.live_tuples} record • {table.table_size}</p>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-xs text-gray-500">{table.table_size}</p>
-                              <div className="flex space-x-1 mt-1">
-                                <span className="w-2 h-2 bg-green-400 rounded-full" title="Attiva"></span>
+                            <div className="flex items-center space-x-3">
+                              <div className="flex items-center space-x-2">
+                                {table.total_inserts > 0 && <span className="w-2 h-2 bg-green-400 rounded-full" title="Popolata"></span>}
                                 {table.total_updates > 0 && <span className="w-2 h-2 bg-yellow-400 rounded-full" title="Modificata"></span>}
                               </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  exportSingleTableDocumentation(table.table_name);
+                                }}
+                                className="flex items-center px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"
+                                title={`Export documentazione ${table.table_name}`}
+                              >
+                                <Download className="mr-1" size={12} />
+                                Export
+                              </button>
                             </div>
                           </div>
                         </div>

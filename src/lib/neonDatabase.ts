@@ -1872,18 +1872,198 @@ export async function generateDatabaseDocumentation(): Promise<string> {
   }
 }
 
-export function downloadDatabaseDocumentation(content: string): void {
+export async function generateSingleTableDocumentation(tableName: string): Promise<string> {
+  try {
+    console.log(`🎓 NEON: Generazione documentazione tabella ${tableName}`);
+    
+    // Carica tutti i dati della tabella
+    const [schema, constraints, indexes, tableInfo, allRelations] = await Promise.all([
+      getTableStructure(tableName),
+      getTableConstraints(tableName),
+      getTableIndexes(tableName),
+      getCompleteTableInfo(),
+      getAllTableRelations()
+    ]);
+    
+    const currentTableInfo = tableInfo.find(t => t.table_name === tableName);
+    
+    // Filtra le relazioni per questa tabella (sia in entrata che in uscita)
+    const outgoingRelations = allRelations.filter(r => r.table_name === tableName);
+    const incomingRelations = allRelations.filter(r => r.foreign_table_name === tableName);
+    
+    let documentation = `# 📄 DOCUMENTAZIONE TABELLA: ${tableName.toUpperCase()}\n`;
+    documentation += `Generata il: ${new Date().toLocaleString('it-IT')}\n`;
+    documentation += `Database: PostgreSQL/Neon\n\n`;
+    
+    // Informazioni generali tabella
+    documentation += `## 📊 INFORMAZIONI GENERALI\n`;
+    if (currentTableInfo) {
+      documentation += `- **Record attivi:** ${currentTableInfo.live_tuples}\n`;
+      documentation += `- **Record eliminati:** ${currentTableInfo.dead_tuples}\n`;
+      documentation += `- **Dimensione totale:** ${currentTableInfo.table_size}\n`;
+      documentation += `- **Inserimenti totali:** ${currentTableInfo.total_inserts}\n`;
+      documentation += `- **Aggiornamenti totali:** ${currentTableInfo.total_updates}\n`;
+      documentation += `- **Eliminazioni totali:** ${currentTableInfo.total_deletes}\n`;
+    }
+    documentation += `\n`;
+    
+    // Schema colonne
+    documentation += `## 🔧 SCHEMA COLONNE\n`;
+    documentation += `| # | Nome | Tipo | Nullable | Default | Descrizione |\n`;
+    documentation += `|---|------|------|----------|---------|-------------|\n`;
+    for (const column of schema) {
+      const type = column.data_type + (column.character_maximum_length ? `(${column.character_maximum_length})` : '');
+      const defaultValue = column.column_default || '—';
+      const nullable = column.is_nullable === 'YES' ? '✅' : '❌';
+      documentation += `| ${column.ordinal_position} | \`${column.column_name}\` | **${type}** | ${nullable} | \`${defaultValue}\` | *${column.column_name}* |\n`;
+    }
+    documentation += `\n`;
+    
+    // Constraints
+    if (constraints.length > 0) {
+      documentation += `## 🔒 CONSTRAINTS E VINCOLI\n`;
+      const primaryKeys = constraints.filter(c => c.constraint_type === 'PRIMARY KEY');
+      const foreignKeys = constraints.filter(c => c.constraint_type === 'FOREIGN KEY');
+      const uniques = constraints.filter(c => c.constraint_type === 'UNIQUE');
+      const checks = constraints.filter(c => c.constraint_type === 'CHECK');
+      
+      if (primaryKeys.length > 0) {
+        documentation += `### 🔑 PRIMARY KEYS\n`;
+        for (const pk of primaryKeys) {
+          documentation += `- **${pk.constraint_name}**: \`${pk.column_name}\`\n`;
+        }
+        documentation += `\n`;
+      }
+      
+      if (foreignKeys.length > 0) {
+        documentation += `### 🔗 FOREIGN KEYS\n`;
+        for (const fk of foreignKeys) {
+          documentation += `- **${fk.constraint_name}**: \`${fk.column_name}\` → \`${fk.foreign_table_name}.${fk.foreign_column_name}\`\n`;
+        }
+        documentation += `\n`;
+      }
+      
+      if (uniques.length > 0) {
+        documentation += `### ⭐ UNIQUE CONSTRAINTS\n`;
+        for (const unique of uniques) {
+          documentation += `- **${unique.constraint_name}**: \`${unique.column_name}\`\n`;
+        }
+        documentation += `\n`;
+      }
+      
+      if (checks.length > 0) {
+        documentation += `### ✅ CHECK CONSTRAINTS\n`;
+        for (const check of checks) {
+          documentation += `- **${check.constraint_name}**: \`${check.column_name}\`\n`;
+        }
+        documentation += `\n`;
+      }
+    }
+    
+    // Indici
+    if (indexes.length > 0) {
+      documentation += `## 📊 INDICI E PERFORMANCE\n`;
+      for (const index of indexes) {
+        documentation += `- **${index.indexname}**\n`;
+        documentation += `  \`\`\`sql\n  ${index.indexdef}\n  \`\`\`\n`;
+      }
+      documentation += `\n`;
+    }
+    
+    // Relazioni in uscita (questa tabella referenzia altre)
+    if (outgoingRelations.length > 0) {
+      documentation += `## 🔗 RELAZIONI IN USCITA\n`;
+      documentation += `*Tabelle referenziate da ${tableName}:*\n\n`;
+      for (const relation of outgoingRelations) {
+        documentation += `- **${relation.column_name}** → \`${relation.foreign_table_name}.${relation.foreign_column_name}\`\n`;
+        documentation += `  - *Colonna locale:* \`${relation.column_name}\`\n`;
+        documentation += `  - *Tabella target:* \`${relation.foreign_table_name}\`\n`;
+        documentation += `  - *Colonna target:* \`${relation.foreign_column_name}\`\n`;
+      }
+      documentation += `\n`;
+    }
+    
+    // Relazioni in entrata (altre tabelle referenziano questa)
+    if (incomingRelations.length > 0) {
+      documentation += `## 🔄 RELAZIONI IN ENTRATA\n`;
+      documentation += `*Tabelle che referenziano ${tableName}:*\n\n`;
+      for (const relation of incomingRelations) {
+        documentation += `- **${relation.table_name}.${relation.column_name}** → \`${relation.foreign_column_name}\`\n`;
+        documentation += `  - *Tabella sorgente:* \`${relation.table_name}\`\n`;
+        documentation += `  - *Colonna sorgente:* \`${relation.column_name}\`\n`;
+        documentation += `  - *Colonna locale:* \`${relation.foreign_column_name}\`\n`;
+      }
+      documentation += `\n`;
+    }
+    
+    // Mappa completa relazioni
+    const totalRelations = outgoingRelations.length + incomingRelations.length;
+    if (totalRelations > 0) {
+      documentation += `## 🗺️ MAPPA RELAZIONI COMPLETA\n`;
+      documentation += `\`\`\`mermaid\n`;
+      documentation += `graph TD\n`;
+      
+      // Nodo centrale
+      documentation += `    ${tableName}[${tableName}]\n`;
+      
+      // Relazioni in uscita
+      for (const relation of outgoingRelations) {
+        documentation += `    ${tableName} -->|${relation.column_name}| ${relation.foreign_table_name}\n`;
+      }
+      
+      // Relazioni in entrata
+      for (const relation of incomingRelations) {
+        documentation += `    ${relation.table_name} -->|${relation.column_name}| ${tableName}\n`;
+      }
+      
+      documentation += `\`\`\`\n\n`;
+    }
+    
+    // Esempio query utili
+    documentation += `## 💡 QUERY UTILI\n`;
+    documentation += `\`\`\`sql\n`;
+    documentation += `-- Conteggio record\n`;
+    documentation += `SELECT COUNT(*) FROM ${tableName};\n\n`;
+    
+    if (outgoingRelations.length > 0) {
+      documentation += `-- Query con JOIN (relazioni in uscita)\n`;
+      for (const relation of outgoingRelations) {
+        documentation += `SELECT t.*, ref.* \nFROM ${tableName} t \nJOIN ${relation.foreign_table_name} ref ON t.${relation.column_name} = ref.${relation.foreign_column_name};\n\n`;
+      }
+    }
+    
+    if (incomingRelations.length > 0) {
+      documentation += `-- Query con JOIN (relazioni in entrata)\n`;
+      for (const relation of incomingRelations) {
+        documentation += `SELECT t.*, child.* \nFROM ${tableName} t \nJOIN ${relation.table_name} child ON t.${relation.foreign_column_name} = child.${relation.column_name};\n\n`;
+      }
+    }
+    
+    documentation += `\`\`\`\n\n`;
+    
+    documentation += `---\n`;
+    documentation += `*Documentazione generata automaticamente dal Database Explorer*\n`;
+    
+    return documentation;
+    
+  } catch (error) {
+    console.error(`🚨 NEON: Errore generazione documentazione ${tableName}:`, error);
+    return `❌ Errore generazione documentazione ${tableName}: ${error}`;
+  }
+}
+
+export function downloadDatabaseDocumentation(content: string, fileName?: string): void {
   try {
     const blob = new Blob([content], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `database-documentation-${new Date().toISOString().split('T')[0]}.md`;
+    link.download = fileName || `database-documentation-${new Date().toISOString().split('T')[0]}.md`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    console.log('📄 NEON: Documentazione database scaricata');
+    console.log('📄 NEON: Documentazione scaricata');
   } catch (error) {
     console.error('🚨 NEON: Errore download documentazione:', error);
   }
