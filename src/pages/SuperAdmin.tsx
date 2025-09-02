@@ -265,20 +265,11 @@ export default function SuperAdmin() {
       );
       
       if (success) {
-        // Aggiorna immediatamente lo stato locale
-        const newMatrix = new Map(roleMatrix);
-        const currentRoleData = newMatrix.get(role);
-        if (currentRoleData) {
-          if (!hasPermission) {
-            // Aggiungi permesso
-            currentRoleData.permissions = [...currentRoleData.permissions, permissionId];
-          } else {
-            // Rimuovi permesso
-            currentRoleData.permissions = currentRoleData.permissions.filter(p => p !== permissionId);
-          }
-          newMatrix.set(role, currentRoleData);
-          setRoleMatrix(newMatrix);
-        }
+        // NON aggiornare lo stato locale - ricarica dal database per evitare inconsistenze
+        debugLogger.logInfo('Ricaricamento matrice dal database dopo modifica', { role, permission: permissionName });
+        
+        // Ricarica i dati dal database
+        await loadPermissionsData();
         
         setHasChanges(true);
         
