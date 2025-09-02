@@ -242,41 +242,42 @@ export default function ControlCenter() {
     }
   };
 
-  const testPermissionOperation = async (role: string, permission: string, granted: boolean) => {
+  const testPermissionOperation = async (role: string, permission: string, expectedGranted: boolean) => {
     setTestLoading(true);
     setTestResults(null);
-    addDebugLog('info', 'PERMISSION_TEST', `Test: ${role} -> ${permission} = ${granted}`);
+    addDebugLog('info', 'PERMISSION_TEST', `Test verifica: ${role} -> ${permission} (aspettato: ${expectedGranted})`);
     
     try {
-      // Test diretto della funzione
-      const success = await updateRolePermission(role, permission, granted);
-      addDebugLog(success ? 'success' : 'error', 'PERMISSION_TEST', 
-        `Risultato operazione: ${success ? 'SUCCESS' : 'FAILED'}`);
+      // Solo verifica lo stato attuale (NON modifica)
+      const roleData = roleMatrix.get(role);
+      const hasPermission = roleData?.permissions?.includes(permission) || false;
       
-      if (success) {
+      const isCorrect = hasPermission === expectedGranted;
+      
+      addDebugLog(isCorrect ? 'success' : 'warning', 'PERMISSION_TEST', 
+        `Verifica: ${role} ha '${permission}' = ${hasPermission}, aspettato = ${expectedGranted}`);
+      
+      if (isCorrect) {
         setTestResults({
           type: 'success',
-          message: `✅ Permesso '${permission}' ${granted ? 'abilitato' : 'disabilitato'} per ruolo '${role}'`
+          message: `✅ VERIFICA OK: Ruolo '${role}' ${hasPermission ? 'ha' : 'non ha'} il permesso '${permission}' come previsto`
         });
       } else {
         setTestResults({
           type: 'error',
-          message: `❌ Errore aggiornamento permesso '${permission}' per ruolo '${role}'`
+          message: `❌ VERIFICA FALLITA: Ruolo '${role}' ${hasPermission ? 'ha' : 'non ha'} '${permission}', ma dovrebbe ${expectedGranted ? 'averlo' : 'non averlo'}`
         });
       }
       
-      // Ricarica dati per verificare persistenza
-      await loadSystemData();
-      
-      return success;
+      return isCorrect;
     } catch (error: any) {
       const errorDetails = error?.message || error?.stack || JSON.stringify(error);
-      addDebugLog('error', 'PERMISSION_TEST', `ERRORE CATTURATO: ${errorDetails}`);
-      console.error('🚨 CONTROL CENTER: Errore test permessi:', error);
+      addDebugLog('error', 'PERMISSION_TEST', `ERRORE VERIFICA: ${errorDetails}`);
+      console.error('🚨 CONTROL CENTER: Errore verifica permessi:', error);
       
       setTestResults({
         type: 'error',
-        message: `🚨 Errore test: ${error?.message || 'Errore sconosciuto'}`
+        message: `🚨 Errore verifica: ${error?.message || 'Errore sconosciuto'}`
       });
       
       return false;
@@ -285,39 +286,42 @@ export default function ControlCenter() {
     }
   };
 
-  const testSectionOperation = async (role: string, section: string, visible: boolean) => {
+  const testSectionOperation = async (role: string, section: string, expectedVisible: boolean) => {
     setSectionTestLoading(true);
     setSectionTestResults(null);
-    addDebugLog('info', 'SECTION_TEST', `Test: ${role} -> ${section} = ${visible}`);
+    addDebugLog('info', 'SECTION_TEST', `Test verifica: ${role} -> ${section} (aspettata: ${expectedVisible})`);
     
     try {
-      const success = await updateRoleSection(role, section, visible);
-      addDebugLog(success ? 'success' : 'error', 'SECTION_TEST', 
-        `Risultato operazione: ${success ? 'SUCCESS' : 'FAILED'}`);
+      // Solo verifica lo stato attuale (NON modifica)
+      const roleData = roleMatrix.get(role);
+      const hasSection = roleData?.sections?.includes(section) || false;
       
-      if (success) {
+      const isCorrect = hasSection === expectedVisible;
+      
+      addDebugLog(isCorrect ? 'success' : 'warning', 'SECTION_TEST', 
+        `Verifica: ${role} ha sezione '${section}' = ${hasSection}, aspettata = ${expectedVisible}`);
+      
+      if (isCorrect) {
         setSectionTestResults({
           type: 'success',
-          message: `✅ Sezione '${section}' ${visible ? 'mostrata' : 'nascosta'} per ruolo '${role}'`
+          message: `✅ VERIFICA OK: Ruolo '${role}' ${hasSection ? 'vede' : 'non vede'} la sezione '${section}' come previsto`
         });
       } else {
         setSectionTestResults({
           type: 'error',
-          message: `❌ Errore aggiornamento sezione '${section}' per ruolo '${role}'`
+          message: `❌ VERIFICA FALLITA: Ruolo '${role}' ${hasSection ? 'vede' : 'non vede'} '${section}', ma dovrebbe ${expectedVisible ? 'vederla' : 'non vederla'}`
         });
       }
       
-      await loadSystemData();
-      
-      return success;
+      return isCorrect;
     } catch (error: any) {
       const errorDetails = error?.message || error?.stack || JSON.stringify(error);
-      addDebugLog('error', 'SECTION_TEST', `ERRORE CATTURATO: ${errorDetails}`);
-      console.error('🚨 CONTROL CENTER: Errore test sezioni:', error);
+      addDebugLog('error', 'SECTION_TEST', `ERRORE VERIFICA: ${errorDetails}`);
+      console.error('🚨 CONTROL CENTER: Errore verifica sezioni:', error);
       
       setSectionTestResults({
         type: 'error',
-        message: `🚨 Errore test: ${error?.message || 'Errore sconosciuto'}`
+        message: `🚨 Errore verifica: ${error?.message || 'Errore sconosciuto'}`
       });
       
       return false;
@@ -536,12 +540,14 @@ export default function ControlCenter() {
           {/* Test CRUD Tab */}
           {activeTab === 'test' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Test Permessi */}
               <div className="bg-white rounded-lg shadow-sm border">
                 <div className="p-4 border-b">
-                  <h3 className="text-lg font-semibold text-gray-900">Test Matrice Permessi</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Test Verifica Permessi</h3>
+                  <p className="text-sm text-gray-600 mt-1">Verifica lo stato attuale dei permessi senza modificarli</p>
                 </div>
                 <div className="p-4 space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <select className="border rounded-lg px-3 py-2" id="test-role" title="Seleziona ruolo">
                       <option value="">Seleziona Ruolo</option>
                       {Array.from(roleMatrix.keys()).map(role => (
@@ -552,13 +558,13 @@ export default function ControlCenter() {
                       <option value="">Seleziona Permesso</option>
                       {allPermissions.map(permission => (
                         <option key={permission.id} value={permission.name}>
-                          {permission.name} ({permission.category})
+                          {permission.name}
                         </option>
                       ))}
                     </select>
-                    <select className="border rounded-lg px-3 py-2" id="test-granted" title="Stato permesso">
-                      <option value="true">Abilitato</option>
-                      <option value="false">Disabilitato</option>
+                    <select className="border rounded-lg px-3 py-2" id="test-granted" title="Stato atteso">
+                      <option value="true">Dovrebbe essere concesso</option>
+                      <option value="false">Dovrebbe essere negato</option>
                     </select>
                   </div>
                   <button
@@ -578,10 +584,10 @@ export default function ControlCenter() {
                     {testLoading ? (
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Testing...
+                        Verificando...
                       </div>
                     ) : (
-                      'Test Aggiornamento Permesso'
+                      'Verifica Stato Permesso'
                     )}
                   </button>
                   
@@ -598,12 +604,14 @@ export default function ControlCenter() {
                 </div>
               </div>
 
+              {/* Test Sezioni */}
               <div className="bg-white rounded-lg shadow-sm border">
                 <div className="p-4 border-b">
-                  <h3 className="text-lg font-semibold text-gray-900">Test Visibilità Sezioni</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Test Verifica Sezioni</h3>
+                  <p className="text-sm text-gray-600 mt-1">Verifica la visibilità delle sezioni senza modificarle</p>
                 </div>
                 <div className="p-4 space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <select className="border rounded-lg px-3 py-2" id="test-section-role" title="Seleziona ruolo">
                       <option value="">Seleziona Ruolo</option>
                       {Array.from(roleMatrix.keys()).map(role => (
@@ -618,9 +626,9 @@ export default function ControlCenter() {
                         </option>
                       ))}
                     </select>
-                    <select className="border rounded-lg px-3 py-2" id="test-visible" title="Visibilità sezione">
-                      <option value="true">Visibile</option>
-                      <option value="false">Nascosta</option>
+                    <select className="border rounded-lg px-3 py-2" id="test-visible" title="Visibilità attesa">
+                      <option value="true">Dovrebbe essere visibile</option>
+                      <option value="false">Dovrebbe essere nascosta</option>
                     </select>
                   </div>
                   <button
@@ -640,10 +648,10 @@ export default function ControlCenter() {
                     {sectionTestLoading ? (
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Testing...
+                        Verificando...
                       </div>
                     ) : (
-                      'Test Aggiornamento Sezione'
+                      'Verifica Stato Sezione'
                     )}
                   </button>
                   
