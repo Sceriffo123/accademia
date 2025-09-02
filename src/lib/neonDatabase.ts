@@ -2121,8 +2121,7 @@ export async function writeActivityLog(
   action: string, 
   resourceType: string,
   resourceId?: string,
-  details?: any,
-  ipAddress?: string
+  details?: any
 ): Promise<{ success: boolean; logId?: string; message: string }> {
   try {
     console.log(`🎓 NEON: Registrazione attività - ${action} su ${resourceType}`);
@@ -2134,7 +2133,6 @@ export async function writeActivityLog(
         resource_type, 
         resource_id, 
         details,
-        ip_address,
         created_at
       ) VALUES (
         ${userId}::uuid,
@@ -2142,7 +2140,6 @@ export async function writeActivityLog(
         ${resourceType},
         ${resourceId ? `${resourceId}::uuid` : null},
         ${details ? JSON.stringify(details) : '{}'}::jsonb,
-        ${ipAddress || null},
         NOW()
       )
       RETURNING id

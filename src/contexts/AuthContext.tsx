@@ -4,6 +4,7 @@ import {
   getUserById,
   createUser,
   verifyPassword,
+  writeActivityLog,
   type User 
 } from '../lib/neonDatabase';
 
@@ -129,6 +130,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       localStorage.setItem('auth_token', token);
       console.log('🎓 ACCADEMIA: Accesso autorizzato per:', user.full_name, `(${user.role})`);
+      
+      // Registra login in activity_logs
+      try {
+        await writeActivityLog(
+          user.id,
+          'user_login',
+          'authentication',
+          undefined,
+          {
+            email: user.email,
+            role: user.role,
+            login_time: new Date().toISOString(),
+            user_agent: navigator.userAgent
+          }
+        );
+      } catch (logError) {
+        console.error('🚨 ACCADEMIA: Errore registrazione login:', logError);
+      }
+      
       return { error: null };
     } catch (error) {
       console.error('🚨 ACCADEMIA: Errore durante l\'autenticazione:', error?.message);
@@ -179,6 +199,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut() {
+    // Registra logout in activity_logs prima di fare logout
+    if (user) {
+      try {
+        await writeActivityLog(
+          user.id,
+          'user_logout',
+          'authentication',
+          undefined,
+          {
+            email: user.email,
+            role: user.role,
+            logout_time: new Date().toISOString(),
+            user_agent: navigator.userAgent
+          }
+        );
+      } catch (logError) {
+        console.error('🚨 ACCADEMIA: Errore registrazione logout:', logError);
+      }
+    }
+    
     setUser(null);
     localStorage.removeItem('auth_token');
   }

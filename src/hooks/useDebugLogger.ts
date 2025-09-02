@@ -61,8 +61,7 @@ export function useDebugLogger(context: DebugContext) {
           `${context.operation}_${level}`,
           context.page,
           undefined,
-          logData,
-          undefined // IP address potrebbe essere aggiunto in futuro
+          logData
         );
       } catch (dbError) {
         console.error('🚨 Failed to write database activity log:', dbError);

@@ -396,8 +396,7 @@ export default function ControlCenter() {
           timestamp: new Date().toISOString(),
           user_agent: navigator.userAgent,
           action_type: 'manual_test'
-        },
-        undefined
+        }
       );
       
       if (testResult.success) {
