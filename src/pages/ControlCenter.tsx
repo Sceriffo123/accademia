@@ -57,6 +57,7 @@ export default function ControlCenter() {
   const [selectedTable, setSelectedTable] = useState<string>('');
   const [tableRecords, setTableRecords] = useState<any[]>([]);
   const [tableStructure, setTableStructure] = useState<any[]>([]);
+  const [tableData, setTableData] = useState<any[]>([]);
   const [systemData, setSystemData] = useState<any>(null);
   const [roleMatrix, setRoleMatrix] = useState<Map<string, any>>(new Map());
   const [allPermissions, setAllPermissions] = useState<any[]>([]);
@@ -199,10 +200,15 @@ export default function ControlCenter() {
   const loadTableData = async (tableName: string) => {
     try {
       addDebugLog('info', 'TABLE_INSPECT', `Caricamento dati tabella: ${tableName}`);
-      const data = await getTableRecords(tableName, 50);
-      setTableData(data);
+      const [records, structure] = await Promise.all([
+        getTableRecords(tableName, 50),
+        getTableStructure(tableName)
+      ]);
+      setTableData(records);
+      setTableRecords(records);
+      setTableStructure(structure);
       setSelectedTable(tableName);
-      addDebugLog('success', 'TABLE_INSPECT', `Caricati ${data.length} record da ${tableName}`);
+      addDebugLog('success', 'TABLE_INSPECT', `Caricati ${records.length} record da ${tableName}`);
     } catch (error) {
       addDebugLog('error', 'TABLE_INSPECT', `Errore caricamento ${tableName}: ${error}`);
     }
