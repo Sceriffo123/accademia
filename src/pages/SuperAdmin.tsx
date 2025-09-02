@@ -33,7 +33,8 @@ import {
   Search,
   HelpCircle,
   Wrench,
-  RefreshCw
+  RefreshCw,
+  GraduationCap
 } from 'lucide-react';
 
 interface Notification {
@@ -961,6 +962,30 @@ export default function SuperAdmin() {
                       <p className="text-sm text-orange-700">
                         Esplora e gestisci le tabelle del database. Visualizza schema, esplora record e monitora le performance.
                       </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Collegamento Sezioni e Database */}
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <GraduationCap className="h-5 w-5 text-indigo-600 mr-2" />
+                    Collegamento Sezioni e Database
+                  </h4>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <GraduationCap className="h-4 w-4 text-indigo-600" />
+                        <span className="font-medium text-indigo-900">Education ↔ Formazione</span>
+                      </div>
+                      <div className="text-sm text-indigo-700 space-y-1">
+                        <p><strong>Nome tecnico:</strong> "education" (utilizzato nel codice e nei permessi)</p>
+                        <p><strong>Nome visualizzato:</strong> "Formazione" (mostrato nel menu e nelle pagine)</p>
+                        <p><strong>Collegato alla pagina:</strong> /education (Formazione Professionale)</p>
+                        <p><strong>Tabelle database:</strong> courses, course_enrollments, course_modules</p>
+                        <p><strong>Permessi:</strong> education.view, education.create, education.edit, education.delete, education.enroll</p>
+                        <p className="text-xs mt-2 italic">I permessi education.* controllano le operazioni sui corsi di formazione e i quiz degli utenti.</p>
+                      </div>
                     </div>
                   </div>
                 </div>
