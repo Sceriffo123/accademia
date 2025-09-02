@@ -23,13 +23,12 @@ export async function exportTableSchema(): Promise<any> {
     
     return schema;
   } catch (error) {
-    console.error('🚨 NEON: Errore export schema:', error);
+    console.error(' NEON: Errore export schema:', error);
     throw error;
   }
 }
 
-// Inizializza connessione Neon
-// const sql = neon(import.meta.env.VITE_DATABASE_URL || '');
+// Connessione Neon già definita sopra alla riga 4
 
 export interface User {
   id: string;
