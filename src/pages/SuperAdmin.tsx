@@ -266,8 +266,20 @@ export default function SuperAdmin() {
       if (success) {
         console.log(`✅ SuperAdmin: Database aggiornato con successo`);
         
-        // Ricarica i dati dal database per sincronizzazione
-        await loadPermissionsData();
+        // Aggiornamento ottimistico dello stato locale (evita refresh)
+        const updatedMatrix = new Map(roleMatrix);
+        const currentRoleData = updatedMatrix.get(role);
+        if (currentRoleData) {
+          const updatedPermissions = hasPermission 
+            ? currentRoleData.permissions.filter(p => p !== permissionName)
+            : [...currentRoleData.permissions, permissionName];
+          
+          updatedMatrix.set(role, {
+            ...currentRoleData,
+            permissions: updatedPermissions
+          });
+          setRoleMatrix(updatedMatrix);
+        }
         
         setHasChanges(true);
         
@@ -319,8 +331,20 @@ export default function SuperAdmin() {
       if (success) {
         console.log(`✅ SuperAdmin: Database aggiornato con successo`);
         
-        // Ricarica i dati dal database per sincronizzazione
-        await loadPermissionsData();
+        // Aggiornamento ottimistico dello stato locale (evita refresh)
+        const updatedMatrix = new Map(roleMatrix);
+        const currentRoleData = updatedMatrix.get(role);
+        if (currentRoleData) {
+          const updatedSections = isVisible
+            ? currentRoleData.sections.filter(s => s !== section)
+            : [...currentRoleData.sections, section];
+          
+          updatedMatrix.set(role, {
+            ...currentRoleData,
+            sections: updatedSections
+          });
+          setRoleMatrix(updatedMatrix);
+        }
         
         setHasChanges(true);
         
