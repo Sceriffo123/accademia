@@ -2,32 +2,20 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { 
-  getTableStats,
-  getUsersData,
-  getRolesData,
-  getPermissionsData,
-  updateRolePermission,
-  updateRoleSection,
-  getCompleteDatabaseInfo,
-  loadTableDataPaginated,
-  getTableRelations,
-  getCompleteTableInfo,
-  generateDatabaseDocumentation,
-  generateSingleTableDocumentation,
-  downloadDatabaseDocumentation,
-  analyzeActivityLogs,
-  getActivityLogsStructure,
-  getActivityLogsSample,
-  clearActivityLogs,
-  writeActivityLog,
   getUsersCount,
   getAllRolesFromDB,
   getAllPermissionsFromDB,
   getAllSectionsFromDB,
-  getTableStructure,
   getAllTables,
+  getRolePermissionsMatrix,
+  getAllTableRelations,
+  getCompleteTableInfo,
+  getTableStructure,
   getTableRecords,
-  getRolePermissionsMatrix
+  analyzeActivityLogs,
+  getActivityLogsStructure,
+  getActivityLogsSample,
+  clearActivityLogs
 } from '../lib/neonDatabase';
 import { 
   RefreshCw, 
@@ -84,19 +72,26 @@ export default function ControlCenter() {
   // Dati sistema
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
   const [debugLogs, setDebugLogs] = useState<DebugLog[]>([]);
-  const [databaseTables, setDatabaseTables] = useState<any[]>([]);
+  const [databaseTables, setDatabaseTables] = useState<DatabaseTable[]>([]);
   const [selectedTable, setSelectedTable] = useState<string>('');
+  const [showDetails, setShowDetails] = useState<boolean>(false);
+  const [detailsData, setDetailsData] = useState<any>(null);
+  const [realTimeMonitoring, setRealTimeMonitoring] = useState(false);
   const [tableRecords, setTableRecords] = useState<any[]>([]);
   const [tableStructure, setTableStructure] = useState<any[]>([]);
   const [systemData, setSystemData] = useState<any>(null);
-  const [roleMatrix, setRoleMatrix] = useState<Map<string, any>>(new Map());
+  const [roleMatrix, setRoleMatrix] = useState<Map<string, string[]>>(new Map());
   const [allPermissions, setAllPermissions] = useState<any[]>([]);
   const [allSections, setAllSections] = useState<any[]>([]);
+  const [completeTableInfo, setCompleteTableInfo] = useState<any[]>([]);
+  const [tableRelations, setTableRelations] = useState<any[]>([]);
+  const [explorerLoading, setExplorerLoading] = useState(false);
+  const [recordsPage, setRecordsPage] = useState(0);
+  const [recordsPerPage] = useState(50);
   const [testLoading, setTestLoading] = useState(false);
   const [testResults, setTestResults] = useState<{type: 'success' | 'error', message: string} | null>(null);
   const [sectionTestLoading, setSectionTestLoading] = useState(false);
   const [sectionTestResults, setSectionTestResults] = useState<{type: 'success' | 'error', message: string} | null>(null);
-  const [realTimeMonitoring, setRealTimeMonitoring] = useState(false);
   const [tableData, setTableData] = useState<any[]>([]);
   
   // Database Explorer state
@@ -105,11 +100,6 @@ export default function ControlCenter() {
   const [tableConstraintsData, setTableConstraintsData] = useState<any[]>([]);
   const [tableIndexesData, setTableIndexesData] = useState<any[]>([]);
   const [tableStatsData, setTableStatsData] = useState<any[]>([]);
-  const [tableRelations, setTableRelations] = useState<any[]>([]);
-  const [completeTableInfo, setCompleteTableInfo] = useState<any[]>([]);
-  const [explorerLoading, setExplorerLoading] = useState(false);
-  const [recordsPage, setRecordsPage] = useState(0);
-  const [recordsPerPage] = useState(50);
 
   const [activityLogsAnalysis, setActivityLogsAnalysis] = useState<any>(null);
   const [activityLogsStructure, setActivityLogsStructure] = useState<any[]>([]);
@@ -179,18 +169,40 @@ export default function ControlCenter() {
     try {
       setIsLoading(true);
       addDebugLog('info', 'SYSTEM_LOAD', 'Caricamento dati sistema iniziato');
+      console.log('🔧 CONTROL CENTER: Avvio caricamento dati sistema...');
 
-      // Carica metriche sistema
-      const [roles, permissions, sections, matrix, tables, relations, completeInfo, usersCount] = await Promise.all([
-        getAllRolesFromDB(),
-        getAllPermissionsFromDB(),
-        getAllSectionsFromDB(),
-        getRolePermissionsMatrix(),
-        getAllTables(),
-        getAllTableRelations(),
-        getCompleteTableInfo(),
-        getUsersCount()
-      ]);
+      // Carica metriche sistema con logging dettagliato
+      console.log('🔧 CONTROL CENTER: Caricamento ruoli...');
+      const roles = await getAllRolesFromDB();
+      console.log('🔧 CONTROL CENTER: Ruoli caricati:', roles.length);
+      
+      console.log('🔧 CONTROL CENTER: Caricamento permessi...');
+      const permissions = await getAllPermissionsFromDB();
+      console.log('🔧 CONTROL CENTER: Permessi caricati:', permissions.length);
+      
+      console.log('🔧 CONTROL CENTER: Caricamento sezioni...');
+      const sections = await getAllSectionsFromDB();
+      console.log('🔧 CONTROL CENTER: Sezioni caricate:', sections.length);
+      
+      console.log('🔧 CONTROL CENTER: Caricamento matrice permessi...');
+      const matrix = await getRolePermissionsMatrix();
+      console.log('🔧 CONTROL CENTER: Matrice caricata:', matrix.size);
+      
+      console.log('🔧 CONTROL CENTER: Caricamento tabelle...');
+      const tables = await getAllTables();
+      console.log('🔧 CONTROL CENTER: Tabelle caricate:', tables.length);
+      
+      console.log('🔧 CONTROL CENTER: Caricamento relazioni...');
+      const relations = await getAllTableRelations();
+      console.log('🔧 CONTROL CENTER: Relazioni caricate:', relations?.length || 0);
+      
+      console.log('🔧 CONTROL CENTER: Caricamento info complete...');
+      const completeInfo = await getCompleteTableInfo();
+      console.log('🔧 CONTROL CENTER: Info complete caricate:', completeInfo.length);
+      
+      console.log('🔧 CONTROL CENTER: Caricamento conteggio utenti...');
+      const usersCount = await getUsersCount();
+      console.log('🔧 CONTROL CENTER: Utenti contati:', usersCount);
 
       setSystemMetrics({
         totalUsers: usersCount,
