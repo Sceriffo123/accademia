@@ -47,21 +47,24 @@ interface DebugLog {
 
 export default function ControlCenter() {
   const { user, profile } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('system');
   const [isLoading, setIsLoading] = useState(true);
   
   // Dati sistema
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
-  const [databaseTables, setDatabaseTables] = useState<DatabaseTable[]>([]);
   const [debugLogs, setDebugLogs] = useState<DebugLog[]>([]);
-  const [roleMatrix, setRoleMatrix] = useState<Map<string, { permissions: string[], sections: string[] }>>(new Map());
-  
-  // Stati debug
-  const [realTimeMonitoring, setRealTimeMonitoring] = useState(false);
+  const [databaseTables, setDatabaseTables] = useState<any[]>([]);
   const [selectedTable, setSelectedTable] = useState<string>('');
-  const [tableData, setTableData] = useState<any[]>([]);
+  const [tableRecords, setTableRecords] = useState<any[]>([]);
+  const [tableStructure, setTableStructure] = useState<any[]>([]);
+  const [systemData, setSystemData] = useState<any>(null);
+  const [roleMatrix, setRoleMatrix] = useState<Map<string, any>>(new Map());
   const [allPermissions, setAllPermissions] = useState<any[]>([]);
   const [allSections, setAllSections] = useState<any[]>([]);
+  const [testLoading, setTestLoading] = useState(false);
+  const [testResults, setTestResults] = useState<{type: 'success' | 'error', message: string} | null>(null);
+  const [sectionTestLoading, setSectionTestLoading] = useState(false);
+  const [sectionTestResults, setSectionTestResults] = useState<{type: 'success' | 'error', message: string} | null>(null);
 
   useEffect(() => {
     if (profile?.role === 'superadmin') {
@@ -238,6 +241,8 @@ export default function ControlCenter() {
   };
 
   const testPermissionOperation = async (role: string, permission: string, granted: boolean) => {
+    setTestLoading(true);
+    setTestResults(null);
     addDebugLog('info', 'PERMISSION_TEST', `Test: ${role} -> ${permission} = ${granted}`);
     
     try {
@@ -245,6 +250,18 @@ export default function ControlCenter() {
       const success = await updateRolePermission(role, permission, granted);
       addDebugLog(success ? 'success' : 'error', 'PERMISSION_TEST', 
         `Risultato operazione: ${success ? 'SUCCESS' : 'FAILED'}`);
+      
+      if (success) {
+        setTestResults({
+          type: 'success',
+          message: `✅ Permesso '${permission}' ${granted ? 'abilitato' : 'disabilitato'} per ruolo '${role}'`
+        });
+      } else {
+        setTestResults({
+          type: 'error',
+          message: `❌ Errore aggiornamento permesso '${permission}' per ruolo '${role}'`
+        });
+      }
       
       // Ricarica dati per verificare persistenza
       await loadSystemData();
@@ -254,17 +271,39 @@ export default function ControlCenter() {
       const errorDetails = error?.message || error?.stack || JSON.stringify(error);
       addDebugLog('error', 'PERMISSION_TEST', `ERRORE CATTURATO: ${errorDetails}`);
       console.error('🚨 CONTROL CENTER: Errore test permessi:', error);
+      
+      setTestResults({
+        type: 'error',
+        message: `🚨 Errore test: ${error?.message || 'Errore sconosciuto'}`
+      });
+      
       return false;
+    } finally {
+      setTestLoading(false);
     }
   };
 
   const testSectionOperation = async (role: string, section: string, visible: boolean) => {
+    setSectionTestLoading(true);
+    setSectionTestResults(null);
     addDebugLog('info', 'SECTION_TEST', `Test: ${role} -> ${section} = ${visible}`);
     
     try {
       const success = await updateRoleSection(role, section, visible);
       addDebugLog(success ? 'success' : 'error', 'SECTION_TEST', 
         `Risultato operazione: ${success ? 'SUCCESS' : 'FAILED'}`);
+      
+      if (success) {
+        setSectionTestResults({
+          type: 'success',
+          message: `✅ Sezione '${section}' ${visible ? 'mostrata' : 'nascosta'} per ruolo '${role}'`
+        });
+      } else {
+        setSectionTestResults({
+          type: 'error',
+          message: `❌ Errore aggiornamento sezione '${section}' per ruolo '${role}'`
+        });
+      }
       
       await loadSystemData();
       
@@ -273,7 +312,15 @@ export default function ControlCenter() {
       const errorDetails = error?.message || error?.stack || JSON.stringify(error);
       addDebugLog('error', 'SECTION_TEST', `ERRORE CATTURATO: ${errorDetails}`);
       console.error('🚨 CONTROL CENTER: Errore test sezioni:', error);
+      
+      setSectionTestResults({
+        type: 'error',
+        message: `🚨 Errore test: ${error?.message || 'Errore sconosciuto'}`
+      });
+      
       return false;
+    } finally {
+      setSectionTestLoading(false);
     }
   };
 
@@ -519,10 +566,33 @@ export default function ControlCenter() {
                       const granted = (document.getElementById('test-granted') as HTMLSelectElement)?.value === 'true';
                       if (role && permission) testPermissionOperation(role, permission, granted);
                     }}
-                    className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+                    disabled={testLoading}
+                    className={`w-full py-2 rounded-lg transition-colors ${
+                      testLoading 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    } text-white`}
                   >
-                    Test Aggiornamento Permesso
+                    {testLoading ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Testing...
+                      </div>
+                    ) : (
+                      'Test Aggiornamento Permesso'
+                    )}
                   </button>
+                  
+                  {/* Risultati Test Permessi */}
+                  {testResults && (
+                    <div className={`p-3 rounded-lg border ${
+                      testResults.type === 'success' 
+                        ? 'bg-green-50 border-green-200 text-green-800'
+                        : 'bg-red-50 border-red-200 text-red-800'
+                    }`}>
+                      <div className="font-medium">{testResults.message}</div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -558,10 +628,33 @@ export default function ControlCenter() {
                       const visible = (document.getElementById('test-visible') as HTMLSelectElement)?.value === 'true';
                       if (role && section) testSectionOperation(role, section, visible);
                     }}
-                    className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700"
+                    disabled={sectionTestLoading}
+                    className={`w-full py-2 rounded-lg transition-colors ${
+                      sectionTestLoading 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-green-600 hover:bg-green-700'
+                    } text-white`}
                   >
-                    Test Aggiornamento Sezione
+                    {sectionTestLoading ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Testing...
+                      </div>
+                    ) : (
+                      'Test Aggiornamento Sezione'
+                    )}
                   </button>
+                  
+                  {/* Risultati Test Sezioni */}
+                  {sectionTestResults && (
+                    <div className={`p-3 rounded-lg border ${
+                      sectionTestResults.type === 'success' 
+                        ? 'bg-green-50 border-green-200 text-green-800'
+                        : 'bg-red-50 border-red-200 text-red-800'
+                    }`}>
+                      <div className="font-medium">{sectionTestResults.message}</div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
