@@ -10,7 +10,6 @@ import {
 } from '../lib/neonDatabase';
 import { 
   Shield, 
-  AlertTriangle, 
   Users, 
   Settings, 
   Eye,
@@ -19,7 +18,6 @@ import {
   RotateCcw,
   Info,
   CheckCircle,
-  XCircle,
   GraduationCap,
   X,
   HelpCircle,
@@ -29,7 +27,9 @@ import {
   ChevronRight,
   Lock,
   Unlock,
-  AlertCircle
+  AlertCircle,
+  Database,
+  RefreshCw
 } from 'lucide-react';
 
 interface Notification {
@@ -49,6 +49,8 @@ export default function SuperAdmin() {
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [migrationStatus, setMigrationStatus] = useState<'idle' | 'checking' | 'migrating' | 'success' | 'error'>('idle');
+  const [migrationMessage, setMigrationMessage] = useState('');
 
   // Debug Logger Integration
   const debugLogger = useDebugLogger({
@@ -80,10 +82,6 @@ export default function SuperAdmin() {
 
   async function handleForceMigration() {
     addNotification('info', 'Funzione Temporaneamente Disabilitata', 'La migrazione forzata sarà implementata in una versione futura');
-  }
-
-  async function confirmMigration() {
-    addNotification('info', 'Funzione Temporaneamente Disabilitata', 'La migrazione sarà implementata in una versione futura');
   }
 
   // Solo SuperAdmin può accedere
@@ -156,14 +154,18 @@ export default function SuperAdmin() {
     const roleData = roleMatrix.get(role);
     const hasPermission = roleData?.permissions.includes(permissionName);
     
-    console.log(`🔄 SuperAdmin: Toggle permesso ${permissionName} per ruolo ${role} (attualmente: ${hasPermission ? 'abilitato' : 'disabilitato'})`);
+    debugLogger.logInfo('Toggle permesso richiesto', {
+      role,
+      permission: permissionName,
+      currentState: hasPermission,
+      newState: !hasPermission
+    });
+    
+    console.log(`🔄 SuperAdmin: Toggle permesso ${permissionName} per ${role}: ${hasPermission} → ${!hasPermission}`);
     
     try {
-      debugLogger.logInfo('Toggle permesso ruolo', { role, permission: permissionName });
-      
-      // Chiama la funzione database reale
       const success = await debugLogger.wrapOperation(
-        `updateRolePermission-${role}-${permissionName}`,
+        'updateRolePermission',
         () => updateRolePermission(role, permissionName, !hasPermission)
       );
       
@@ -221,14 +223,18 @@ export default function SuperAdmin() {
     const roleData = roleMatrix.get(role);
     const isVisible = roleData?.sections.includes(section);
     
-    console.log(`🔄 SuperAdmin: Toggle sezione ${section} per ruolo ${role} (attualmente: ${isVisible ? 'visibile' : 'nascosta'})`);
+    debugLogger.logInfo('Toggle sezione richiesto', {
+      role,
+      section,
+      currentState: isVisible,
+      newState: !isVisible
+    });
+    
+    console.log(`🔄 SuperAdmin: Toggle sezione ${section} per ${role}: ${isVisible} → ${!isVisible}`);
     
     try {
-      debugLogger.logInfo('Toggle sezione ruolo', { role, section });
-      
-      // Chiama la funzione database reale
       const success = await debugLogger.wrapOperation(
-        `updateRoleSection-${role}-${section}`,
+        'updateRoleSection',
         () => updateRoleSection(role, section, !isVisible)
       );
       
@@ -504,7 +510,7 @@ export default function SuperAdmin() {
                               </tr>
                             </thead>
                             <tbody>
-                              {permissions.filter(p => p.category === category).map(permission => (
+                              {permissions.filter((p: any) => p.category === category).map((permission: any) => (
                                 <tr key={permission.id} className="border-t border-gray-100">
                                   <td className="py-3 px-3">
                                     <div>
@@ -943,338 +949,6 @@ export default function SuperAdmin() {
                     </ul>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-          <div className="bg-white rounded-xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900">
-                  Esplora Tabella: {selectedTableName}
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  {selectedTableRecords.totalCount?.toLocaleString() || '0'} record totali • 
-                  Pagina {selectedTableRecords.page} di {Math.ceil((selectedTableRecords.totalCount || 0) / 20)}
-                  {selectedTableRecords.hiddenColumns.length > 0 && (
-                    <span className="text-orange-600 ml-2">
-                      • {selectedTableRecords.hiddenColumns.length} colonne nascoste per sicurezza
-                    </span>
-                  )}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowExploreModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="p-6 border-b border-gray-200">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    // Debounce search
-                    clearTimeout(window.searchTimeout);
-                    window.searchTimeout = setTimeout(() => {
-                      handleSearchRecords(e.target.value);
-                    }, 500);
-                  }}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Cerca nei record..."
-                />
-              </div>
-            </div>
-
-            <div className="overflow-auto max-h-[calc(90vh-200px)]">
-              {loadingRecords ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-3 text-gray-600">Caricamento record...</span>
-                </div>
-              ) : selectedTableRecords.records.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 sticky top-0">
-                      <tr>
-                        {Object.keys(selectedTableRecords.records[0]).map((column) => (
-                          <th key={column} className="text-left py-3 px-4 font-medium text-gray-700 whitespace-nowrap">
-                            {column}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedTableRecords.records.map((record: any, index: number) => (
-                        <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          {Object.entries(record).map(([column, value]: [string, any]) => (
-                            <td key={column} className="py-3 px-4 text-sm text-gray-900 whitespace-nowrap max-w-xs truncate">
-                              {value === null ? (
-                                <span className="text-gray-400 italic">null</span>
-                              ) : typeof value === 'boolean' ? (
-                                <span className={`px-2 py-1 rounded text-xs ${value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                  {value ? 'true' : 'false'}
-                                </span>
-                              ) : typeof value === 'object' ? (
-                                <span className="text-blue-600 font-mono text-xs">
-                                  {JSON.stringify(value)}
-                                </span>
-                              ) : (
-                                <span title={String(value)}>
-                                  {String(value)}
-                                </span>
-                              )}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <Database className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg">Nessun record trovato</p>
-                  <p className="text-sm">La tabella è vuota o non corrisponde ai criteri di ricerca</p>
-                </div>
-              )}
-            </div>
-
-            {/* Pagination Footer */}
-            {selectedTableRecords.records.length > 0 && (
-              <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
-                <div className="text-sm text-gray-600">
-                  Mostrando {((selectedTableRecords.page - 1) * 20) + 1} - {Math.min(selectedTableRecords.page * 20, selectedTableRecords.totalCount || 0)} di {selectedTableRecords.totalCount?.toLocaleString() || '0'} record
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage <= 1 || loadingRecords}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Precedente
-                  </button>
-                  <span className="px-3 py-2 text-sm text-gray-600">
-                    Pagina {selectedTableRecords.page} di {Math.ceil(selectedTableRecords.totalCount / 20)}
-                  </span>
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={!selectedTableRecords.hasMore || loadingRecords}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Successiva
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Schema Modal */}
-      {showSchemaModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900">
-                  Schema Tabella: {selectedTableStructure?.tableName || 'Caricamento...'}
-                </h3>
-                {selectedTableStructure && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    {selectedTableStructure.recordCount?.toLocaleString() || '0'} record • {selectedTableStructure.columns?.length || 0} colonne
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={() => setShowSchemaModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              {loadingSchema ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-3 text-gray-600">Caricamento schema...</span>
-                </div>
-              ) : selectedTableStructure ? (
-                <div className="space-y-6">
-                  {/* Sezione Colonne */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                      <Database className="h-5 w-5 mr-2 text-blue-600" />
-                      Colonne ({selectedTableStructure.columns.length})
-                    </h4>
-                    <div className="overflow-x-auto">
-                      <table className="w-full border border-gray-200 rounded-lg">
-                        <thead>
-                          <tr className="bg-gray-50">
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Nome</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Tipo</th>
-                            <th className="text-center py-3 px-4 font-medium text-gray-700">Nullable</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Default</th>
-                            <th className="text-center py-3 px-4 font-medium text-gray-700">Chiavi</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Relazioni</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedTableStructure.columns.map((column: any, index: number) => (
-                            <tr key={column.name} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                              <td className="py-3 px-4 font-medium text-gray-900">{column.name}</td>
-                              <td className="py-3 px-4 text-gray-600">
-                                {column.type}
-                                {column.maxLength && `(${column.maxLength})`}
-                              </td>
-                              <td className="py-3 px-4 text-center">
-                                {column.nullable ? (
-                                  <span className="text-yellow-600">✓</span>
-                                ) : (
-                                  <span className="text-red-600">✗</span>
-                                )}
-                              </td>
-                              <td className="py-3 px-4 text-gray-600 text-sm">
-                                {column.defaultValue || '-'}
-                              </td>
-                              <td className="py-3 px-4 text-center">
-                                <div className="flex justify-center space-x-1">
-                                  {column.isPrimaryKey && (
-                                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded font-medium">
-                                      PK
-                                    </span>
-                                  )}
-                                  {column.isForeignKey && (
-                                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded font-medium">
-                                      FK
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="py-3 px-4 text-gray-600 text-sm">
-                                {column.isForeignKey ? (
-                                  <span>
-                                    → {column.referencedTable}.{column.referencedColumn}
-                                  </span>
-                                ) : (
-                                  '-'
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Sezione Indici */}
-                  {selectedTableStructure.indexes.length > 0 && (
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <Settings className="h-5 w-5 mr-2 text-green-600" />
-                        Indici ({selectedTableStructure.indexes.length})
-                      </h4>
-                      <div className="space-y-2">
-                        {selectedTableStructure.indexes.map((index: string, i: number) => (
-                          <div key={i} className="bg-gray-50 p-3 rounded-lg">
-                            <code className="text-sm text-gray-800">{index}</code>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Sezione Relazioni */}
-                  {selectedTableStructure.columns.some((col: any) => col.isForeignKey) && (
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <ChevronRight className="h-5 w-5 mr-2 text-purple-600" />
-                        Relazioni
-                      </h4>
-                      <div className="space-y-2">
-                        {selectedTableStructure.columns
-                          .filter((col: any) => col.isForeignKey)
-                          .map((col: any, i: number) => (
-                            <div key={i} className="bg-purple-50 p-3 rounded-lg border border-purple-200">
-                              <span className="font-medium text-purple-900">
-                                {col.name}
-                              </span>
-                              <span className="text-purple-700 mx-2">→</span>
-                              <span className="text-purple-800">
-                                {col.referencedTable}.{col.referencedColumn}
-                              </span>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg">Errore caricamento schema</p>
-                  <p className="text-sm">Impossibile caricare la struttura della tabella</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Conferma Migrazione */}
-      {showMigrationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="flex-shrink-0">
-                  <AlertTriangle className="h-8 w-8 text-amber-500" />
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    Conferma Migrazione Database
-                  </h3>
-                </div>
-              </div>
-              
-              <div className="mb-6">
-                <p className="text-sm text-gray-600 mb-3">
-                  Stai per eseguire una migrazione forzata del database. Questa operazione:
-                </p>
-                <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                  <li>• Modificherà la struttura delle tabelle</li>
-                  <li>• Aggiungerà colonne mancanti</li>
-                  <li>• Popolerà i corsi di formazione</li>
-                  <li>• Potrebbe richiedere alcuni minuti</li>
-                </ul>
-                <p className="text-sm text-amber-600 mt-3 font-medium">
-                  ⚠️ Assicurati di aver fatto un backup del database
-                </p>
-              </div>
-
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowMigrationModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Annulla
-                </button>
-                <button
-                  onClick={confirmMigration}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  Conferma Migrazione
-                </button>
               </div>
             </div>
           </div>
