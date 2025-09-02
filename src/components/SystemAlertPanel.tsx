@@ -350,9 +350,46 @@ export default function SystemAlertPanel() {
         // Test permission lookup - always test with a valid role
         const testRole = profile?.role || 'user'; // Use current user role or fallback to 'user'
         try {
-          const userPerms = await getUserPermissions(profile.role);
+          const userPerms = await getUserPermissions(profile?.role || 'user');
           checks[2] = { 
             ...checks[2], 
+            status: 'success',
+            message: 'Permissions system operational',
+            details: { 
+              rolesCount: roles.length, 
+              permissionsCount: permissions.length,
+              userPermissions: userPerms?.length || 0 
+            }
+          };
+        } catch (permError) {
+          checks[2] = { 
+            ...checks[2], 
+            status: 'warning',
+            message: 'Permissions test incomplete',
+            details: { error: permError instanceof Error ? permError.message : String(permError) }
+          };
+        }
+      } else {
+        checks[2] = { 
+          ...checks[2], 
+          status: 'error',
+          message: 'No roles or permissions found',
+          details: { rolesCount: roles.length, permissionsCount: permissions.length }
+        };
+      }
+    } catch (error) {
+      checks[2] = { 
+        ...checks[2], 
+        status: 'error',
+        message: 'Permissions system check failed',
+        details: { error: error instanceof Error ? error.message : String(error) }
+      };
+    }
+    
+    setHealthChecks([...checks]);
+  };
+
+  const getAlertTitle = (type: string, message: string) => {
     if (message.includes('User')) return 'User Management Error';
     if (message.includes('Schema')) return 'Database Schema Error';
     return type === 'error' ? 'System Error' : type === 'warning' ? 'System Warning' : 'System Info';
