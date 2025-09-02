@@ -142,18 +142,6 @@ export default function ControlCenter() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const addDebugLog = (type: DebugLog['type'], operation: string, details: string) => {
-    const newLog: DebugLog = {
-      id: Date.now().toString(),
-      timestamp: new Date().toLocaleTimeString(),
-      type,
-      operation,
-      details,
-      user: profile?.full_name
-    };
-    setDebugLogs(prev => [newLog, ...prev.slice(0, 99)]); // Mantieni solo 100 log
-  };
-
   const loadSystemData = async () => {
     try {
       setIsLoading(true);
