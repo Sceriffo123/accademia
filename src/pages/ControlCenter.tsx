@@ -471,15 +471,27 @@ export default function ControlCenter() {
                   <h3 className="text-lg font-semibold text-gray-900">Tabelle Database</h3>
                 </div>
                 <div className="p-4 max-h-96 overflow-y-auto">
-                  {databaseTables.map((table) => (
+                  {databaseTables.map((table, index) => (
                     <div
-                      key={table.name}
-                      onClick={() => loadTableData(table.name)}
-                      className="flex items-center justify-between p-3 hover:bg-gray-50 cursor-pointer rounded-lg"
+                      key={table.name || index}
+                      onClick={() => {
+                        console.log(`🖱️ CLICK su tabella:`, table);
+                        console.log(`🖱️ Nome tabella: "${table.name}"`);
+                        console.log(`🖱️ Tipo table.name:`, typeof table.name);
+                        if (table.name) {
+                          loadTableData(table.name);
+                        } else {
+                          console.error('❌ table.name è undefined!', table);
+                        }
+                      }}
+                      className="flex items-center justify-between p-3 hover:bg-gray-50 cursor-pointer rounded-lg border-b border-gray-100"
                     >
                       <div>
-                        <p className="font-medium text-gray-900">{table.name}</p>
-                        <p className="text-sm text-gray-500">{table.records} record</p>
+                        <p className="font-medium text-gray-900">
+                          {table.name || `Tabella ${index + 1} - NOME MANCANTE`}
+                        </p>
+                        <p className="text-sm text-gray-500">{table.records || 0} record</p>
+                        <p className="text-xs text-gray-400">Debug: {JSON.stringify(table)}</p>
                       </div>
                       <Eye className="h-4 w-4 text-gray-400" />
                     </div>
