@@ -47,7 +47,7 @@ interface DebugLog {
 
 export default function ControlCenter() {
   const { user, profile } = useAuth();
-  const [activeTab, setActiveTab] = useState('system');
+  const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
   
   // Dati sistema
