@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getNormativesCount, getUsersCount, getUsers, getNormatives, updateUser, deleteUser, createNewUser, updateUserPassword } from '../lib/api';
-import { createNormative, updateNormative, deleteNormative, getAllDocuments, getDocumentsCount, createDocument, updateDocument, deleteDocument } from '../lib/neonDatabase';
+import { createNormative, updateNormative, deleteNormative, getAllDocuments, getDocumentsCount, createDocument, updateDocument, deleteDocument, getUserPermissions } from '../lib/neonDatabase';
 import { downloadGoogleDriveFile, isGoogleDriveUrl } from '../lib/driveDownload';
 import { generatePDF } from '../lib/pdfGenerator';
 import { 
@@ -58,6 +58,7 @@ export default function Admin() {
   const [showPasswordModal, setShowPasswordModal] = useState<any>(null);
   const [newPassword, setNewPassword] = useState('');
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
 
   // Stati per gestione normative (aggiunti correttamente)
   const [showEditNormative, setShowEditNormative] = useState(false);
@@ -105,10 +106,32 @@ export default function Admin() {
 
   useEffect(() => {
     fetchAdminData();
+    loadUserPermissions();
   }, []);
+
+  const loadUserPermissions = async () => {
+    try {
+      if (profile?.role) {
+        const permissions = await getUserPermissions(profile.role);
+        setUserPermissions(permissions);
+      }
+    } catch (error) {
+      console.error('Errore caricamento permessi utente:', error);
+    }
+  };
+
+  const hasPermission = (permission: string): boolean => {
+    return userPermissions.includes(permission);
+  };
 
   // Handler per creazione normativa
   async function handleCreateNormative() {
+    // Verifica permessi prima di procedere
+    if (!hasPermission('normatives.create')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per creare normative');
+      return;
+    }
+
     try {
       if (!normativeForm.title || !normativeForm.content || !normativeForm.reference_number) {
         addNotification('error', 'Errore Validazione', 'Titolo, contenuto e numero di riferimento sono obbligatori');
@@ -157,6 +180,12 @@ export default function Admin() {
 
   // Handler per modifica normativa
   async function handleUpdateNormative() {
+    // Verifica permessi prima di procedere
+    if (!hasPermission('normatives.edit')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per modificare normative');
+      return;
+    }
+
     console.log('🔄 handleUpdateNormative chiamato');
     console.log('📝 editingNormative:', editingNormative);
 
@@ -218,6 +247,12 @@ export default function Admin() {
 
   // Handler per eliminazione normativa
   async function handleDeleteNormative(normativeId: string, normativeTitle: string) {
+    // Verifica permessi prima di procedere
+    if (!hasPermission('normatives.delete')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per eliminare normative');
+      return;
+    }
+
     if (!confirm(`Sei sicuro di voler eliminare la normativa "${normativeTitle}"?`)) {
       return;
     }
@@ -350,6 +385,12 @@ export default function Admin() {
 
   // Handler per documenti
   async function handleCreateDocument() {
+    // Verifica permessi prima di procedere
+    if (!hasPermission('documents.create')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per creare documenti');
+      return;
+    }
+
     try {
       if (!documentForm.title || !documentForm.filename || !documentForm.type || !documentForm.category) {
         addNotification('error', 'Errore Validazione', 'Titolo, filename, tipo e categoria sono obbligatori');
@@ -395,6 +436,12 @@ export default function Admin() {
   }
 
   async function handleUpdateDocument() {
+    // Verifica permessi prima di procedere
+    if (!hasPermission('documents.edit')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per modificare documenti');
+      return;
+    }
+
     console.log('🔄 handleUpdateDocument chiamato');
 
     try {
@@ -445,6 +492,12 @@ export default function Admin() {
   }
 
   async function handleDeleteDocument(documentId: string, documentTitle: string) {
+    // Verifica permessi prima di procedere
+    if (!hasPermission('documents.delete')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per eliminare documenti');
+      return;
+    }
+    
     setDeleteConfirm({ show: true, document: { id: documentId, title: documentTitle } });
   }
 
@@ -544,6 +597,12 @@ export default function Admin() {
   }
 
   async function handleCreateUser() {
+    // Verifica permessi prima di procedere
+    if (!hasPermission('users.create')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per creare utenti');
+      return;
+    }
+
     try {
       if (!userForm.email || !userForm.full_name || !userForm.password) {
         addNotification('error', 'Errore Validazione', 'Tutti i campi sono obbligatori per creare un utente');
@@ -562,6 +621,12 @@ export default function Admin() {
   }
 
   async function handleUpdateUser() {
+    // Verifica permessi prima di procedere
+    if (!hasPermission('users.edit')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per modificare utenti');
+      return;
+    }
+
     try {
       if (!editingUser) return;
       
@@ -581,6 +646,12 @@ export default function Admin() {
   }
 
   async function handleDeleteUser(userId: string, userEmail: string) {
+    // Verifica permessi prima di procedere
+    if (!hasPermission('users.delete')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per eliminare utenti');
+      return;
+    }
+
     if (!confirm(`Sei sicuro di voler eliminare l'utente ${userEmail}?`)) {
       return;
     }
@@ -803,7 +874,12 @@ export default function Admin() {
                   </h3>
                   <button
                     onClick={() => setShowAddUser(true)}
-                    className="flex items-center space-x-2 bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors"
+                    disabled={!hasPermission('users.create')}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                      hasPermission('users.create')
+                        ? 'bg-blue-800 text-white hover:bg-blue-900'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                   >
                     <Plus className="h-5 w-5" />
                     <span>Aggiungi Utente</span>
@@ -900,8 +976,13 @@ export default function Admin() {
                               <div className="flex items-center space-x-2">
                                 <button
                                   onClick={() => setEditingUser({...user})}
-                                  className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                                  title="Modifica"
+                                  disabled={!hasPermission('users.edit')}
+                                  className={`p-1 transition-colors ${
+                                    hasPermission('users.edit')
+                                      ? 'text-gray-400 hover:text-blue-600'
+                                      : 'text-gray-300 cursor-not-allowed'
+                                  }`}
+                                  title={hasPermission('users.edit') ? 'Modifica' : 'Permesso negato'}
                                 >
                                   <Edit3 className="h-4 w-4" />
                                 </button>
@@ -914,8 +995,13 @@ export default function Admin() {
                                 </button>
                                 <button
                                   onClick={() => handleDeleteUser(user.id, user.email)}
-                                  className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                                  title="Elimina"
+                                  disabled={!hasPermission('users.delete')}
+                                  className={`p-1 transition-colors ${
+                                    hasPermission('users.delete')
+                                      ? 'text-gray-400 hover:text-red-600'
+                                      : 'text-gray-300 cursor-not-allowed'
+                                  }`}
+                                  title={hasPermission('users.delete') ? 'Elimina' : 'Permesso negato'}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </button>
@@ -938,7 +1024,12 @@ export default function Admin() {
                   </h3>
                   <button
                     onClick={() => setShowAddNormative(true)}
-                    className="flex items-center space-x-2 bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors"
+                    disabled={!hasPermission('normatives.create')}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                      hasPermission('normatives.create')
+                        ? 'bg-blue-800 text-white hover:bg-blue-900'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                   >
                     <Plus className="h-5 w-5" />
                     <span>Aggiungi Normativa</span>
@@ -984,15 +1075,25 @@ export default function Admin() {
                         </button>
                         <button 
                           onClick={() => handleEditNormative(normative)}
-                          className="p-2 text-gray-400 hover:text-green-600 transition-colors"
-                          title="Modifica"
+                          disabled={!hasPermission('normatives.edit')}
+                          className={`p-2 transition-colors ${
+                            hasPermission('normatives.edit')
+                              ? 'text-gray-400 hover:text-green-600'
+                              : 'text-gray-300 cursor-not-allowed'
+                          }`}
+                          title={hasPermission('normatives.edit') ? 'Modifica' : 'Permesso negato'}
                         >
                           <Edit3 className="h-4 w-4" />
                         </button>
                         <button 
                           onClick={() => handleDeleteNormative(normative.id, normative.title)}
-                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                          title="Elimina"
+                          disabled={!hasPermission('normatives.delete')}
+                          className={`p-2 transition-colors ${
+                            hasPermission('normatives.delete')
+                              ? 'text-gray-400 hover:text-red-600'
+                              : 'text-gray-300 cursor-not-allowed'
+                          }`}
+                          title={hasPermission('normatives.delete') ? 'Elimina' : 'Permesso negato'}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -1011,7 +1112,12 @@ export default function Admin() {
                   </h3>
                   <button
                     onClick={() => setShowAddDocument(true)}
-                    className="flex items-center space-x-2 bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors"
+                    disabled={!hasPermission('documents.create')}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                      hasPermission('documents.create')
+                        ? 'bg-blue-800 text-white hover:bg-blue-900'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                   >
                     <Plus className="h-5 w-5" />
                     <span>Aggiungi Documento</span>
@@ -1086,15 +1192,25 @@ export default function Admin() {
                         )}
                         <button
                           onClick={() => handleEditDocument(document)}
-                          className="p-2 text-gray-400 hover:text-green-600 transition-colors"
-                          title="Modifica"
+                          disabled={!hasPermission('documents.edit')}
+                          className={`p-2 transition-colors ${
+                            hasPermission('documents.edit')
+                              ? 'text-gray-400 hover:text-green-600'
+                              : 'text-gray-300 cursor-not-allowed'
+                          }`}
+                          title={hasPermission('documents.edit') ? 'Modifica' : 'Permesso negato'}
                         >
                           <Edit3 className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteDocument(document.id, document.title)}
-                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                          title="Elimina"
+                          disabled={!hasPermission('documents.delete')}
+                          className={`p-2 transition-colors ${
+                            hasPermission('documents.delete')
+                              ? 'text-gray-400 hover:text-red-600'
+                              : 'text-gray-300 cursor-not-allowed'
+                          }`}
+                          title={hasPermission('documents.delete') ? 'Elimina' : 'Permesso negato'}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
