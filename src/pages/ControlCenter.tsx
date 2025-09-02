@@ -10,7 +10,12 @@ import {
   updateRoleSection,
   getAllTables,
   getTableStructure,
-  getTableRecords
+  getTableRecords,
+  getTableConstraints,
+  getTableIndexes,
+  getTableStats,
+  getAllTableRelations,
+  getCompleteTableInfo
 } from '../lib/neonDatabase';
 import { 
   Monitor, Database, Shield, Zap, Bug, 
@@ -67,6 +72,18 @@ export default function ControlCenter() {
   const [sectionTestResults, setSectionTestResults] = useState<{type: 'success' | 'error', message: string} | null>(null);
   const [realTimeMonitoring, setRealTimeMonitoring] = useState(false);
   const [tableData, setTableData] = useState<any[]>([]);
+  
+  // Database Explorer state
+  const [selectedTableExplorer, setSelectedTableExplorer] = useState<string>('');
+  const [tableSchemaData, setTableSchemaData] = useState<any[]>([]);
+  const [tableConstraintsData, setTableConstraintsData] = useState<any[]>([]);
+  const [tableIndexesData, setTableIndexesData] = useState<any[]>([]);
+  const [tableStatsData, setTableStatsData] = useState<any[]>([]);
+  const [tableRelations, setTableRelations] = useState<any[]>([]);
+  const [completeTableInfo, setCompleteTableInfo] = useState<any[]>([]);
+  const [explorerLoading, setExplorerLoading] = useState(false);
+  const [recordsPage, setRecordsPage] = useState(1);
+  const [recordsPerPage] = useState(50);
 
   useEffect(() => {
     if (profile?.role === 'superadmin') {
@@ -130,12 +147,14 @@ export default function ControlCenter() {
       addDebugLog('info', 'SYSTEM_LOAD', 'Caricamento dati sistema iniziato');
 
       // Carica metriche sistema
-      const [roles, permissions, sections, matrix, tables] = await Promise.all([
+      const [roles, permissions, sections, matrix, tables, relations, completeInfo] = await Promise.all([
         getAllRolesFromDB(),
         getAllPermissionsFromDB(),
         getAllSectionsFromDB(),
         getRolePermissionsMatrix(),
-        getAllTables()
+        getAllTables(),
+        getAllTableRelations(),
+        getCompleteTableInfo()
       ]);
 
       setSystemMetrics({
@@ -150,6 +169,8 @@ export default function ControlCenter() {
       setRoleMatrix(matrix);
       setAllPermissions(permissions);
       setAllSections(sections);
+      setTableRelations(relations);
+      setCompleteTableInfo(completeInfo);
 
       // Carica info tabelle database
       const tableInfo: DatabaseTable[] = [];
@@ -206,6 +227,35 @@ export default function ControlCenter() {
       addDebugLog('success', 'TABLE_INSPECT', `Caricati ${data.length} record da ${tableName}`);
     } catch (error) {
       addDebugLog('error', 'TABLE_INSPECT', `Errore caricamento ${tableName}: ${error}`);
+    }
+  };
+
+  const loadCompleteTableExplorer = async (tableName: string) => {
+    try {
+      setExplorerLoading(true);
+      setSelectedTableExplorer(tableName);
+      addDebugLog('info', 'EXPLORER_LOAD', `Caricamento completo tabella: ${tableName}`);
+
+      // Carica tutti i dati della tabella in parallelo
+      const [schema, constraints, indexes, stats, records] = await Promise.all([
+        getTableStructure(tableName),
+        getTableConstraints(tableName),
+        getTableIndexes(tableName),
+        getTableStats(tableName),
+        getTableRecords(tableName, recordsPerPage * recordsPage)
+      ]);
+
+      setTableSchemaData(schema);
+      setTableConstraintsData(constraints);
+      setTableIndexesData(indexes);
+      setTableStatsData(stats);
+      setTableData(records);
+
+      addDebugLog('success', 'EXPLORER_LOAD', `Caricamento completo ${tableName}: ${schema.length} colonne, ${constraints.length} constraints, ${indexes.length} indici, ${records.length} record`);
+    } catch (error) {
+      addDebugLog('error', 'EXPLORER_LOAD', `Errore caricamento completo ${tableName}: ${error}`);
+    } finally {
+      setExplorerLoading(false);
     }
   };
 
@@ -333,6 +383,7 @@ export default function ControlCenter() {
   const tabs = [
     { id: 'overview', label: 'Panoramica', icon: Monitor },
     { id: 'database', label: 'Database', icon: Database },
+    { id: 'explorer', label: 'DB Explorer', icon: Search },
     { id: 'permissions', label: 'Permessi', icon: Shield },
     { id: 'integrity', label: 'Integrità DB', icon: Shield },
     { id: 'test', label: 'Test CRUD', icon: Zap },
@@ -489,6 +540,260 @@ export default function ControlCenter() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Database Explorer Tab */}
+          {activeTab === 'explorer' && (
+            <div className="space-y-6">
+              {/* Header Explorer */}
+              <div className="bg-white rounded-lg shadow-sm border">
+                <div className="p-4 border-b">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">🔍 Database Explorer Completo</h3>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-600">
+                        {completeTableInfo.length} tabelle • {tableRelations.length} relazioni
+                      </span>
+                      <button
+                        onClick={loadSystemData}
+                        className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Stats Overview */}
+                <div className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {completeTableInfo.slice(0,4).map((table) => (
+                    <div key={table.table_name} className="text-center p-3 bg-gray-50 rounded-lg">
+                      <h4 className="font-medium text-gray-900">{table.table_name}</h4>
+                      <p className="text-sm text-gray-600">{table.live_tuples} record</p>
+                      <p className="text-xs text-gray-500">{table.table_size}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Lista Tabelle */}
+                <div className="lg:col-span-1">
+                  <div className="bg-white rounded-lg shadow-sm border">
+                    <div className="p-4 border-b">
+                      <h3 className="text-lg font-semibold text-gray-900">📋 Tabelle Database</h3>
+                    </div>
+                    <div className="p-4 max-h-96 overflow-y-auto">
+                      {completeTableInfo.map((table) => (
+                        <div
+                          key={table.table_name}
+                          onClick={() => loadCompleteTableExplorer(table.table_name)}
+                          className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                            selectedTableExplorer === table.table_name
+                              ? 'bg-blue-100 border-blue-300'
+                              : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-gray-900">{table.table_name}</p>
+                              <p className="text-sm text-gray-500">{table.live_tuples} record</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-gray-500">{table.table_size}</p>
+                              <div className="flex space-x-1 mt-1">
+                                <span className="w-2 h-2 bg-green-400 rounded-full" title="Attiva"></span>
+                                {table.total_updates > 0 && <span className="w-2 h-2 bg-yellow-400 rounded-full" title="Modificata"></span>}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Relazioni Tabelle */}
+                  <div className="bg-white rounded-lg shadow-sm border mt-4">
+                    <div className="p-4 border-b">
+                      <h3 className="text-lg font-semibold text-gray-900">🔗 Relazioni Database</h3>
+                    </div>
+                    <div className="p-4 max-h-64 overflow-y-auto">
+                      {tableRelations.map((relation, index) => (
+                        <div key={index} className="p-2 border-l-4 border-blue-200 bg-blue-50 rounded mb-2">
+                          <p className="text-sm font-medium text-blue-900">
+                            {relation.table_name}.{relation.column_name}
+                          </p>
+                          <p className="text-xs text-blue-600">
+                            → {relation.foreign_table_name}.{relation.foreign_column_name}
+                          </p>
+                        </div>
+                      ))}
+                      {tableRelations.length === 0 && (
+                        <p className="text-gray-500 text-center py-4">Nessuna relazione configurata</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dettagli Tabella Selezionata */}
+                <div className="lg:col-span-2">
+                  {selectedTableExplorer ? (
+                    <div className="space-y-4">
+                      {explorerLoading ? (
+                        <div className="bg-white rounded-lg shadow-sm border p-8 text-center">
+                          <RefreshCw className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+                          <p className="text-gray-600">Caricamento dettagli {selectedTableExplorer}...</p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Schema Tabella */}
+                          <div className="bg-white rounded-lg shadow-sm border">
+                            <div className="p-4 border-b">
+                              <h3 className="text-lg font-semibold text-gray-900">
+                                🔧 Schema: {selectedTableExplorer}
+                              </h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead className="bg-gray-50">
+                                  <tr>
+                                    <th className="px-4 py-2 text-left">#</th>
+                                    <th className="px-4 py-2 text-left">Colonna</th>
+                                    <th className="px-4 py-2 text-left">Tipo</th>
+                                    <th className="px-4 py-2 text-left">Nullable</th>
+                                    <th className="px-4 py-2 text-left">Default</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {tableSchemaData.map((column, index) => (
+                                    <tr key={index} className="border-t">
+                                      <td className="px-4 py-2 text-gray-500">{column.ordinal_position}</td>
+                                      <td className="px-4 py-2 font-medium">{column.column_name}</td>
+                                      <td className="px-4 py-2">
+                                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                                          {column.data_type}
+                                          {column.character_maximum_length && `(${column.character_maximum_length})`}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-2">
+                                        <span className={`px-2 py-1 rounded text-xs ${
+                                          column.is_nullable === 'YES' 
+                                            ? 'bg-yellow-100 text-yellow-800' 
+                                            : 'bg-red-100 text-red-800'
+                                        }`}>
+                                          {column.is_nullable}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-2 text-gray-600 text-xs">
+                                        {column.column_default || '—'}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+
+                          {/* Constraints e Indici */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="bg-white rounded-lg shadow-sm border">
+                              <div className="p-4 border-b">
+                                <h3 className="text-lg font-semibold text-gray-900">🔒 Constraints</h3>
+                              </div>
+                              <div className="p-4 max-h-48 overflow-y-auto">
+                                {tableConstraintsData.map((constraint, index) => (
+                                  <div key={index} className="mb-2 p-2 bg-gray-50 rounded">
+                                    <p className="font-medium text-sm">{constraint.constraint_name}</p>
+                                    <p className="text-xs text-gray-600">
+                                      {constraint.constraint_type} • {constraint.column_name}
+                                      {constraint.foreign_table_name && (
+                                        <span className="text-blue-600">
+                                          → {constraint.foreign_table_name}.{constraint.foreign_column_name}
+                                        </span>
+                                      )}
+                                    </p>
+                                  </div>
+                                ))}
+                                {tableConstraintsData.length === 0 && (
+                                  <p className="text-gray-500 text-center py-4">Nessun constraint</p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="bg-white rounded-lg shadow-sm border">
+                              <div className="p-4 border-b">
+                                <h3 className="text-lg font-semibold text-gray-900">📊 Indici</h3>
+                              </div>
+                              <div className="p-4 max-h-48 overflow-y-auto">
+                                {tableIndexesData.map((index, idx) => (
+                                  <div key={idx} className="mb-2 p-2 bg-gray-50 rounded">
+                                    <p className="font-medium text-sm">{index.indexname}</p>
+                                    <p className="text-xs text-gray-600 truncate" title={index.indexdef}>
+                                      {index.indexdef}
+                                    </p>
+                                  </div>
+                                ))}
+                                {tableIndexesData.length === 0 && (
+                                  <p className="text-gray-500 text-center py-4">Nessun indice personalizzato</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Record Browser */}
+                          <div className="bg-white rounded-lg shadow-sm border">
+                            <div className="p-4 border-b">
+                              <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-semibold text-gray-900">
+                                  📄 Record ({tableData.length} mostrati)
+                                </h3>
+                                <div className="flex items-center space-x-2">
+                                  <button
+                                    onClick={() => setRecordsPage(Math.max(1, recordsPage - 1))}
+                                    disabled={recordsPage === 1}
+                                    className="px-2 py-1 bg-gray-100 text-gray-600 rounded disabled:opacity-50"
+                                  >
+                                    ←
+                                  </button>
+                                  <span className="text-sm text-gray-600">Pagina {recordsPage}</span>
+                                  <button
+                                    onClick={() => setRecordsPage(recordsPage + 1)}
+                                    disabled={tableData.length < recordsPerPage}
+                                    className="px-2 py-1 bg-gray-100 text-gray-600 rounded disabled:opacity-50"
+                                  >
+                                    →
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="p-4 max-h-96 overflow-auto">
+                              {tableData.length > 0 ? (
+                                <pre className="text-xs text-gray-700 whitespace-pre-wrap">
+                                  {JSON.stringify(tableData.slice(0, 10), null, 2)}
+                                </pre>
+                              ) : (
+                                <p className="text-gray-500 text-center py-8">
+                                  Nessun record trovato in {selectedTableExplorer}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-lg shadow-sm border p-8 text-center">
+                      <Database className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Seleziona una Tabella</h3>
+                      <p className="text-gray-600">
+                        Clicca su una tabella nella lista a sinistra per visualizzare schema, constraints, 
+                        indici e record completi.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 

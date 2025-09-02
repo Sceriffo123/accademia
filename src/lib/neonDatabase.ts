@@ -1594,20 +1594,14 @@ export async function getTableStructure(tableName: string): Promise<any[]> {
   try {
     console.log('🎓 NEON: Recupero struttura tabella:', tableName);
     
-    // Validazione nome tabella per sicurezza
-    // Rimuovo la validazione per permettere l'accesso a tutte le tabelle esistenti
-    // const allowedTables = ['users', 'normatives', 'documents', 'activity_logs', 'course_enrollments', 'course_modules', 'courses'];
-    // if (!allowedTables.includes(tableName)) {
-    //   throw new Error(`Tabella non consentita: ${tableName}`);
-    // }
-    
     const result = await sql`
       SELECT 
         column_name,
         data_type,
         is_nullable,
         column_default,
-        character_maximum_length
+        character_maximum_length,
+        ordinal_position
       FROM information_schema.columns
       WHERE table_name = ${tableName}
       AND table_schema = 'public'
@@ -1617,6 +1611,141 @@ export async function getTableStructure(tableName: string): Promise<any[]> {
     return result;
   } catch (error) {
     console.error('🚨 NEON: Errore recupero struttura tabella:', error);
+    return [];
+  }
+}
+
+export async function getTableConstraints(tableName: string): Promise<any[]> {
+  try {
+    console.log('🎓 NEON: Recupero constraints tabella:', tableName);
+    
+    const result = await sql`
+      SELECT 
+        tc.constraint_name,
+        tc.constraint_type,
+        kcu.column_name,
+        ccu.table_name AS foreign_table_name,
+        ccu.column_name AS foreign_column_name
+      FROM information_schema.table_constraints tc
+      LEFT JOIN information_schema.key_column_usage kcu
+        ON tc.constraint_name = kcu.constraint_name
+        AND tc.table_schema = kcu.table_schema
+      LEFT JOIN information_schema.constraint_column_usage ccu
+        ON ccu.constraint_name = tc.constraint_name
+        AND ccu.table_schema = tc.table_schema
+      WHERE tc.table_name = ${tableName}
+      AND tc.table_schema = 'public'
+      ORDER BY tc.constraint_type, tc.constraint_name
+    `;
+    
+    return result;
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero constraints tabella:', error);
+    return [];
+  }
+}
+
+export async function getTableIndexes(tableName: string): Promise<any[]> {
+  try {
+    console.log('🎓 NEON: Recupero indici tabella:', tableName);
+    
+    const result = await sql`
+      SELECT 
+        indexname,
+        indexdef
+      FROM pg_indexes
+      WHERE tablename = ${tableName}
+      AND schemaname = 'public'
+      ORDER BY indexname
+    `;
+    
+    return result;
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero indici tabella:', error);
+    return [];
+  }
+}
+
+export async function getTableStats(tableName: string): Promise<any> {
+  try {
+    console.log('🎓 NEON: Recupero statistiche tabella:', tableName);
+    
+    const result = await sql`
+      SELECT 
+        schemaname,
+        tablename,
+        attname as column_name,
+        n_distinct,
+        most_common_vals,
+        most_common_freqs
+      FROM pg_stats
+      WHERE tablename = ${tableName}
+      AND schemaname = 'public'
+      ORDER BY attname
+    `;
+    
+    return result;
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero statistiche tabella:', error);
+    return [];
+  }
+}
+
+export async function getAllTableRelations(): Promise<any[]> {
+  try {
+    console.log('🎓 NEON: Recupero tutte le relazioni tra tabelle');
+    
+    const result = await sql`
+      SELECT 
+        tc.table_name,
+        kcu.column_name,
+        ccu.table_name AS foreign_table_name,
+        ccu.column_name AS foreign_column_name,
+        tc.constraint_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu
+        ON tc.constraint_name = kcu.constraint_name
+        AND tc.table_schema = kcu.table_schema
+      JOIN information_schema.constraint_column_usage ccu
+        ON ccu.constraint_name = tc.constraint_name
+        AND ccu.table_schema = tc.table_schema
+      WHERE tc.constraint_type = 'FOREIGN KEY'
+      AND tc.table_schema = 'public'
+      ORDER BY tc.table_name, kcu.column_name
+    `;
+    
+    return result;
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero relazioni tabelle:', error);
+    return [];
+  }
+}
+
+export async function getCompleteTableInfo(): Promise<any[]> {
+  try {
+    console.log('🎓 NEON: Recupero informazioni complete tabelle');
+    
+    const result = await sql`
+      SELECT 
+        t.table_name,
+        t.table_type,
+        COALESCE(s.n_tup_ins, 0) as total_inserts,
+        COALESCE(s.n_tup_upd, 0) as total_updates,
+        COALESCE(s.n_tup_del, 0) as total_deletes,
+        COALESCE(s.n_live_tup, 0) as live_tuples,
+        COALESCE(s.n_dead_tup, 0) as dead_tuples,
+        COALESCE(pg_size_pretty(pg_total_relation_size(c.oid)), '0 bytes') as table_size
+      FROM information_schema.tables t
+      LEFT JOIN pg_class c ON c.relname = t.table_name
+      LEFT JOIN pg_stat_user_tables s ON s.relname = t.table_name
+      WHERE t.table_schema = 'public'
+      AND t.table_type = 'BASE TABLE'
+      ORDER BY t.table_name
+    `;
+    
+    return result;
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero info complete tabelle:', error);
     return [];
   }
 }
