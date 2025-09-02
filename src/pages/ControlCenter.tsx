@@ -36,7 +36,10 @@ import {
   Zap, 
   Clock, 
   Trash2,
-  AlertTriangle 
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Info
 } from 'lucide-react';
 
 interface SystemMetrics {
