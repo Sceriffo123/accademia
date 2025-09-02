@@ -66,6 +66,7 @@ export default function ControlCenter() {
   const [sectionTestLoading, setSectionTestLoading] = useState(false);
   const [sectionTestResults, setSectionTestResults] = useState<{type: 'success' | 'error', message: string} | null>(null);
   const [realTimeMonitoring, setRealTimeMonitoring] = useState(false);
+  const [tableData, setTableData] = useState<any[]>([]);
 
   useEffect(() => {
     if (profile?.role === 'superadmin') {
