@@ -1222,52 +1222,9 @@ async function getRoleSectionsFromDB(role: string): Promise<string[]> {
       return sections;
     }
 
-    // Fallback: configurazione hardcoded se database vuoto
-    console.log('⚠️ NEON: Database vuoto, uso configurazione hardcoded per', role);
-    const sectionsConfig: Record<string, string[]> = {
-      'superadmin': [
-        'dashboard',
-        'users',
-        'normatives',
-        'documents',
-        'education',
-        'courses',
-        'modules',
-        'quizzes',
-        'reports',
-        'settings'
-      ],
-      'admin': [
-        'dashboard',
-        'users',
-        'normatives',
-        'documents',
-        'education',
-        'courses',
-        'modules',
-        'quizzes',
-        'reports'
-      ],
-      'operator': [
-        'dashboard',
-        'normatives',
-        'education',
-        'courses'
-      ],
-      'user': [
-        'dashboard',
-        'normatives',
-        'documents',
-        'education'
-      ],
-      'guest': [
-        'dashboard'
-      ]
-    };
-
-    const sections = sectionsConfig[role] || ['dashboard'];
-    console.log('🎓 NEON: Sezioni hardcoded per', role + ':', sections);
-    return sections;
+    // Database vuoto - restituisci solo dashboard come fallback minimo
+    console.log('⚠️ NEON: Nessuna sezione trovata nel database per ruolo:', role);
+    return ['dashboard'];
 
   } catch (error) {
     console.error('🚨 NEON: Errore recupero sezioni per ruolo:', error);

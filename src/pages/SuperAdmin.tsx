@@ -591,7 +591,7 @@ export default function SuperAdmin() {
                                   </td>
                                   {Array.from(roleMatrix.keys()).map(role => {
                                     const roleData = roleMatrix.get(role);
-                                    const hasPermission = roleData?.permissions.includes(permission.id);
+                                    const hasPermission = roleData?.permissions.includes(permission.name);
                                     const isDisabled = role === 'superadmin'; // SuperAdmin ha sempre tutti i permessi
                                     
                                     return (
