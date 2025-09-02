@@ -821,11 +821,67 @@ export async function seedPermissionsData(): Promise<void> {
 
     console.log('🎓 NEON: Dati base sistema permessi inseriti');
     
+    // Inizializza i permessi per i ruoli
+    await initializeRolePermissions();
+    
     // Inizializza le sezioni per i ruoli
     await initializeRoleSections();
   } catch (error) {
     console.error('🚨 NEON: Errore inserimento dati base:', error);
     throw error;
+  }
+}
+
+// Inizializza i permessi per tutti i ruoli
+async function initializeRolePermissions(): Promise<void> {
+  try {
+    console.log('🎓 NEON: Inizializzazione permessi ruoli...');
+    
+    // Configurazione permessi per ruolo
+    const rolePermissionsConfig = {
+      'superadmin': [
+        'normatives.view', 'normatives.create', 'normatives.edit', 'normatives.delete', 'normatives.publish',
+        'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.upload',
+        'users.view', 'users.create', 'users.edit', 'users.delete', 'users.manage_roles',
+        'education.view', 'education.create', 'education.edit', 'education.delete', 'education.enroll',
+        'system.settings', 'system.permissions', 'system.logs', 'system.backup'
+      ],
+      'admin': [
+        'normatives.view', 'normatives.create', 'normatives.edit', 'normatives.publish',
+        'documents.view', 'documents.create', 'documents.edit', 'documents.upload',
+        'users.view', 'users.create', 'users.edit', 'users.manage_roles',
+        'education.view', 'education.create', 'education.edit', 'education.enroll',
+        'system.logs'
+      ],
+      'operator': [
+        'normatives.view', 'normatives.create', 'normatives.edit',
+        'documents.view', 'documents.create', 'documents.edit',
+        'education.view', 'education.create', 'education.edit', 'education.enroll'
+      ],
+      'user': [
+        'normatives.view',
+        'documents.view',
+        'education.view', 'education.enroll'
+      ]
+    };
+    
+    // Per ogni ruolo, inserisci i permessi
+    for (const [roleName, permissions] of Object.entries(rolePermissionsConfig)) {
+      for (const permissionName of permissions) {
+        await sql`
+          INSERT INTO role_permissions (role_id, permission_id, granted)
+          SELECT r.id, p.id, true
+          FROM roles r, permissions p
+          WHERE r.name = ${roleName} AND p.name = ${permissionName}
+          ON CONFLICT (role_id, permission_id) DO NOTHING
+        `;
+      }
+      console.log(`✅ NEON: Permessi inizializzati per ruolo ${roleName}: ${permissions.length} permessi`);
+    }
+    
+    console.log('🎓 NEON: Inizializzazione permessi ruoli completata');
+  } catch (error) {
+    console.error('🚨 NEON: Errore inizializzazione permessi ruoli:', error);
   }
 }
 
