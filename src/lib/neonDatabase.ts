@@ -1750,6 +1750,145 @@ export async function getCompleteTableInfo(): Promise<any[]> {
   }
 }
 
+export async function generateDatabaseDocumentation(): Promise<string> {
+  try {
+    console.log('🎓 NEON: Generazione documentazione database completa');
+    
+    const [tables, relations] = await Promise.all([
+      getAllTables(),
+      getAllTableRelations()
+    ]);
+    
+    let documentation = `# 📚 DOCUMENTAZIONE DATABASE ACCADEMIA\n`;
+    documentation += `Generata il: ${new Date().toLocaleString('it-IT')}\n`;
+    documentation += `Database: PostgreSQL/Neon\n\n`;
+    
+    // Overview generale
+    documentation += `## 🔍 OVERVIEW\n`;
+    documentation += `- **Tabelle totali:** ${tables.length}\n`;
+    documentation += `- **Relazioni totali:** ${relations.length}\n\n`;
+    
+    // Mappa relazioni
+    documentation += `## 🔗 MAPPA RELAZIONI\n`;
+    for (const relation of relations) {
+      documentation += `- \`${relation.table_name}.${relation.column_name}\` → \`${relation.foreign_table_name}.${relation.foreign_column_name}\`\n`;
+    }
+    documentation += `\n`;
+    
+    // Dettagli per ogni tabella
+    documentation += `## 📋 TABELLE DETTAGLIATE\n\n`;
+    
+    for (const tableName of tables) {
+      try {
+        const [schema, constraints, indexes, tableInfo] = await Promise.all([
+          getTableStructure(tableName),
+          getTableConstraints(tableName),
+          getTableIndexes(tableName),
+          getCompleteTableInfo()
+        ]);
+        
+        const currentTableInfo = tableInfo.find(t => t.table_name === tableName);
+        
+        documentation += `### 📄 ${tableName.toUpperCase()}\n`;
+        if (currentTableInfo) {
+          documentation += `- **Record:** ${currentTableInfo.live_tuples}\n`;
+          documentation += `- **Dimensione:** ${currentTableInfo.table_size}\n`;
+          documentation += `- **Operazioni:** ${currentTableInfo.total_inserts} insert, ${currentTableInfo.total_updates} update, ${currentTableInfo.total_deletes} delete\n`;
+        }
+        documentation += `\n`;
+        
+        // Schema colonne
+        documentation += `#### 🔧 SCHEMA COLONNE\n`;
+        documentation += `| # | Nome | Tipo | Nullable | Default |\n`;
+        documentation += `|---|------|------|----------|--------|\n`;
+        for (const column of schema) {
+          const type = column.data_type + (column.character_maximum_length ? `(${column.character_maximum_length})` : '');
+          const defaultValue = column.column_default || '—';
+          documentation += `| ${column.ordinal_position} | \`${column.column_name}\` | ${type} | ${column.is_nullable} | ${defaultValue} |\n`;
+        }
+        documentation += `\n`;
+        
+        // Constraints
+        if (constraints.length > 0) {
+          documentation += `#### 🔒 CONSTRAINTS\n`;
+          for (const constraint of constraints) {
+            documentation += `- **${constraint.constraint_name}** (${constraint.constraint_type}): \`${constraint.column_name}\``;
+            if (constraint.foreign_table_name) {
+              documentation += ` → \`${constraint.foreign_table_name}.${constraint.foreign_column_name}\``;
+            }
+            documentation += `\n`;
+          }
+          documentation += `\n`;
+        }
+        
+        // Indici
+        if (indexes.length > 0) {
+          documentation += `#### 📊 INDICI\n`;
+          for (const index of indexes) {
+            documentation += `- **${index.indexname}**: \`${index.indexdef}\`\n`;
+          }
+          documentation += `\n`;
+        }
+        
+        documentation += `---\n\n`;
+        
+      } catch (error) {
+        documentation += `❌ Errore caricamento ${tableName}: ${error}\n\n`;
+      }
+    }
+    
+    // Permessi e ruoli
+    try {
+      const [roles, permissions] = await Promise.all([
+        getAllRolesFromDB(),
+        getAllPermissionsFromDB()
+      ]);
+      
+      documentation += `## 👥 SISTEMA PERMESSI\n\n`;
+      documentation += `### 🎭 RUOLI (${roles.length})\n`;
+      for (const role of roles) {
+        documentation += `- **${role.name}** (livello ${role.level}): ${role.description}\n`;
+      }
+      documentation += `\n`;
+      
+      documentation += `### 🔐 PERMESSI (${permissions.length})\n`;
+      for (const permission of permissions) {
+        documentation += `- **${permission.name}**: ${permission.description}\n`;
+      }
+      documentation += `\n`;
+      
+    } catch (error) {
+      documentation += `❌ Errore caricamento permessi: ${error}\n\n`;
+    }
+    
+    documentation += `---\n`;
+    documentation += `*Documentazione generata automaticamente dal Database Explorer*\n`;
+    
+    return documentation;
+    
+  } catch (error) {
+    console.error('🚨 NEON: Errore generazione documentazione:', error);
+    return `❌ Errore generazione documentazione: ${error}`;
+  }
+}
+
+export function downloadDatabaseDocumentation(content: string): void {
+  try {
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `database-documentation-${new Date().toISOString().split('T')[0]}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    console.log('📄 NEON: Documentazione database scaricata');
+  } catch (error) {
+    console.error('🚨 NEON: Errore download documentazione:', error);
+  }
+}
+
 export async function createMainTables(): Promise<void> {
   try {
     console.log('🎓 NEON: Creazione tabelle principali...');

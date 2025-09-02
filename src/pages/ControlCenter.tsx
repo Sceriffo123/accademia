@@ -15,14 +15,16 @@ import {
   getTableIndexes,
   getTableStats,
   getAllTableRelations,
-  getCompleteTableInfo
+  getCompleteTableInfo,
+  generateDatabaseDocumentation,
+  downloadDatabaseDocumentation
 } from '../lib/neonDatabase';
 import { 
   Monitor, Database, Shield, Zap, Bug, 
   Users, FileText, Settings, 
   AlertTriangle, CheckCircle, XCircle, 
-  Info, RefreshCw, Search, Eye, 
-  Clock, Server, Cpu
+  RefreshCw, Search, Eye, 
+  Clock, Download
 } from 'lucide-react';
 
 interface SystemMetrics {
@@ -256,6 +258,17 @@ export default function ControlCenter() {
       addDebugLog('error', 'EXPLORER_LOAD', `Errore caricamento completo ${tableName}: ${error}`);
     } finally {
       setExplorerLoading(false);
+    }
+  };
+
+  const exportDatabaseDocumentation = async () => {
+    try {
+      addDebugLog('info', 'EXPORT_DOC', 'Generazione documentazione database...');
+      const documentation = await generateDatabaseDocumentation();
+      downloadDatabaseDocumentation(documentation);
+      addDebugLog('success', 'EXPORT_DOC', 'Documentazione database esportata e scaricata');
+    } catch (error) {
+      addDebugLog('error', 'EXPORT_DOC', `Errore export documentazione: ${error}`);
     }
   };
 
@@ -551,10 +564,17 @@ export default function ControlCenter() {
                 <div className="p-4 border-b">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-gray-900">🔍 Database Explorer Completo</h3>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-4">
                       <span className="text-sm text-gray-600">
                         {completeTableInfo.length} tabelle • {tableRelations.length} relazioni
                       </span>
+                      <button
+                        onClick={exportDatabaseDocumentation}
+                        className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                      >
+                        <Download className="mr-2" size={16} />
+                        Export Documentazione
+                      </button>
                       <button
                         onClick={loadSystemData}
                         className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
