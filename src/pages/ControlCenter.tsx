@@ -25,11 +25,21 @@ import {
   clearActivityLogs
 } from '../lib/neonDatabase';
 import { 
-  Monitor, Database, Shield, Zap, Bug, 
-  Users, FileText, Settings, 
-  AlertTriangle, CheckCircle, XCircle, 
-  RefreshCw, Search, Eye, 
-  Clock, Download, Trash2, Activity
+  RefreshCw, 
+  Shield, 
+  Users, 
+  Settings, 
+  Database, 
+  Download, 
+  FileText, 
+  Activity, 
+  Search, 
+  Monitor, 
+  Bug, 
+  Zap, 
+  Clock, 
+  Trash2,
+  AlertTriangle 
 } from 'lucide-react';
 
 interface SystemMetrics {
@@ -96,6 +106,9 @@ export default function ControlCenter() {
   const [activityLogsStructure, setActivityLogsStructure] = useState<any[]>([]);
   const [activityLogsSample, setActivityLogsSample] = useState<any[]>([]);
   const [activityLogsLoading, setActivityLogsLoading] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [clearConfirmed, setClearConfirmed] = useState(false);
+  const [recordsToDelete, setRecordsToDelete] = useState(0);
 
   useEffect(() => {
     if (profile?.role === 'superadmin') {
@@ -328,18 +341,27 @@ export default function ControlCenter() {
       
       if (recordCount === 0) {
         addDebugLog('info', 'ACTIVITY_LOGS', 'La tabella activity_logs è già vuota');
+        setActivityLogsLoading(false);
         return;
       }
       
-      // Conferma con il numero esatto di record
-      const confirmMessage = `⚠️ ATTENZIONE: Stai per cancellare ${recordCount.toLocaleString()} record dalla tabella activity_logs.\n\nQuesta operazione è IRREVERSIBILE.\n\nConfermi la cancellazione di tutti i ${recordCount.toLocaleString()} record?`;
+      // Mostra la modale di conferma
+      setRecordsToDelete(recordCount);
+      setShowClearModal(true);
+      setActivityLogsLoading(false);
+    } catch (error) {
+      addDebugLog('error', 'ACTIVITY_LOGS', `Errore conteggio record: ${error}`);
+      setActivityLogsLoading(false);
+    }
+  };
+
+  const confirmClearActivityLogs = async () => {
+    try {
+      setActivityLogsLoading(true);
+      setShowClearModal(false);
+      setClearConfirmed(false);
       
-      if (!confirm(confirmMessage)) {
-        addDebugLog('info', 'ACTIVITY_LOGS', 'Cancellazione annullata dall\'utente');
-        return;
-      }
-      
-      addDebugLog('warning', 'ACTIVITY_LOGS', `Avvio svuotamento di ${recordCount.toLocaleString()} record...`);
+      addDebugLog('warning', 'ACTIVITY_LOGS', `Avvio svuotamento di ${recordsToDelete.toLocaleString()} record...`);
       
       const result = await clearActivityLogs();
       
@@ -355,6 +377,12 @@ export default function ControlCenter() {
     } finally {
       setActivityLogsLoading(false);
     }
+  };
+
+  const cancelClearActivityLogs = () => {
+    setShowClearModal(false);
+    setClearConfirmed(false);
+    addDebugLog('info', 'ACTIVITY_LOGS', 'Cancellazione annullata dall\'utente');
   };
 
   const runIntegrityCheck = async () => {
@@ -1436,5 +1464,79 @@ export default function ControlCenter() {
         </div>
       </div>
     </div>
+
+    {/* Modale Conferma Cancellazione Activity Logs */}
+    {showClearModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="p-6">
+            <div className="flex items-center mb-4">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Conferma Cancellazione
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Questa operazione è irreversibile
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-gray-700 mb-4">
+                Stai per cancellare <strong className="text-red-600">{recordsToDelete.toLocaleString()}</strong> record 
+                dalla tabella <code className="bg-gray-100 px-2 py-1 rounded">activity_logs</code>.
+              </p>
+              <p className="text-sm text-gray-600 mb-4">
+                Questa operazione <strong>non può essere annullata</strong>. Tutti i log delle attività verranno eliminati permanentemente.
+              </p>
+
+              <div className="flex items-center space-x-2 p-3 bg-red-50 rounded-lg border border-red-200">
+                <input
+                  type="checkbox"
+                  id="confirmClear"
+                  checked={clearConfirmed}
+                  onChange={(e) => setClearConfirmed(e.target.checked)}
+                  className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2"
+                />
+                <label htmlFor="confirmClear" className="text-sm font-medium text-red-800">
+                  Confermo di voler cancellare tutti i {recordsToDelete.toLocaleString()} record
+                </label>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3">
+              <button
+                onClick={cancelClearActivityLogs}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={confirmClearActivityLogs}
+                disabled={!clearConfirmed || activityLogsLoading}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              >
+                {activityLogsLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Cancellazione...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Conferma Cancellazione
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
   );
 }
