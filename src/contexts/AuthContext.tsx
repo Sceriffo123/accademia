@@ -129,6 +129,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       localStorage.setItem('auth_token', token);
+      localStorage.setItem('user_data', JSON.stringify({
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role
+      }));
       console.log('🎓 ACCADEMIA: Accesso autorizzato per:', user.full_name, `(${user.role})`);
       
       // Registra login in activity_logs
@@ -221,6 +227,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     setUser(null);
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_data');
   }
 
   const value = {

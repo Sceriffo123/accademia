@@ -8,29 +8,29 @@ export function useRouteLogger() {
   const { user } = useAuth();
 
   useEffect(() => {
-    // Registra navigazione solo per utenti autenticati
-    if (user && location.pathname) {
-      const logNavigation = async () => {
-        try {
-          await writeActivityLog(
-            user.id,
-            'page_navigation',
-            'route',
-            undefined,
-            {
-              from_path: document.referrer ? new URL(document.referrer).pathname : null,
-              to_path: location.pathname,
-              search: location.search,
-              timestamp: new Date().toISOString(),
-              user_agent: navigator.userAgent
-            }
-          );
-        } catch (error) {
-          console.error('🚨 ROUTE LOGGER: Errore registrazione navigazione:', error);
-        }
-      };
+    // Skip se utente non autenticato
+    if (!user || !location.pathname) return;
 
-      logNavigation();
-    }
+    const logNavigation = async () => {
+      try {
+        await writeActivityLog(
+          user.id,
+          'page_navigation',
+          'route',
+          undefined,
+          {
+            from_path: document.referrer ? new URL(document.referrer).pathname : null,
+            to_path: location.pathname,
+            search: location.search,
+            timestamp: new Date().toISOString(),
+            user_agent: navigator.userAgent
+          }
+        );
+      } catch (error) {
+        console.error('🚨 ROUTE LOGGER: Errore registrazione navigazione:', error);
+      }
+    };
+
+    logNavigation();
   }, [location.pathname, location.search, user]);
 }
