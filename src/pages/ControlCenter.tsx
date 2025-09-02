@@ -17,7 +17,9 @@ import {
   Search,
   Server, 
   Cpu,
-  RefreshCw
+  RefreshCw,
+  Monitor,
+  Clock
 } from 'lucide-react';
 import { 
   getAllTables, 
