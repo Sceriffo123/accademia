@@ -31,6 +31,28 @@ export async function writeAuditLog(operation: string, status: 'SUCCESS' | 'ERRO
     }
     
     localStorage.setItem('auditLogs', JSON.stringify(logs));
+
+    // AGGIUNTA: Salva anche nel database Neon activity_logs
+    try {
+      const { sql } = await import('./neonDatabase');
+      await sql`
+        INSERT INTO activity_logs (user_id, action, resource_type, resource_id, details)
+        VALUES (
+          ${user || null},
+          ${operation},
+          'audit_log',
+          ${null},
+          ${JSON.stringify({
+            status,
+            data,
+            timestamp
+          })}
+        )
+      `;
+      console.log('📝 AUDIT: Log salvato anche nel database Neon');
+    } catch (dbError) {
+      console.warn('⚠️ AUDIT: Errore salvataggio database (continuando solo localStorage):', dbError);
+    }
     
     // Log in console with structured format
     const statusEmoji = {
