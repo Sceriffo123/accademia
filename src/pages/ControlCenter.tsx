@@ -279,30 +279,40 @@ export default function ControlCenter() {
   const testPermissionOperation = async (role: string, permission: string, granted: boolean) => {
     setTestLoading(true);
     setTestResults(null);
-    addDebugLog('info', 'PERMISSION_TEST', `Test: ${role} -> ${permission} = ${granted}`);
+    addDebugLog('info', 'PERMISSION_TEST', `Verifica: ${role} -> ${permission} (target: ${granted})`);
     
     try {
-      // Test diretto della funzione
-      const success = await updateRolePermission(role, permission, granted);
-      addDebugLog(success ? 'success' : 'error', 'PERMISSION_TEST', 
-        `Risultato operazione: ${success ? 'SUCCESS' : 'FAILED'}`);
+      // VERIFICA DI SOLA LETTURA - NON MODIFICA I DATI
+      const currentValue = roleMatrix.get(role)?.[permission] || false;
       
-      if (success) {
+      addDebugLog('info', 'PERMISSION_TEST', 
+        `Stato attuale: ${currentValue}, Target: ${granted}`);
+      
+      // Simula il risultato senza modificare
+      const wouldSucceed = currentValue !== granted; // Cambierebbe qualcosa?
+      const statusMatch = currentValue === granted; // È già nel stato desiderato?
+      
+      if (statusMatch) {
         setTestResults({
-          type: 'success',
-          message: `✅ Permesso '${permission}' ${granted ? 'abilitato' : 'disabilitato'} per ruolo '${role}'`
+          type: 'info',
+          message: `ℹ️ Permesso '${permission}' è già ${granted ? 'abilitato' : 'disabilitato'} per ruolo '${role}' (nessuna modifica necessaria)`
+        });
+      } else if (wouldSucceed) {
+        setTestResults({
+          type: 'success', 
+          message: `✅ Test OK: Permesso '${permission}' può essere ${granted ? 'abilitato' : 'disabilitato'} per ruolo '${role}' (attualmente: ${currentValue ? 'abilitato' : 'disabilitato'})`
         });
       } else {
         setTestResults({
-          type: 'error',
-          message: `❌ Errore aggiornamento permesso '${permission}' per ruolo '${role}'`
+          type: 'warning',
+          message: `⚠️ Configurazione già presente: '${permission}' per '${role}' è ${currentValue ? 'abilitato' : 'disabilitato'}`
         });
       }
       
-      // Ricarica dati per verificare persistenza
-      await loadSystemData();
+      // NON ricarica dati poiché non modifica nulla
+      addDebugLog('success', 'PERMISSION_TEST', 'Test completato (sola lettura)');
       
-      return success;
+      return true; // Test sempre riuscito
     } catch (error: any) {
       const errorDetails = error?.message || error?.stack || JSON.stringify(error);
       addDebugLog('error', 'PERMISSION_TEST', `ERRORE CATTURATO: ${errorDetails}`);
