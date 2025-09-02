@@ -19,7 +19,9 @@ import {
   Cpu,
   RefreshCw,
   Monitor,
-  Clock
+  Clock,
+  Zap,
+  Bug
 } from 'lucide-react';
 import { 
   getAllTables, 
