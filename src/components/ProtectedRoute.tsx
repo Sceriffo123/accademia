@@ -1,7 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useRouteLogger } from '../hooks/useRouteLogger';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -17,10 +16,21 @@ export default function ProtectedRoute({
   operatorOnly = false 
 }: ProtectedRouteProps) {
   const location = useLocation();
-  const { user, profile, loading } = useAuth();
-  
-  // Attiva logging navigazione per routes protette
-  useRouteLogger();
+
+  // Gestisci il caso in cui AuthProvider non è ancora disponibile
+  let authData;
+  try {
+    authData = useAuth();
+  } catch (error) {
+    // AuthProvider non è ancora disponibile, mostra caricamento
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-800"></div>
+      </div>
+    );
+  }
+
+  const { user, profile, loading } = authData;
 
   if (loading) {
     return (

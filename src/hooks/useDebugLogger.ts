@@ -1,7 +1,5 @@
 import { useCallback } from 'react';
 import { writeAuditLog, createSystemAlert } from '../lib/auditLogger';
-import { writeActivityLog } from '../lib/neonDatabase';
-import { useAuth } from '../contexts/AuthContext';
 
 export type LogLevel = 'info' | 'warning' | 'error' | 'success';
 
@@ -13,7 +11,6 @@ export interface DebugContext {
 }
 
 export function useDebugLogger(context: DebugContext) {
-  const { user } = useAuth();
   
   const logDebug = useCallback(async (
     level: LogLevel,
@@ -46,27 +43,12 @@ export function useDebugLogger(context: DebugContext) {
     
     console.log(`${emoji[level]} [${context.page}] ${context.operation}: ${message}`, details);
 
-    // Scrivi audit log (localStorage)
+    // Scrivi audit log
     await writeAuditLog(
       `${context.page.toUpperCase()}_${context.operation.toUpperCase()}`,
       level === 'error' ? 'ERROR' : level === 'warning' ? 'WARNING' : 'SUCCESS',
       logData
     );
-
-    // Scrivi nel database activity_logs se l'utente è autenticato
-    if (user?.id) {
-      try {
-        await writeActivityLog(
-          user.id,
-          `${context.operation}_${level}`,
-          context.page,
-          undefined,
-          logData
-        );
-      } catch (dbError) {
-        console.error('🚨 Failed to write database activity log:', dbError);
-      }
-    }
 
     // Crea alert per errori critici
     if (level === 'error') {
@@ -78,7 +60,7 @@ export function useDebugLogger(context: DebugContext) {
       });
     }
 
-  }, [context, user]);
+  }, [context]);
 
   const logError = useCallback((message: string, error: Error, details?: any) => {
     logDebug('error', message, details, error);
