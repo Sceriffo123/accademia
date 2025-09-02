@@ -999,6 +999,8 @@ export async function updateRolePermissionInDB(roleName: string, permissionName:
       return false;
     }
     
+    console.log('🔧 NEON: Eseguendo query UPDATE permesso:', { roleName, permissionName, granted });
+    
     const result = await sql`
       INSERT INTO role_permissions (role_id, permission_id, granted)
       SELECT CAST(r.id AS UUID), CAST(p.id AS UUID), ${granted}
@@ -1008,6 +1010,8 @@ export async function updateRolePermissionInDB(roleName: string, permissionName:
       DO UPDATE SET granted = ${granted}
     `;
     
+    console.log('🔧 NEON: Risultato query INSERT/UPDATE:', result);
+    
     // Verifica che la modifica sia stata effettivamente applicata
     const verification = await sql`
       SELECT rp.granted, r.name as role_name, p.name as permission_name
@@ -1016,6 +1020,8 @@ export async function updateRolePermissionInDB(roleName: string, permissionName:
       JOIN permissions p ON p.id = rp.permission_id
       WHERE r.name = ${roleName} AND p.name = ${permissionName}
     `;
+    
+    console.log('🔧 NEON: Risultato verifica DB:', verification);
     
     if (verification.length > 0 && verification[0].granted === granted) {
       console.log('✅ NEON: Verifica DB confermata - Permesso aggiornato correttamente');
