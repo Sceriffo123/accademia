@@ -242,6 +242,12 @@ export default function SystemAlertPanel() {
   const runSystemHealthCheck = async () => {
     if (isRunningHealthCheck) return;
     
+    // Verifica che il database sia inizializzato prima di fare health check
+    if (!databaseStatus.initialized) {
+      console.log('⏳ SYSTEM: Database non ancora inizializzato, skip health check');
+      return;
+    }
+    
     setIsRunningHealthCheck(true);
     const timestamp = new Date().toLocaleTimeString();
     
