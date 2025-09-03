@@ -64,11 +64,11 @@ export default function Navigation() {
   if (!user) {
     return (
       <nav className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center space-x-2">
               <GraduationCap className="h-8 w-8 text-blue-800" />
-              <span className="text-xl font-bold text-gray-900">Accademia TPL</span>
+              <span className="text-lg sm:text-xl font-bold text-gray-900">Accademia TPL</span>
             </Link>
             <div className="flex items-center space-x-4">
               <Link
@@ -115,12 +115,12 @@ export default function Navigation() {
 
   return (
     <nav className="bg-white shadow-sm border-b">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/dashboard" className="flex items-center space-x-2">
             <GraduationCap className="h-8 w-8 text-blue-800" />
-            <span className="text-xl font-bold text-gray-900">Accademia TPL</span>
+            <span className="text-lg sm:text-xl font-bold text-gray-900">Accademia TPL</span>
           </Link>
           
           {/* Desktop Menu */}
@@ -163,7 +163,7 @@ export default function Navigation() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="md:hidden p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
           >
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -181,7 +181,7 @@ export default function Navigation() {
                     key={item.to}
                     to={item.to}
                     onClick={() => setIsMenuOpen(false)}
-                    className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${
+                    className={`flex items-center space-x-3 px-3 py-3 min-h-[44px] rounded-lg transition-colors ${
                       isActive
                         ? 'bg-blue-100 text-blue-800'
                         : 'text-gray-600 hover:text-blue-800 hover:bg-gray-100'
@@ -200,7 +200,7 @@ export default function Navigation() {
                 </div>
                 <button
                   onClick={handleSignOut}
-                  className="flex items-center space-x-3 px-3 py-3 rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors w-full"
+                  className="flex items-center space-x-3 px-3 py-3 min-h-[44px] rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors w-full"
                 >
                   <LogOut className="h-5 w-5" />
                   <span className="font-medium">Esci</span>
