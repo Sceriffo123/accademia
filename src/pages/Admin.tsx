@@ -848,31 +848,31 @@ export default function Admin() {
 
           {/* Desktop Tab Navigation */}
           <div className="hidden md:block">
-            <div className="border-b border-gray-200">
-              <nav className="flex space-x-8 px-6">
-                {[
-                  { id: 'overview', label: 'Panoramica', icon: Settings },
-                  { id: 'users', label: 'Utenti', icon: Users },
-                  { id: 'normatives', label: 'Normative', icon: FileText },
-                  { id: 'documents', label: 'Documenti', icon: FolderOpen }
-                ].map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                        activeTab === tab.id
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700'
-                      }`}
-                    >
-                      <Icon className="h-5 w-5" />
-                      <span>{tab.label}</span>
-                    </button>
-                  );
-                })}
-              </nav>
+          <div className="border-b border-gray-200">
+            <nav className="flex space-x-8 px-6">
+              {[
+                { id: 'overview', label: 'Panoramica', icon: Settings },
+                { id: 'users', label: 'Utenti', icon: Users },
+                { id: 'normatives', label: 'Normative', icon: FileText },
+                { id: 'documents', label: 'Documenti', icon: FolderOpen }
+              ].map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      activeTab === tab.id
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
             </div>
           </div>
 
@@ -921,50 +921,49 @@ export default function Admin() {
                   </button>
                 </div>
                 
-                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">Nome</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">Email</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">Ruolo</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">Registrato</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">Azioni</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
                       {users.map((user) => (
-                        <tr key={user.id} className="border-b border-gray-100">
-                          <td className="py-3 px-4">
+                    <div
+                      key={user.id}
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3 sm:gap-0"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 mb-1 text-sm sm:text-base line-clamp-2">
                             {editingUser?.id === user.id ? (
                               <input
                                 type="text"
                                 value={editingUser.full_name}
                                 onChange={(e) => setEditingUser({...editingUser, full_name: e.target.value})}
-                                className="w-full px-2 py-1 border border-gray-300 rounded"
+                              className="w-full px-3 py-2 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                               />
                             ) : (
                               user.full_name
                             )}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">
+                        </h4>
+                        <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2">
                             {editingUser?.id === user.id ? (
                               <input
                                 type="email"
                                 value={editingUser.email}
                                 onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              className="w-full px-3 py-2 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                               />
                             ) : (
                               user.email
                             )}
-                          </td>
-                          <td className="py-3 px-4">
+                        </p>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium w-fit ${
+                            user.role === 'superadmin' ? 'bg-purple-100 text-purple-800' :
+                            user.role === 'admin' ? 'bg-red-100 text-red-800' : 
+                            user.role === 'operator' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-blue-100 text-blue-800'
+                          }`}>
                             {editingUser?.id === user.id ? (
                               <select
                                 value={editingUser.role}
                                 onChange={(e) => setEditingUser({...editingUser, role: e.target.value as 'user' | 'admin' | 'superadmin' | 'operator'})}
-                                className="px-2 py-1 border border-gray-300 rounded text-xs"
+                                className="px-2 py-1 border border-gray-300 rounded text-xs min-h-[44px]"
                               >
                                 <option value="user">Utente</option>
                                 <option value="operator">Operatore</option>
@@ -974,45 +973,41 @@ export default function Admin() {
                                 )}
                               </select>
                             ) : (
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                user.role === 'superadmin' ? 'bg-purple-100 text-purple-800' :
-                                user.role === 'admin' ? 'bg-red-100 text-red-800' : 
-                                user.role === 'operator' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-blue-100 text-blue-800'
-                              }`}>
-                                {user.role === 'superadmin' ? 'SuperAdmin' :
+                              user.role === 'superadmin' ? 'SuperAdmin' :
                                  user.role === 'admin' ? 'Admin' : 
-                                 user.role === 'operator' ? 'Operatore' : 'Utente'}
-                              </span>
+                               user.role === 'operator' ? 'Operatore' : 'Utente'
                             )}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">
+                          </span>
+                          <span className="whitespace-nowrap">
                             {new Date(user.created_at).toLocaleDateString('it-IT')}
-                          </td>
-                          <td className="py-3 px-4">
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-2">
                             {editingUser?.id === user.id ? (
-                              <div className="flex items-center space-x-2">
+                          <>
                                 <button
                                   onClick={handleUpdateUser}
-                                  className="p-1 text-gray-400 hover:text-green-600 transition-colors"
+                              className="p-2 min-h-[44px] min-w-[44px] text-gray-400 hover:text-green-600 transition-colors"
                                   title="Salva"
                                 >
                                   <Save className="h-4 w-4" />
                                 </button>
                                 <button
                                   onClick={() => setEditingUser(null)}
-                                  className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                              className="p-2 min-h-[44px] min-w-[44px] text-gray-400 hover:text-red-600 transition-colors"
                                   title="Annulla"
                                 >
                                   <X className="h-4 w-4" />
                                 </button>
-                              </div>
+                          </>
                             ) : (
-                              <div className="flex items-center space-x-2">
+                          <>
                                 <button
                                   onClick={() => setEditingUser({...user})}
                                   disabled={!hasPermission('users.edit')}
-                                  className={`p-1 transition-colors ${
+                              className={`p-2 min-h-[44px] min-w-[44px] transition-colors ${
                                     hasPermission('users.edit')
                                       ? 'text-gray-400 hover:text-blue-600'
                                       : 'text-gray-300 cursor-not-allowed'
@@ -1023,7 +1018,7 @@ export default function Admin() {
                                 </button>
                                 <button
                                   onClick={() => setShowPasswordModal(user)}
-                                  className="p-1 text-gray-400 hover:text-yellow-600 transition-colors"
+                              className="p-2 min-h-[44px] min-w-[44px] text-gray-400 hover:text-yellow-600 transition-colors"
                                   title="Cambia Password"
                                 >
                                   <Key className="h-4 w-4" />
@@ -1031,7 +1026,7 @@ export default function Admin() {
                                 <button
                                   onClick={() => handleDeleteUser(user.id, user.email)}
                                   disabled={!hasPermission('users.delete')}
-                                  className={`p-1 transition-colors ${
+                              className={`p-2 min-h-[44px] min-w-[44px] transition-colors ${
                                     hasPermission('users.delete')
                                       ? 'text-gray-400 hover:text-red-600'
                                       : 'text-gray-300 cursor-not-allowed'
@@ -1040,13 +1035,11 @@ export default function Admin() {
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </button>
-                              </div>
+                          </>
                             )}
-                          </td>
-                        </tr>
+                      </div>
+                    </div>
                       ))}
-                    </tbody>
-                  </table>
                 </div>
               </div>
             )}
