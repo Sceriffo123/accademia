@@ -31,6 +31,8 @@ import {
 interface AdminStats {
   totalUsers: number;
   totalNormatives: number;
+  totalDocuments: number;
+  totalCourses: number;
   totalViews: number;
   newUsersThisMonth: number;
 }
@@ -616,6 +618,8 @@ export default function Admin() {
       setStats({
         totalUsers,
         totalNormatives,
+        totalDocuments,
+        totalCourses,
         totalViews: 1247, // Mock data
         newUsersThisMonth: 23 // Mock data
       });
@@ -875,10 +879,24 @@ export default function Admin() {
       change: '+5 questa settimana'
     },
     {
+      title: 'Documenti Caricati',
+      value: stats.totalDocuments,
+      icon: Download,
+      color: 'bg-indigo-500',
+      change: '+12 questa settimana'
+    },
+    {
+      title: 'Corsi Disponibili',
+      value: stats.totalCourses,
+      icon: GraduationCap,
+      color: 'bg-purple-500',
+      change: '+2 questa settimana'
+    },
+    {
       title: 'Visualizzazioni Totali',
       value: stats.totalViews,
       icon: Eye,
-      color: 'bg-purple-500',
+      color: 'bg-emerald-500',
       change: '+156 oggi'
     },
     {
