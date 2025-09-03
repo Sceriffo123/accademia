@@ -49,6 +49,8 @@ export default function CourseDetail() {
       setLoading(true);
       console.log('📚 CourseDetail: Caricamento corso:', courseId);
       console.log('📚 CourseDetail: User ID:', profile?.id);
+      console.log('📚 CourseDetail: URL params:', { courseId });
+      console.log('📚 CourseDetail: Current location:', window.location.pathname);
       
       const [courseData, modulesData, progressData] = await Promise.all([
         getCourseById(courseId!),

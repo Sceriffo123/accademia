@@ -34,6 +34,7 @@ export default function Education() {
   const [loading, setLoading] = useState(true);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [notifications, setNotifications] = useState<{type: 'success' | 'error' | 'info', message: string}[]>([]);
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
   // Caricamento corsi dal database
   useEffect(() => {
@@ -355,8 +356,12 @@ export default function Education() {
                   ) : course.isEnrolled ? (
                     <button 
                       onClick={() => {
-                        console.log(`🎓 Education: Clicking Continue for course: ${course.title} (${course.id})`);
-                        navigate(`/course/${course.id}`);
+                        const debugMsg = `🎯 DEBUG: Clicking Continue for course: ${course.title} (${course.id}) - Navigate to: /course/${course.id}`;
+                        console.log(debugMsg);
+                        setDebugInfo(debugMsg);
+                        setTimeout(() => {
+                          navigate(`/course/${course.id}`);
+                        }, 1000); // Ritardo di 1 secondo per vedere il debug
                       }}
                       className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm min-h-[44px]"
                     >
