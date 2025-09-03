@@ -62,7 +62,7 @@ export default function SystemAlertPanel() {
   const { profile } = useAuth();
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'alerts' | 'audit'>('alerts');
   const [healthChecks, setHealthChecks] = useState<SystemHealthCheck[]>([]);
@@ -134,6 +134,10 @@ export default function SystemAlertPanel() {
           if (!isMobile) {
             setIsExpanded(true);
           }
+        } else {
+          // Per warning e info, mostra solo l'icona galleggiante
+          setIsVisible(true);
+          setIsExpanded(false);
         }
       } catch (e) {
         // Ignore errors in alert handler
@@ -147,7 +151,7 @@ export default function SystemAlertPanel() {
         setAuditLogs(prev => [logEntry, ...prev.slice(0, 99)]); // Max 100 logs
         
         // Crea alert per errori audit
-        if (logEntry.status === 'ERROR' || logEntry.status === 'VERIFICATION_FAILED') {
+        if (logEntry.success === false) {
           const newAlert: SystemAlert = {
             id: Date.now().toString() + '_audit',
             timestamp: logEntry.timestamp,
@@ -475,7 +479,7 @@ export default function SystemAlertPanel() {
       <div className="fixed bottom-4 right-4 z-50">
         <button
           onClick={() => setIsVisible(true)}
-          className={`p-3 rounded-full shadow-lg transition-all ${
+          className={`p-2 rounded-full shadow-lg transition-all hover:scale-110 ${
             errorCount > 0 || overallStatus.status === 'error'
               ? 'bg-red-500 text-white animate-pulse' 
               : warningCount > 0 || overallStatus.status === 'warning'
@@ -484,17 +488,18 @@ export default function SystemAlertPanel() {
                   ? 'bg-blue-500 text-white'
                   : 'bg-green-500 text-white'
           }`}
+          title={`System Monitor - ${overallStatus.message}`}
         >
           <div className="relative">
-            <Shield className="h-5 w-5" />
+            <Shield className="h-4 w-4" />
             {databaseStatus.connected && (
-              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white">
-                <Database className="h-2 w-2 text-white" />
+              <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-green-500 rounded-full border border-white">
+                <Database className="h-1 w-1 text-white" />
               </div>
             )}
           </div>
           {(errorCount + warningCount > 0 || overallStatus.status !== 'success') && (
-            <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center text-[10px]">
               {overallStatus.status === 'error' ? '!' : errorCount + warningCount || '?'}
             </span>
           )}
