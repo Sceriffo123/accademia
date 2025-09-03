@@ -922,35 +922,35 @@ export default function Admin() {
                 </div>
                 
                 <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
-                      {users.map((user) => (
+                  {users.map((user) => (
                     <div
                       key={user.id}
                       className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3 sm:gap-0"
                     >
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-gray-900 mb-1 text-sm sm:text-base line-clamp-2">
-                            {editingUser?.id === user.id ? (
-                              <input
-                                type="text"
-                                value={editingUser.full_name}
-                                onChange={(e) => setEditingUser({...editingUser, full_name: e.target.value})}
+                          {editingUser?.id === user.id ? (
+                            <input
+                              type="text"
+                              value={editingUser.full_name}
+                              onChange={(e) => setEditingUser({...editingUser, full_name: e.target.value})}
                               className="w-full px-3 py-2 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                              />
-                            ) : (
-                              user.full_name
-                            )}
+                            />
+                          ) : (
+                            user.full_name
+                          )}
                         </h4>
                         <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2">
-                            {editingUser?.id === user.id ? (
-                              <input
-                                type="email"
-                                value={editingUser.email}
-                                onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
+                          {editingUser?.id === user.id ? (
+                            <input
+                              type="email"
+                              value={editingUser.email}
+                              onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
                               className="w-full px-3 py-2 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                              />
-                            ) : (
-                              user.email
-                            )}
+                            />
+                          ) : (
+                            user.email
+                          )}
                         </p>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium w-fit ${
