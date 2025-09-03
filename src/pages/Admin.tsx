@@ -17,7 +17,8 @@ import {
   createCourse,
   updateCourse,
   deleteCourse,
-  getCoursesCount
+  getCoursesCount,
+  getUserPermissions
 } from '../lib/neonDatabase';
 import { createModuleProgressTable, checkModuleProgressTable } from '../lib/createModuleProgressTable';
 import { downloadGoogleDriveFile, isGoogleDriveUrl } from '../lib/driveDownload';
