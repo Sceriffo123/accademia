@@ -209,6 +209,20 @@ export default function Education() {
           </div>
         )}
 
+        {/* Debug Info */}
+        {debugInfo && (
+          <div className="fixed top-4 left-4 z-50 bg-yellow-500 text-black p-4 rounded-lg shadow-lg max-w-md">
+            <div className="font-bold text-lg mb-2">🔍 DEBUG INFO:</div>
+            <div className="text-sm">{debugInfo}</div>
+            <button 
+              onClick={() => setDebugInfo('')}
+              className="mt-2 px-3 py-1 bg-black text-white rounded text-xs"
+            >
+              Chiudi
+            </button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
