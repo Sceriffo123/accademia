@@ -21,6 +21,7 @@ import {
   getCourseModules,
   getUserProgress,
   updateModuleProgress,
+  sql,
   type Course,
   type CourseModule,
   type ModuleProgress
@@ -79,11 +80,12 @@ export default function CourseDetail() {
 
       setCourse(courseData);
       setModules(modulesData);
-      setProgress(progressData || []);
+      setProgress(Array.isArray(progressData) ? progressData : []);
       
       // Seleziona il primo modulo non completato o il primo modulo
+      const progressArray = Array.isArray(progressData) ? progressData : [];
       const firstIncomplete = modulesData.find(m => 
-        !(progressData || []).some(p => p.module_id === m.id && p.completed)
+        !progressArray.some(p => p.module_id === m.id && p.completed)
       );
       setSelectedModule(firstIncomplete || modulesData[0]);
       
@@ -110,7 +112,18 @@ export default function CourseDetail() {
 
   const handleCompleteModule = async (moduleId: string) => {
     try {
-      await updateModuleProgress(profile!.id, moduleId, true);
+      // Trova l'enrollment ID per questo utente e corso
+      const enrollment = await sql`
+        SELECT id FROM enrollments 
+        WHERE user_id = ${profile!.id} AND course_id = ${courseId}
+      `;
+      
+      if (enrollment.length === 0) {
+        addNotification('error', 'Iscrizione al corso non trovata');
+        return;
+      }
+      
+      await updateModuleProgress(enrollment[0].id, moduleId, true);
       await loadCourseData(); // Refresh data
       addNotification('success', 'Modulo completato!');
     } catch (error) {
@@ -130,12 +143,14 @@ export default function CourseDetail() {
 
   const getProgressPercentage = () => {
     if (modules.length === 0) return 0;
-    const completedModules = progress.filter(p => p.completed).length;
+    const progressArray = Array.isArray(progress) ? progress : [];
+    const completedModules = progressArray.filter(p => p.completed).length;
     return Math.round((completedModules / modules.length) * 100);
   };
 
   const isModuleCompleted = (moduleId: string) => {
-    return progress.some(p => p.module_id === moduleId && p.completed);
+    const progressArray = Array.isArray(progress) ? progress : [];
+    return progressArray.some(p => p.module_id === moduleId && p.completed);
   };
 
   if (loading) {
