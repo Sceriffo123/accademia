@@ -576,7 +576,7 @@ export default function Docx() {
                 {filteredDocuments.map((doc) => (
                   <div
                     key={doc.id}
-                    className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-4 sm:p-6 border border-gray-100 group cursor-pointer">
+                    className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-4 sm:p-6 border border-gray-100 group cursor-pointer"
                     onClick={() => {
                       setSelectedDocument(doc);
                       setShowPreviewModal(true);
