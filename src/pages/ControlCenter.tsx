@@ -740,7 +740,7 @@ export default function ControlCenter() {
 
               <div className="bg-white rounded-lg shadow-sm border">
                 <div className="p-4 border-b">
-                  <h3 className="text-lg font-semibold text-gray-900">Test Visibilità Sezioni</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Test Visibilità Sezioni (Lettura e Modifica)</h3>
                 </div>
                 <div className="p-4 space-y-4">
                   <div className="grid grid-cols-3 gap-4">
@@ -763,29 +763,68 @@ export default function ControlCenter() {
                       <option value="false">Nascosta</option>
                     </select>
                   </div>
-                  <button
-                    onClick={() => {
-                      const role = (document.getElementById('test-section-role') as HTMLSelectElement)?.value;
-                      const section = (document.getElementById('test-section') as HTMLSelectElement)?.value;
-                      const visible = (document.getElementById('test-visible') as HTMLSelectElement)?.value === 'true';
-                      if (role && section) testSectionOperation(role, section, visible);
-                    }}
-                    disabled={sectionTestLoading}
-                    className={`w-full py-2 rounded-lg transition-colors ${
-                      sectionTestLoading 
-                        ? 'bg-gray-400 cursor-not-allowed' 
-                        : 'bg-green-600 hover:bg-green-700'
-                    } text-white`}
-                  >
-                    {sectionTestLoading ? (
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Testing...
-                      </div>
-                    ) : (
-                      'Test Aggiornamento Sezione'
-                    )}
-                  </button>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Pulsante Verifica Stato */}
+                    <button
+                      onClick={async () => {
+                        const role = (document.getElementById('test-section-role') as HTMLSelectElement)?.value;
+                        const section = (document.getElementById('test-section') as HTMLSelectElement)?.value;
+                        
+                        if (role && section) {
+                          setSectionTestLoading(true);
+                          setSectionTestResults(null);
+                          try {
+                            const result = await verifySectionState(role, section);
+                            setSectionTestResults({
+                              type: result.source === 'error' ? 'error' : result.isConfigured ? 'success' : 'warning',
+                              message: result.message
+                            });
+                          } catch (error: any) {
+                            setSectionTestResults({
+                              type: 'error',
+                              message: `🚨 Errore verifica: ${error?.message}`
+                            });
+                          } finally {
+                            setSectionTestLoading(false);
+                          }
+                        }
+                      }}
+                      disabled={sectionTestLoading}
+                      className={`py-2 rounded-lg transition-colors ${
+                        sectionTestLoading 
+                          ? 'bg-gray-400 cursor-not-allowed' 
+                          : 'bg-blue-600 hover:bg-blue-700'
+                      } text-white`}
+                    >
+                      🔍 Verifica Stato
+                    </button>
+                    
+                    {/* Pulsante Modifica */}
+                    <button
+                      onClick={() => {
+                        const role = (document.getElementById('test-section-role') as HTMLSelectElement)?.value;
+                        const section = (document.getElementById('test-section') as HTMLSelectElement)?.value;
+                        const visible = (document.getElementById('test-visible') as HTMLSelectElement)?.value === 'true';
+                        if (role && section) testSectionOperation(role, section, visible);
+                      }}
+                      disabled={sectionTestLoading}
+                      className={`py-2 rounded-lg transition-colors ${
+                        sectionTestLoading 
+                          ? 'bg-gray-400 cursor-not-allowed' 
+                          : 'bg-green-600 hover:bg-green-700'
+                      } text-white`}
+                    >
+                      {sectionTestLoading ? (
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Testing...
+                        </div>
+                      ) : (
+                        '✏️ Test Modifica'
+                      )}
+                    </button>
+                  </div>
                   
                   {/* Risultati Test Sezioni */}
                   {sectionTestResults && (
