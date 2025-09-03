@@ -341,7 +341,7 @@ const ${variableName} = [];
   }
 
   return (
-    <div className="fixed top-4 right-4 z-50 w-96 max-h-[80vh] bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden">
+    <div className="fixed top-4 right-4 z-50 w-full max-w-[90vw] sm:w-96 max-h-[80vh] bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden">
       {/* Header */}
       <div className={`p-4 border-b flex items-center justify-between ${
         errorCount > 0 ? 'bg-red-50 border-red-200' :

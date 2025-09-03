@@ -446,7 +446,7 @@ export default function ControlCenter() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-6 py-4">
+        <div className="container mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Monitor className="h-8 w-8 text-blue-600" />
@@ -466,7 +466,7 @@ export default function ControlCenter() {
               </div>
               <button
                 onClick={loadSystemData}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center space-x-2 px-4 py-3 min-h-[44px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <RefreshCw className="h-4 w-4" />
                 <span>Aggiorna</span>
@@ -476,16 +476,16 @@ export default function ControlCenter() {
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-6">
+      <div className="container mx-auto px-4 sm:px-6 py-6">
         {/* Navigation Tabs */}
-        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6">
+        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6 overflow-x-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
+                className={`flex items-center space-x-2 px-4 py-3 min-h-[44px] rounded-md transition-colors ${
                   activeTab === tab.id
                     ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -685,7 +685,7 @@ export default function ControlCenter() {
                       }
                     }}
                     disabled={testLoading}
-                    className={`w-full py-2 rounded-lg transition-colors ${
+                    className={`w-full py-3 min-h-[44px] rounded-lg transition-colors ${
                       testLoading 
                         ? 'bg-gray-400 cursor-not-allowed' 
                         : 'bg-green-600 hover:bg-green-700'
@@ -835,7 +835,7 @@ export default function ControlCenter() {
                   <div className="flex space-x-2">
                     <button
                       onClick={runIntegrityCheck}
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="flex items-center space-x-2 px-4 py-3 min-h-[44px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       <Shield className="h-4 w-4" />
                       <span>Verifica Integrità</span>
@@ -852,7 +852,7 @@ export default function ControlCenter() {
                           addDebugLog('error', 'SCHEMA_EXPORT', `Errore export schema: ${errorMessage}`);
                         }
                       }}
-                      className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                      className="flex items-center space-x-2 px-4 py-3 min-h-[44px] bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                     >
                       <Database className="h-4 w-4" />
                       <span>Export Schema</span>
