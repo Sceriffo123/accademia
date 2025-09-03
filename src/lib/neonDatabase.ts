@@ -1,7 +1,9 @@
 import { neon } from '@neondatabase/serverless';
 import { writeAuditLog, createSystemAlert, verifyDatabaseIntegrity } from './auditLogger';
 
-const sql = neon(import.meta.env.VITE_DATABASE_URL!);
+const sql = neon(import.meta.env.VITE_DATABASE_URL!, {
+  disableWarningInBrowsers: true
+});
 
 export { sql };
 

@@ -81,6 +81,7 @@ export default function DatabaseExplorer() {
     enrollments: false
   });
   const [migrationLoading, setMigrationLoading] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'overview' | 'structure' | 'data' | 'relations'>('overview');
   const [tableData, setTableData] = useState<any[]>([]);
@@ -315,6 +316,7 @@ export default function DatabaseExplorer() {
   const checkEducationTables = async () => {
     try {
       setMigrationLoading(true);
+      setVerificationResult('🔄 Verifica in corso...');
       
       const moduleProgressExists = await checkModuleProgressTable();
       
@@ -330,6 +332,19 @@ export default function DatabaseExplorer() {
         enrollments: enrollmentsExists
       });
       
+      // Crea messaggio di risultato
+      const missingTables = [];
+      if (!moduleProgressExists) missingTables.push('module_progress');
+      if (!coursesExists) missingTables.push('courses');
+      if (!courseModulesExists) missingTables.push('course_modules');
+      if (!enrollmentsExists) missingTables.push('enrollments');
+      
+      if (missingTables.length === 0) {
+        setVerificationResult('✅ Tutte le tabelle formazione sono presenti!');
+      } else {
+        setVerificationResult(`⚠️ Tabelle mancanti: ${missingTables.join(', ')}`);
+      }
+      
       console.log('✅ Verifica tabelle formazione completata:', {
         module_progress: moduleProgressExists,
         courses: coursesExists,
@@ -339,6 +354,7 @@ export default function DatabaseExplorer() {
       
     } catch (error) {
       console.error('🚨 Errore verifica tabelle formazione:', error);
+      setVerificationResult('❌ Errore durante la verifica');
     } finally {
       setMigrationLoading(false);
     }
@@ -440,6 +456,17 @@ export default function DatabaseExplorer() {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
+
+        {/* Risultato verifica formazione */}
+        {verificationResult && (
+          <div className={`mt-4 p-3 rounded-lg ${
+            verificationResult.includes('✅') ? 'bg-green-50 text-green-800 border border-green-200' :
+            verificationResult.includes('⚠️') ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' :
+            'bg-red-50 text-red-800 border border-red-200'
+          }`}>
+            <p className="text-sm font-medium">{verificationResult}</p>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
