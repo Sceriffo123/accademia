@@ -74,21 +74,26 @@ export default function Education() {
     if (!profile?.id) return;
     
     try {
-      console.log('🎓 Education: Caricamento iscrizioni utente...');
+      console.log('🎓 Education: Caricamento iscrizioni utente...', profile.id);
       const userEnrollments = await getUserEnrollments(profile.id);
+      console.log('🎓 Education: Iscrizioni trovate:', userEnrollments);
       setEnrollments(userEnrollments);
       
       // Aggiorna lo stato dei corsi con le informazioni di iscrizione
-      setCourses(prevCourses => 
-        prevCourses.map(course => {
+      setCourses(prevCourses => {
+        console.log('🎓 Education: Corsi prima del mapping:', prevCourses.length);
+        const updatedCourses = prevCourses.map(course => {
           const enrollment = userEnrollments.find(e => e.course_id === course.id);
+          console.log(`🎓 Education: Corso ${course.title} (${course.id}) - Enrollment:`, enrollment);
           return {
             ...course,
             isEnrolled: !!enrollment,
             completed: enrollment?.status === 'completed'
           };
-        })
-      );
+        });
+        console.log('🎓 Education: Corsi dopo il mapping:', updatedCourses.map(c => ({ title: c.title, isEnrolled: c.isEnrolled })));
+        return updatedCourses;
+      });
     } catch (error) {
       console.error('🚨 Education: Errore caricamento iscrizioni:', error);
     }
