@@ -353,12 +353,18 @@ export default function DatabaseExplorer() {
         const success = await createModuleProgressTable();
         if (success) {
           console.log('✅ Tabella module_progress creata');
-          // Ricarica le tabelle per aggiornare la lista
+          // Aggiorna solo lo stato locale senza ricaricare tutto
+          setEducationTablesStatus(prev => ({
+            ...prev,
+            module_progress: true
+          }));
+          // Ricarica solo la lista tabelle senza chiamare checkEducationTables
           await loadTables();
-          await checkEducationTables();
         } else {
           console.error('❌ Errore creazione tabella module_progress');
         }
+      } else {
+        console.log('✅ Tabella module_progress già esistente');
       }
       
     } catch (error) {
@@ -446,22 +452,21 @@ export default function DatabaseExplorer() {
           </div>
           <div className="max-h-96 overflow-y-auto">
             {filteredTables.map((table) => {
-              const info = allTablesInfo.find(t => t.name === table);
               return (
                 <div
-                  key={table}
-                  onClick={() => loadTableDetails(table)}
+                  key={table.name}
+                  onClick={() => loadTableDetails(table.name)}
                   className={`p-4 border-b cursor-pointer hover:bg-gray-50 ${
-                    selectedTable === table ? 'bg-blue-50 border-blue-200' : ''
+                    selectedTable === table.name ? 'bg-blue-50 border-blue-200' : ''
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <Table className="h-4 w-4 text-gray-500" />
                       <div>
-                        <p className="font-medium text-gray-900">{table}</p>
+                        <p className="font-medium text-gray-900">{table.name}</p>
                         <p className="text-sm text-gray-500">
-                          {info?.columns.length || 0} colonne • {info?.recordCount || 0} record
+                          {table.columns.length || 0} colonne • {table.recordCount || 0} record
                         </p>
                       </div>
                     </div>
