@@ -57,15 +57,15 @@ export default function Home() {
     <div className="min-h-screen">
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 text-white">
-        <div className="container mx-auto px-4 py-16 md:py-24">
+        <div className="container mx-auto px-4 sm:px-6 py-16 md:py-24">
           <div className="max-w-4xl mx-auto text-center">
             <div className="flex justify-center mb-6">
               <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-sm">
-                <GraduationCap className="h-12 w-12 text-white" />
+                <GraduationCap className="h-8 w-8 sm:h-12 sm:w-12 text-white" />
               </div>
             </div>
             
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-6 leading-tight">
               Accademia del
               <br />
               <span className="text-blue-200">Trasporto Locale</span>
@@ -80,7 +80,7 @@ export default function Home() {
               {user ? (
                 <Link
                   to="/dashboard"
-                  className="inline-flex items-center justify-center px-8 py-4 bg-white text-blue-800 font-semibold rounded-xl hover:bg-blue-50 transition-all transform hover:scale-105 shadow-lg"
+                  className="inline-flex items-center justify-center px-8 py-4 min-h-[44px] bg-white text-blue-800 font-semibold rounded-xl hover:bg-blue-50 transition-all transform hover:scale-105 shadow-lg"
                 >
                   Vai alla Dashboard
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -89,14 +89,14 @@ export default function Home() {
                 <>
                   <Link
                     to="/register"
-                    className="inline-flex items-center justify-center px-8 py-4 bg-white text-blue-800 font-semibold rounded-xl hover:bg-blue-50 transition-all transform hover:scale-105 shadow-lg"
+                    className="inline-flex items-center justify-center px-8 py-4 min-h-[44px] bg-white text-blue-800 font-semibold rounded-xl hover:bg-blue-50 transition-all transform hover:scale-105 shadow-lg"
                   >
                     Inizia Subito
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                   <Link
                     to="/login"
-                    className="inline-flex items-center justify-center px-8 py-4 border-2 border-white text-white font-semibold rounded-xl hover:bg-white hover:text-blue-800 transition-all"
+                    className="inline-flex items-center justify-center px-8 py-4 min-h-[44px] border-2 border-white text-white font-semibold rounded-xl hover:bg-white hover:text-blue-800 transition-all"
                   >
                     Accedi
                   </Link>
@@ -109,7 +109,7 @@ export default function Home() {
 
       {/* Features Section */}
       <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -121,13 +121,13 @@ export default function Home() {
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
               {features.map((feature, index) => {
                 const Icon = feature.icon;
                 return (
                   <div
                     key={index}
-                    className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100"
+                    className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100"
                   >
                     <div className="flex items-center mb-4">
                       <div className="p-3 bg-blue-100 rounded-xl mr-4">
@@ -150,7 +150,7 @@ export default function Home() {
 
       {/* Benefits Section */}
       <section className="py-16 md:py-24 bg-gray-100">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
@@ -167,7 +167,7 @@ export default function Home() {
                 </div>
               </div>
               
-              <div className="bg-white p-8 rounded-2xl shadow-lg">
+              <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">
                   Inizia oggi stesso
                 </h3>
@@ -192,7 +192,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-center">
               <div className="flex items-center space-x-2 mb-4 md:mb-0">

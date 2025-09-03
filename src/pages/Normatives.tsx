@@ -82,11 +82,11 @@ export default function Normatives() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 sm:px-6 py-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2">
             Consultazione Normative
           </h1>
           <p className="text-gray-600">
@@ -95,7 +95,7 @@ export default function Normatives() {
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-100">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-8 border border-gray-100">
           <div className="space-y-4">
             {/* Search Bar */}
             <div className="relative">
@@ -112,7 +112,7 @@ export default function Normatives() {
             {/* Filter Toggle */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-2 text-gray-600 hover:text-blue-800 transition-colors"
+              className="flex items-center space-x-2 text-gray-600 hover:text-blue-800 transition-colors min-h-[44px]"
             >
               <Filter className="h-5 w-5" />
               <span>Filtri avanzati</span>
@@ -120,7 +120,7 @@ export default function Normatives() {
 
             {/* Filters */}
             {showFilters && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Tipo Documento
@@ -128,7 +128,7 @@ export default function Normatives() {
                   <select
                     value={selectedType}
                     onChange={(e) => setSelectedType(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-3 min-h-[44px] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="all">Tutti i tipi</option>
                     <option value="law">Leggi</option>
@@ -144,7 +144,7 @@ export default function Normatives() {
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-3 min-h-[44px] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="all">Tutte le categorie</option>
                     {categories.map(category => (
@@ -173,9 +173,9 @@ export default function Normatives() {
                 <Link
                   key={normative.id}
                   to={`/normative/${normative.id}`}
-                  className="block bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-6 border border-gray-100 group"
+                  className="block bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-4 sm:p-6 border border-gray-100 group">
                 >
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-3">
                         <FileText className="h-5 w-5 text-gray-400" />

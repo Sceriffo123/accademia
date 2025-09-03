@@ -258,7 +258,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 sm:px-6 py-8">
       <div className="max-w-6xl mx-auto">
         {/* Welcome Header */}
         <div className="mb-8">
@@ -271,13 +271,13 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-8">
           {statCards.map((stat, index) => {
             const Icon = stat.icon;
             return (
               <div
                 key={index}
-                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-6 border border-gray-100"
+                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-4 sm:p-6 border border-gray-100"
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className={`p-3 rounded-lg ${stat.color}`}>
@@ -397,7 +397,7 @@ export default function Dashboard() {
                 Vedi tutti →
               </Link>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {recentDocuments.map((doc) => (
                 <div
                   key={doc.id}

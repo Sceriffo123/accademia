@@ -341,7 +341,7 @@ export default function SuperAdmin() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 sm:px-6 py-8">
       <div className="max-w-7xl mx-auto">
         {/* Toast Notifications */}
         <div className="fixed top-4 right-4 z-50 space-y-3">
@@ -393,7 +393,7 @@ export default function SuperAdmin() {
                 <Crown className="h-8 w-8 text-purple-800" />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
                   Pannello Super Amministratore
                 </h1>
                 <p className="text-gray-600">
@@ -426,7 +426,7 @@ export default function SuperAdmin() {
                 </button>
                 <button
                   onClick={saveChanges}
-                  className="flex items-center space-x-1 bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+                  className="flex items-center space-x-1 bg-yellow-600 text-white px-4 py-3 min-h-[44px] rounded-lg hover:bg-yellow-700 transition-colors"
                 >
                   <Save className="h-4 w-4" />
                   <span>Salva</span>
@@ -439,7 +439,7 @@ export default function SuperAdmin() {
         {/* Tabs */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
           <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6">
+            <nav className="flex space-x-4 sm:space-x-8 px-4 sm:px-6">
               {[
                 { id: 'permissions', label: 'Gestione Permessi', icon: Shield },
                 { id: 'roles', label: 'Visibilità Sezioni', icon: Eye },
@@ -450,21 +450,22 @@ export default function SuperAdmin() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    className={`flex items-center space-x-1 sm:space-x-2 py-4 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
                       activeTab === tab.id
                         ? 'border-purple-500 text-purple-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                   >
                     <Icon className="h-5 w-5" />
-                    <span>{tab.label}</span>
+                    <span className="hidden sm:inline">{tab.label}</span>
+                    <span className="sm:hidden">{tab.id === 'permissions' ? 'Permessi' : tab.id === 'roles' ? 'Sezioni' : 'Sistema'}</span>
                   </button>
                 );
               })}
             </nav>
           </div>
 
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {activeTab === 'permissions' && (
               <div className="space-y-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -492,17 +493,17 @@ export default function SuperAdmin() {
                     </button>
                     
                     {expandedCategories.has(category) && (
-                      <div className="p-4 border-t border-gray-200">
+                      <div className="p-2 sm:p-4 border-t border-gray-200">
                         <div className="overflow-x-auto">
                           <table className="w-full">
                             <thead>
                               <tr>
-                                <th className="text-left py-2 px-3 font-medium text-gray-700 min-w-[200px]">
+                                <th className="text-left py-2 px-2 sm:px-3 font-medium text-gray-700 text-xs sm:text-sm min-w-[150px] sm:min-w-[200px]">
                                   Permesso
                                 </th>
                                 {Array.from(roleMatrix.keys()).map(role => (
-                                  <th key={role} className="text-center py-2 px-3 min-w-[120px]">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getRoleColor(role)}`}>
+                                  <th key={role} className="text-center py-2 px-1 sm:px-3 min-w-[80px] sm:min-w-[120px]">
+                                    <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium border ${getRoleColor(role)}`}>
                                       {getRoleDisplayName(role)}
                                     </span>
                                   </th>
@@ -512,10 +513,10 @@ export default function SuperAdmin() {
                             <tbody>
                               {permissions.filter((p: any) => p.category === category).map((permission: any) => (
                                 <tr key={permission.id} className="border-t border-gray-100">
-                                  <td className="py-3 px-3">
+                                  <td className="py-3 px-2 sm:px-3">
                                     <div>
-                                      <div className="font-medium text-gray-900">{permission.name}</div>
-                                      <div className="text-sm text-gray-500">{permission.description}</div>
+                                      <div className="font-medium text-gray-900 text-xs sm:text-sm">{permission.name}</div>
+                                      <div className="text-xs sm:text-sm text-gray-500 hidden sm:block">{permission.description}</div>
                                     </div>
                                   </td>
                                   {Array.from(roleMatrix.keys()).map(role => {
@@ -524,7 +525,7 @@ export default function SuperAdmin() {
                                     const isDisabled = role === 'superadmin'; // SuperAdmin ha sempre tutti i permessi
                                     
                                     return (
-                                      <td key={role} className="py-3 px-3 text-center">
+                                      <td key={role} className="py-3 px-1 sm:px-3 text-center">
                                         <button
                                           onClick={() => !isDisabled && togglePermission(role, permission.name)}
                                           disabled={isDisabled}
@@ -562,11 +563,11 @@ export default function SuperAdmin() {
                   <table className="w-full border border-gray-200 rounded-lg">
                     <thead>
                       <tr className="bg-gray-50">
-                        <th className="text-left py-3 px-4 font-medium text-gray-700">
+                        <th className="text-left py-3 px-2 sm:px-4 font-medium text-gray-700 text-xs sm:text-sm">
                           Sezione
                         </th>
                         {Array.from(roleMatrix.keys()).map(role => (
-                          <th key={role} className="text-center py-3 px-4">
+                          <th key={role} className="text-center py-3 px-1 sm:px-4">
                             <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getRoleColor(role)}`}>
                               {getRoleDisplayName(role)}
                             </span>
@@ -577,7 +578,7 @@ export default function SuperAdmin() {
                     <tbody>
                       {sections.map(section => (
                         <tr key={section} className="border-t border-gray-100">
-                          <td className="py-3 px-4 font-medium text-gray-900 capitalize">
+                          <td className="py-3 px-2 sm:px-4 font-medium text-gray-900 capitalize text-xs sm:text-sm">
                             {section === 'dashboard' ? 'Dashboard' :
                              section === 'users' ? 'Gestione Utenti' :
                              section === 'normatives' ? 'Normative' :
@@ -594,7 +595,7 @@ export default function SuperAdmin() {
                             const isDisabled = role === 'superadmin' && section === 'superadmin'; // Protezione: SuperAdmin non può disabilitare la propria sezione
                             
                             return (
-                              <td key={role} className="py-3 px-4 text-center">
+                              <td key={role} className="py-3 px-1 sm:px-4 text-center">
                                 <button
                                   onClick={() => !isDisabled && toggleSectionVisibility(role, section)}
                                   disabled={isDisabled}
@@ -641,26 +642,32 @@ export default function SuperAdmin() {
                       </div>
                     </div>
                     
-                    <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex flex-col gap-2">
                       <button
                         onClick={handleCheckMigration}
                         disabled={migrationStatus !== 'idle'}
-                        className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="inline-flex items-center justify-center space-x-2 px-3 sm:px-4 py-3 min-h-[44px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
                       >
                         <Wrench className="h-4 w-4" />
-                        <span>
+                        <span className="hidden sm:inline">
                           {migrationStatus === 'checking' ? 'Verifica...' : 'Verifica DB'}
+                        </span>
+                        <span className="sm:hidden">
+                          {migrationStatus === 'checking' ? 'Verifica...' : 'Verifica'}
                         </span>
                       </button>
                       
                       <button
                         onClick={handleForceMigration}
                         disabled={migrationStatus !== 'idle'}
-                        className="inline-flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="inline-flex items-center justify-center space-x-2 px-3 sm:px-4 py-3 min-h-[44px] bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
                       >
                         <RefreshCw className={`h-4 w-4 ${migrationStatus === 'migrating' ? 'animate-spin' : ''}`} />
-                        <span>
+                        <span className="hidden sm:inline">
                           {migrationStatus === 'migrating' ? 'Migrazione...' : 'Forza Migrazione'}
+                        </span>
+                        <span className="sm:hidden">
+                          {migrationStatus === 'migrating' ? 'Migrazione...' : 'Migrazione'}
                         </span>
                       </button>
                     </div>
@@ -719,9 +726,9 @@ export default function SuperAdmin() {
 
       {/* Help Modal */}
       {showHelpModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-[95vw] sm:w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
               <div className="flex items-center space-x-3">
                 <div className="p-3 bg-blue-100 rounded-xl">
                   <HelpCircle className="h-6 w-6 text-blue-600" />
@@ -743,7 +750,7 @@ export default function SuperAdmin() {
               </button>
             </div>
 
-            <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
+            <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-4 sm:p-6">
               <div className="space-y-8">
                 {/* Sezioni del pannello */}
                 <div>
@@ -751,7 +758,7 @@ export default function SuperAdmin() {
                     <Shield className="h-5 w-5 text-purple-600 mr-2" />
                     Sezioni del Pannello
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                       <div className="flex items-center space-x-2 mb-2">
                         <Shield className="h-4 w-4 text-purple-600" />
@@ -822,7 +829,7 @@ export default function SuperAdmin() {
                     Come Funziona
                   </h4>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div>
                         <h5 className="font-medium text-blue-900 mb-2">Controlli Visivi</h5>
                         <ul className="space-y-1 text-sm text-blue-800">
@@ -892,7 +899,7 @@ export default function SuperAdmin() {
                     Salvare le Modifiche
                   </h4>
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div>
                         <h5 className="font-medium text-green-900 mb-2">Indicatore Modifiche</h5>
                         <p className="text-sm text-green-800 mb-3">
@@ -908,11 +915,11 @@ export default function SuperAdmin() {
                       <div>
                         <h5 className="font-medium text-green-900 mb-2">Pulsanti Azioni</h5>
                         <div className="space-y-2">
-                          <button className="w-full bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 transition-colors flex items-center justify-center space-x-2">
+                          <button className="w-full bg-green-600 text-white px-4 py-3 min-h-[44px] rounded text-sm hover:bg-green-700 transition-colors flex items-center justify-center space-x-2">
                             <Save className="h-4 w-4" />
                             <span>Salva</span>
                           </button>
-                          <button className="w-full bg-gray-600 text-white px-4 py-2 rounded text-sm hover:bg-gray-700 transition-colors flex items-center justify-center space-x-2">
+                          <button className="w-full bg-gray-600 text-white px-4 py-3 min-h-[44px] rounded text-sm hover:bg-gray-700 transition-colors flex items-center justify-center space-x-2">
                             <RotateCcw className="h-4 w-4" />
                             <span>Reset</span>
                           </button>

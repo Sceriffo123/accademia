@@ -298,7 +298,7 @@ export default function Docx() {
     console.log('🎯 DOCX DEBUG: userSections:', userSections);
     console.log('🎯 DOCX DEBUG: includes documents?:', userSections.includes('documents'));
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 sm:px-6 py-8">
         <div className="max-w-4xl mx-auto text-center">
           <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -320,7 +320,7 @@ export default function Docx() {
     console.log('🎯 DOCX DEBUG: userPermissions:', userPermissions);
     console.log('🎯 DOCX DEBUG: includes documents.view?:', userPermissions.includes('documents.view'));
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 sm:px-6 py-8">
         <div className="max-w-4xl mx-auto text-center">
           <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -400,11 +400,11 @@ export default function Docx() {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 sm:px-6 py-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2">
             Documenti e Modulistica
           </h1>
           <p className="text-gray-600">
@@ -413,13 +413,13 @@ export default function Docx() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-8">
           {stats.map((stat, index) => {
             const Icon = stat.icon;
             return (
               <div
                 key={index}
-                className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+                className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100"
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className={`p-3 rounded-lg ${stat.color}`}>
@@ -438,7 +438,7 @@ export default function Docx() {
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-100">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-8 border border-gray-100">
           <div className="space-y-4">
             {/* Search Bar */}
             <div className="relative">
@@ -463,7 +463,7 @@ export default function Docx() {
 
             {/* Filters */}
             {showFilters && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Tipo Documento
@@ -471,7 +471,7 @@ export default function Docx() {
                   <select
                     value={selectedType}
                     onChange={(e) => setSelectedType(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-3 min-h-[44px] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="all">Tutti i tipi</option>
                     <option value="template">Template</option>
@@ -488,7 +488,7 @@ export default function Docx() {
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-3 min-h-[44px] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="all">Tutte le categorie</option>
                     {categories.map(category => (
@@ -502,7 +502,7 @@ export default function Docx() {
                 <div className="flex items-end">
                   <button 
                     disabled={!canUpload}
-                    className={`w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                    className={`w-full flex items-center justify-center space-x-2 px-4 py-3 min-h-[44px] rounded-lg transition-colors ${
                       canUpload 
                         ? 'bg-blue-800 text-white hover:bg-blue-900' 
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -525,7 +525,7 @@ export default function Docx() {
             </h2>
             <button 
               disabled={!canCreate}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+              className={`flex items-center space-x-2 px-4 py-3 min-h-[44px] rounded-lg transition-colors ${
                 canCreate 
                   ? 'border border-gray-300 text-gray-600 hover:bg-gray-50' 
                   : 'border border-gray-200 text-gray-400 cursor-not-allowed'
@@ -572,11 +572,11 @@ export default function Docx() {
                 </div>
               )}
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {filteredDocuments.map((doc) => (
                   <div
                     key={doc.id}
-                    className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-6 border border-gray-100 group cursor-pointer"
+                    className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-4 sm:p-6 border border-gray-100 group cursor-pointer">
                     onClick={() => {
                       setSelectedDocument(doc);
                       setShowPreviewModal(true);
@@ -675,7 +675,7 @@ export default function Docx() {
               </div>
               <button
                 onClick={loadDocuments}
-                className="mt-4 bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+                className="mt-4 bg-yellow-600 text-white px-4 py-3 min-h-[44px] rounded-lg hover:bg-yellow-700 transition-colors"
               >
                 🔄 Ricarica Documenti
               </button>
@@ -687,8 +687,8 @@ export default function Docx() {
       {/* Preview Modal */}
       {showPreviewModal && selectedDocument && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-[95vw] sm:w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
               <div className="flex items-center space-x-3">
                 <div className="p-3 bg-blue-100 rounded-xl">
                   <FileText className="h-4 w-4 text-blue-600" />
