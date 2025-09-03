@@ -30,7 +30,7 @@ export default function CourseDetail() {
   console.log('📚 CourseDetail: Componente caricato!');
   console.log('📚 CourseDetail: URL corrente:', window.location.pathname);
   
-  const { courseId } = useParams<{ courseId: string }>();
+  const { id: courseId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { profile } = useAuth();
   
