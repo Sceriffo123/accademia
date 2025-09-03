@@ -921,7 +921,7 @@ export default function Admin() {
                   </button>
                 </div>
                 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gray-200">
@@ -1071,18 +1071,18 @@ export default function Admin() {
                   </button>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
                   {normatives.map((normative) => (
                     <div
                       key={normative.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3 sm:gap-0"
                     >
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 mb-1 text-sm sm:text-base line-clamp-2">
                           {normative.title}
                         </h4>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium w-fit ${
                             normative.type === 'law' ? 'bg-blue-100 text-blue-800' :
                             normative.type === 'regulation' ? 'bg-green-100 text-green-800' :
                             'bg-orange-100 text-orange-800'
@@ -1090,8 +1090,8 @@ export default function Admin() {
                             {normative.type === 'law' ? 'Legge' :
                              normative.type === 'regulation' ? 'Regolamento' : 'Sentenza'}
                           </span>
-                          <span>{normative.reference_number}</span>
-                          <span>
+                          <span className="truncate">{normative.reference_number}</span>
+                          <span className="whitespace-nowrap">
                             {normative.publication_date 
                               ? new Date(normative.publication_date).toLocaleDateString('it-IT')
                               : 'N/A'
@@ -1100,10 +1100,10 @@ export default function Admin() {
                         </div>
                       </div>
                       
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-2">
                         <button 
                           onClick={() => console.log('View normative:', normative.id)}
-                          className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                          className="p-2 min-h-[44px] min-w-[44px] text-gray-400 hover:text-blue-600 transition-colors"
                           title="Visualizza"
                         >
                           <Eye className="h-4 w-4" />
@@ -1111,7 +1111,7 @@ export default function Admin() {
                         <button 
                           onClick={() => handleEditNormative(normative)}
                           disabled={!hasPermission('normatives.edit')}
-                          className={`p-2 transition-colors ${
+                          className={`p-2 min-h-[44px] min-w-[44px] transition-colors ${
                             hasPermission('normatives.edit')
                               ? 'text-gray-400 hover:text-green-600'
                               : 'text-gray-300 cursor-not-allowed'
@@ -1123,7 +1123,7 @@ export default function Admin() {
                         <button 
                           onClick={() => handleDeleteNormative(normative.id, normative.title)}
                           disabled={!hasPermission('normatives.delete')}
-                          className={`p-2 transition-colors ${
+                          className={`p-2 min-h-[44px] min-w-[44px] transition-colors ${
                             hasPermission('normatives.delete')
                               ? 'text-gray-400 hover:text-red-600'
                               : 'text-gray-300 cursor-not-allowed'
@@ -1159,21 +1159,21 @@ export default function Admin() {
                   </button>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
                   {documents.map((document) => (
                     <div
                       key={document.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3 sm:gap-0"
                     >
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 mb-1 text-sm sm:text-base line-clamp-2">
                           {document.filename}
                         </h4>
-                        <p className="text-sm text-gray-600 mb-2">
+                        <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2">
                           {document.title}
                         </p>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium w-fit ${
                             document.type === 'template' ? 'bg-blue-100 text-blue-800' :
                             document.type === 'form' ? 'bg-green-100 text-green-800' :
                             document.type === 'guide' ? 'bg-purple-100 text-purple-800' :
@@ -1183,8 +1183,8 @@ export default function Admin() {
                              document.type === 'form' ? 'Modulo' :
                              document.type === 'guide' ? 'Guida' : 'Report'}
                           </span>
-                          <span>{document.category}</span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          <span className="truncate">{document.category}</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium w-fit ${
                             document.status === 'active' ? 'bg-green-100 text-green-800' :
                             document.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-red-100 text-red-800'
@@ -1192,22 +1192,22 @@ export default function Admin() {
                             {document.status === 'active' ? 'Attivo' :
                              document.status === 'draft' ? 'Bozza' : 'Archiviato'}
                           </span>
-                          <span>📊 {document.download_count} download</span>
-                          {document.file_size && <span>💾 {document.file_size} KB</span>}
+                          <span className="whitespace-nowrap">📊 {document.download_count} download</span>
+                          {document.file_size && <span className="whitespace-nowrap">💾 {document.file_size} KB</span>}
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-2">
                         <button
                           onClick={() => setViewingDocument(document)}
-                          className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                          className="p-2 min-h-[44px] min-w-[44px] text-gray-400 hover:text-blue-600 transition-colors"
                           title="Visualizza"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleDownloadDocumentPDF(document)}
-                          className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
+                          className="p-2 min-h-[44px] min-w-[44px] text-gray-400 hover:text-purple-600 transition-colors"
                           title="Scarica PDF"
                         >
                           <Download className="h-4 w-4" />
@@ -1215,7 +1215,7 @@ export default function Admin() {
                         {document.file_path && (
                           <button
                             onClick={() => handleDownloadOriginalFile(document)}
-                            className={`p-2 transition-colors ${
+                            className={`p-2 min-h-[44px] min-w-[44px] transition-colors ${
                               isGoogleDriveUrl(document.file_path) 
                                 ? 'text-gray-400 hover:text-green-600' 
                                 : 'text-gray-400 hover:text-blue-600'
