@@ -1,22 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   Shield, 
   Users, 
   Database, 
-  Activity, 
   AlertTriangle, 
   CheckCircle, 
   XCircle, 
-  Eye,
   FileText,
-  Settings,
-  Info,
-  Refresh,
-  Search,
-  Server, 
-  Cpu,
   RefreshCw,
   Monitor,
   Clock,
@@ -25,11 +17,7 @@ import {
 } from 'lucide-react';
 import { 
   getAllTables, 
-  getTableStructure, 
-  getTableRecords,
-  getAllUsers,
   getRolePermissionsMatrix,
-  updateRolePermission,
   getUsersCount,
   getDocumentsCount,
   getAllRolesFromDB,
@@ -44,16 +32,11 @@ interface SystemMetrics {
   totalRoles: number;
   totalPermissions: number;
   totalSections: number;
+  totalDocuments: number;
   activeConnections: number;
   lastUpdate: string;
 }
 
-interface DatabaseTable {
-  name: string;
-  records: number;
-  structure: any[];
-  lastModified: string;
-}
 
 interface DebugLog {
   id: string;
@@ -73,11 +56,6 @@ export default function ControlCenter() {
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
   const [debugLogs, setDebugLogs] = useState<DebugLog[]>([]);
   const [databaseTables, setDatabaseTables] = useState<any[]>([]);
-  const [selectedTable, setSelectedTable] = useState<string>('');
-  const [tableRecords, setTableRecords] = useState<any[]>([]);
-  const [tableStructure, setTableStructure] = useState<any[]>([]);
-  const [tableData, setTableData] = useState<any[]>([]);
-  const [systemData, setSystemData] = useState<any>(null);
   const [roleMatrix, setRoleMatrix] = useState<Map<string, any>>(new Map());
   const [allPermissions, setAllPermissions] = useState<any[]>([]);
   const [allSections, setAllSections] = useState<any[]>([]);
@@ -151,19 +129,22 @@ export default function ControlCenter() {
       addDebugLog('info', 'SYSTEM_LOAD', 'Caricamento dati sistema iniziato');
 
       // Carica metriche sistema
-      const [roles, permissions, sections, matrix, tables] = await Promise.all([
+      const [roles, permissions, sections, matrix, tables, usersCount, documentsCount] = await Promise.all([
         getAllRolesFromDB(),
         getAllPermissionsFromDB(),
         getAllSectionsFromDB(),
         getRolePermissionsMatrix(),
-        getAllTables()
+        getAllTables(),
+        getUsersCount(),
+        getDocumentsCount()
       ]);
 
       setSystemMetrics({
-        totalUsers: 0, // Da implementare
+        totalUsers: usersCount,
         totalRoles: roles.length,
         totalPermissions: permissions.length,
         totalSections: sections.length,
+        totalDocuments: documentsCount,
         activeConnections: 1,
         lastUpdate: new Date().toLocaleTimeString()
       });
@@ -172,23 +153,8 @@ export default function ControlCenter() {
       setAllPermissions(permissions);
       setAllSections(sections);
 
-      // Carica info tabelle database
-      const tableInfo: DatabaseTable[] = [];
-      for (const tableName of tables) {
-        try {
-          const records = await getTableRecords(tableName, 1);
-          const structure = await getTableStructure(tableName);
-          tableInfo.push({
-            name: tableName,
-            records: records.length,
-            structure,
-            lastModified: new Date().toISOString()
-          });
-        } catch (error) {
-          addDebugLog('warning', 'TABLE_LOAD', `Errore caricamento tabella ${tableName}: ${error}`);
-        }
-      }
-      setDatabaseTables(tableInfo);
+      // Info tabelle database (solo nomi per overview)
+      setDatabaseTables(tables.map(name => ({ name, records: 0, structure: [], lastModified: '' })));
 
       addDebugLog('success', 'SYSTEM_LOAD', 'Dati sistema caricati con successo');
     } catch (error) {
@@ -216,32 +182,6 @@ export default function ControlCenter() {
       clearInterval(interval);
       setRealTimeMonitoring(false);
     };
-  };
-
-  const loadTableData = async (tableName: string) => {
-    try {
-      addDebugLog('info', 'TABLE_INSPECT', `🔄 INIZIO Caricamento dati tabella: ${tableName}`);
-      console.log(`🔄 Centro di Controllo: Caricando ${tableName}...`);
-      
-      const [records, structure] = await Promise.all([
-        getTableRecords(tableName, 50),
-        getTableStructure(tableName)
-      ]);
-      
-      console.log(`✅ Centro di Controllo: Caricati ${records.length} record da ${tableName}`, records);
-      
-      setTableData(records);
-      setTableRecords(records);
-      setTableStructure(structure);
-      setSelectedTable(tableName);
-      
-      addDebugLog('success', 'TABLE_INSPECT', `✅ COMPLETATO: Caricati ${records.length} record da ${tableName}`);
-    } catch (error) {
-      console.error(`❌ Centro di Controllo: Errore caricamento ${tableName}:`, error);
-      addDebugLog('error', 'TABLE_INSPECT', `❌ ERRORE caricamento ${tableName}: ${error}`);
-      setTableData([]);
-      setSelectedTable('');
-    }
   };
 
   const runIntegrityCheck = async () => {
@@ -535,14 +475,24 @@ export default function ControlCenter() {
         <div className="space-y-6">
           {/* Overview Tab */}
           {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+              <div className="bg-white p-6 rounded-lg shadow-sm border">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Utenti Totali</p>
+                    <p className="text-2xl font-bold text-gray-900">{systemMetrics?.totalUsers}</p>
+                  </div>
+                  <Users className="h-8 w-8 text-blue-500" />
+                </div>
+              </div>
+              
               <div className="bg-white p-6 rounded-lg shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Ruoli Sistema</p>
                     <p className="text-2xl font-bold text-gray-900">{systemMetrics?.totalRoles}</p>
                   </div>
-                  <Users className="h-8 w-8 text-blue-500" />
+                  <Shield className="h-8 w-8 text-indigo-500" />
                 </div>
               </div>
               
@@ -552,17 +502,17 @@ export default function ControlCenter() {
                     <p className="text-sm text-gray-600">Permessi Totali</p>
                     <p className="text-2xl font-bold text-gray-900">{systemMetrics?.totalPermissions}</p>
                   </div>
-                  <Shield className="h-8 w-8 text-green-500" />
+                  <Monitor className="h-8 w-8 text-green-500" />
                 </div>
               </div>
               
               <div className="bg-white p-6 rounded-lg shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">Sezioni Menu</p>
-                    <p className="text-2xl font-bold text-gray-900">{systemMetrics?.totalSections}</p>
+                    <p className="text-sm text-gray-600">Documenti</p>
+                    <p className="text-2xl font-bold text-gray-900">{systemMetrics?.totalDocuments}</p>
                   </div>
-                  <Settings className="h-8 w-8 text-purple-500" />
+                  <FileText className="h-8 w-8 text-cyan-500" />
                 </div>
               </div>
               
