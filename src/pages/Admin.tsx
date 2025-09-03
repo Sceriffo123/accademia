@@ -12,6 +12,7 @@ import {
   deleteNormative,
   getNormativesCount,
   getAllDocuments,
+  updateDocument,
   getDocumentsCount,
   getAllCourses,
   createCourse,
