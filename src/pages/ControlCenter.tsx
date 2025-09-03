@@ -85,6 +85,7 @@ export default function ControlCenter() {
   const [testResults, setTestResults] = useState<{type: 'success' | 'error' | 'warning', message: string} | null>(null);
   const [sectionTestLoading, setSectionTestLoading] = useState(false);
   const [sectionTestResults, setSectionTestResults] = useState<{type: 'success' | 'error', message: string} | null>(null);
+  const [verifyType, setVerifyType] = useState('permission');
   const [realTimeMonitoring, setRealTimeMonitoring] = useState(false);
 
   // Funzione per aggiungere log di debug
@@ -644,28 +645,38 @@ export default function ControlCenter() {
                         <option key={role} value={role}>{role}</option>
                       ))}
                     </select>
-                    <select className="border rounded-lg px-3 py-2" id="verify-type" title="Tipo verifica">
+                    <select 
+                      className="border rounded-lg px-3 py-2" 
+                      id="verify-type" 
+                      title="Tipo verifica"
+                      value={verifyType}
+                      onChange={(e) => setVerifyType(e.target.value)}
+                    >
                       <option value="permission">Permesso</option>
                       <option value="section">Sezione</option>
                     </select>
                   </div>
                   <div className="grid grid-cols-1 gap-4">
-                    <select className="border rounded-lg px-3 py-2" id="verify-permission" title="Seleziona permesso">
-                      <option value="">Seleziona Permesso</option>
-                      {allPermissions.map(permission => (
-                        <option key={permission.id} value={permission.name}>
-                          {permission.name} ({permission.category})
-                        </option>
-                      ))}
-                    </select>
-                    <select className="border rounded-lg px-3 py-2" id="verify-section" title="Seleziona sezione" style={{display: 'none'}}>
-                      <option value="">Seleziona Sezione</option>
-                      {allSections.map(section => (
-                        <option key={section.id} value={section.name}>
-                          {section.name}
-                        </option>
-                      ))}
-                    </select>
+                    {verifyType === 'permission' && (
+                      <select className="border rounded-lg px-3 py-2" id="verify-permission" title="Seleziona permesso">
+                        <option value="">Seleziona Permesso</option>
+                        {allPermissions.map(permission => (
+                          <option key={permission.id} value={permission.name}>
+                            {permission.name} ({permission.category})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {verifyType === 'section' && (
+                      <select className="border rounded-lg px-3 py-2" id="verify-section" title="Seleziona sezione">
+                        <option value="">Seleziona Sezione</option>
+                        {allSections.map(section => (
+                          <option key={section.id} value={section.name}>
+                            {section.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                   <button
                     onClick={async () => {
