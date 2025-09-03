@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   GraduationCap, 
   PlayCircle, 
@@ -7,46 +8,131 @@ import {
   Star,
   CheckCircle,
   Lock,
-  BookOpen
+  BookOpen,
+  AlertCircle
 } from 'lucide-react';
+import { 
+  getAllCourses, 
+  enrollUserInCourse, 
+  getUserEnrollments,
+  type Course as DBCourse,
+  type Enrollment 
+} from '../lib/neonDatabase';
 
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  duration: string;
-  level: 'beginner' | 'intermediate' | 'advanced';
-  enrollments: number;
-  rating: number;
+interface Course extends DBCourse {
   completed: boolean;
   locked: boolean;
-  modules: number;
+  isEnrolled: boolean;
 }
 
 export default function Education() {
+  const { profile } = useAuth();
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [notifications, setNotifications] = useState<{type: 'success' | 'error' | 'info', message: string}[]>([]);
 
-  // Caricamento corsi dal database (da implementare)
+  // Caricamento corsi dal database
   useEffect(() => {
     loadCourses();
-  }, []);
+    if (profile?.id) {
+      loadUserEnrollments();
+    }
+  }, [profile?.id]);
 
   const loadCourses = async () => {
     try {
       setLoading(true);
-      // TODO: Sostituire con getCourses() dal database
-      // const coursesData = await getCourses();
-      // setCourses(coursesData);
+      console.log('🎓 Education: Caricamento corsi dal database...');
       
-      // Temporaneo: array vuoto per evitare errori
-      setCourses([]);
+      const coursesData = await getAllCourses();
+      console.log('🎓 Education: Corsi caricati:', coursesData.length);
+      
+      // Trasforma i dati del database nel formato dell'interfaccia
+      const transformedCourses: Course[] = coursesData.map(course => ({
+        ...course,
+        completed: false, // Da determinare in base alle iscrizioni
+        locked: false,    // Da implementare logica di sblocco
+        isEnrolled: false // Da determinare in base alle iscrizioni
+      }));
+      
+      setCourses(transformedCourses);
+      addNotification('success', `${coursesData.length} corsi caricati con successo`);
     } catch (error) {
-      console.error('Errore caricamento corsi:', error);
+      console.error('🚨 Education: Errore caricamento corsi:', error);
+      addNotification('error', 'Errore nel caricamento dei corsi');
       setCourses([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadUserEnrollments = async () => {
+    if (!profile?.id) return;
+    
+    try {
+      console.log('🎓 Education: Caricamento iscrizioni utente...');
+      const userEnrollments = await getUserEnrollments(profile.id);
+      setEnrollments(userEnrollments);
+      
+      // Aggiorna lo stato dei corsi con le informazioni di iscrizione
+      setCourses(prevCourses => 
+        prevCourses.map(course => {
+          const enrollment = userEnrollments.find(e => e.course_id === course.id);
+          return {
+            ...course,
+            isEnrolled: !!enrollment,
+            completed: enrollment?.status === 'completed'
+          };
+        })
+      );
+    } catch (error) {
+      console.error('🚨 Education: Errore caricamento iscrizioni:', error);
+    }
+  };
+
+  const addNotification = (type: 'success' | 'error' | 'info', message: string) => {
+    const id = Date.now().toString();
+    setNotifications(prev => [...prev, { type, message }]);
+    
+    // Rimuovi automaticamente dopo 4 secondi
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n !== notifications.find(n => n.message === message)));
+    }, 4000);
+  };
+
+  const handleEnroll = async (courseId: string) => {
+    if (!profile?.id) {
+      addNotification('error', 'Devi essere loggato per iscriverti ai corsi');
+      return;
+    }
+
+    try {
+      console.log('🎓 Education: Iscrizione al corso:', courseId);
+      
+      const enrollment = await enrollUserInCourse(profile.id, courseId);
+      
+      if (enrollment) {
+        addNotification('success', 'Iscrizione completata con successo!');
+        
+        // Aggiorna lo stato locale
+        setCourses(prevCourses => 
+          prevCourses.map(course => 
+            course.id === courseId 
+              ? { ...course, isEnrolled: true }
+              : course
+          )
+        );
+        
+        // Ricarica le iscrizioni
+        await loadUserEnrollments();
+      } else {
+        addNotification('error', 'Errore durante l\'iscrizione al corso');
+      }
+    } catch (error) {
+      console.error('🚨 Education: Errore iscrizione:', error);
+      addNotification('error', 'Errore durante l\'iscrizione al corso');
     }
   };
 
@@ -75,6 +161,29 @@ export default function Education() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
+        {/* Notifications */}
+        {notifications.length > 0 && (
+          <div className="fixed top-4 right-4 z-50 space-y-2">
+            {notifications.map((notification, index) => (
+              <div
+                key={index}
+                className={`p-4 rounded-lg shadow-lg max-w-sm ${
+                  notification.type === 'success' 
+                    ? 'bg-green-100 text-green-800 border border-green-200'
+                    : notification.type === 'error'
+                    ? 'bg-red-100 text-red-800 border border-red-200'
+                    : 'bg-blue-100 text-blue-800 border border-blue-200'
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="h-5 w-5" />
+                  <span className="font-medium">{notification.message}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
@@ -195,7 +304,7 @@ export default function Education() {
                     </div>
                     <div className="flex items-center space-x-1">
                       <Users className="h-4 w-4" />
-                      <span>{course.enrollments}</span>
+                      <span>{course.enrollment_count}</span>
                     </div>
                   </div>
                   <div className="flex items-center space-x-1">
@@ -206,7 +315,7 @@ export default function Education() {
 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">
-                    {course.modules} moduli
+                    {course.modules_count} moduli
                   </span>
                   
                   {course.completed ? (
@@ -219,10 +328,21 @@ export default function Education() {
                       <Lock className="h-4 w-4" />
                       <span>Bloccato</span>
                     </span>
-                  ) : (
-                    <button className="flex items-center space-x-2 bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors text-sm">
+                  ) : course.isEnrolled ? (
+                    <button 
+                      onClick={() => {/* Navigate to course */}}
+                      className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm min-h-[44px]"
+                    >
                       <PlayCircle className="h-4 w-4" />
-                      <span>Inizia</span>
+                      <span>Continua</span>
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => handleEnroll(course.id)}
+                      className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm min-h-[44px]"
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      <span>Iscriviti</span>
                     </button>
                   )}
                 </div>

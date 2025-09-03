@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getNormativesCount, getUsersCount, getUsers, getNormatives, updateUser, deleteUser, createNewUser, updateUserPassword } from '../lib/api';
-import { createNormative, updateNormative, deleteNormative, getAllDocuments, getDocumentsCount, createDocument, updateDocument, deleteDocument, getUserPermissions } from '../lib/neonDatabase';
+import { createNormative, updateNormative, deleteNormative, getAllDocuments, getDocumentsCount, createDocument, updateDocument, deleteDocument, getUserPermissions, getAllCourses, getCoursesCount, createCourse, updateCourse, deleteCourse, getCourseModules, createCourseModule, updateCourseModule, deleteCourseModule } from '../lib/neonDatabase';
 import { downloadGoogleDriveFile, isGoogleDriveUrl } from '../lib/driveDownload';
 import { generatePDF } from '../lib/pdfGenerator';
 import { 
@@ -22,7 +22,10 @@ import {
   Info,
   FolderOpen,
   Download,
-  ChevronRight
+  ChevronRight,
+  GraduationCap,
+  BookOpen,
+  PlayCircle
 } from 'lucide-react';
 
 interface AdminStats {
@@ -41,7 +44,7 @@ interface Notification {
 
 export default function Admin() {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'normatives' | 'documents'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'normatives' | 'documents' | 'courses'>('overview');
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
     totalNormatives: 0,
@@ -51,10 +54,12 @@ export default function Admin() {
   const [users, setUsers] = useState<any[]>([]);
   const [normatives, setNormatives] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddNormative, setShowAddNormative] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
   const [showAddDocument, setShowAddDocument] = useState(false);
+  const [showAddCourse, setShowAddCourse] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showPasswordModal, setShowPasswordModal] = useState<any>(null);
   const [newPassword, setNewPassword] = useState('');
@@ -97,6 +102,32 @@ export default function Admin() {
     status: 'active' as 'active' | 'draft' | 'archived'
   });
   const [documentTagInput, setDocumentTagInput] = useState('');
+
+  // Stati per gestione corsi
+  const [showEditCourse, setShowEditCourse] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<any>(null);
+  const [viewingCourse, setViewingCourse] = useState<any>(null);
+  const [courseDeleteConfirm, setCourseDeleteConfirm] = useState<{ show: boolean; course: any }>({ show: false, course: null });
+  const [courseForm, setCourseForm] = useState({
+    title: '',
+    description: '',
+    duration: '',
+    level: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
+    instructor: '',
+    category: '',
+    status: 'draft' as 'active' | 'draft' | 'archived',
+    rating: 0,
+    tags: [] as string[],
+    file_path: '',
+    thumbnail_path: '',
+    price: 0,
+    is_free: true,
+    certificate_template: '',
+    passing_score: 70
+  });
+  const [courseTagInput, setCourseTagInput] = useState('');
+  const [courseModules, setCourseModules] = useState<any[]>([]);
+  const [showCourseModules, setShowCourseModules] = useState(false);
 
   const [userForm, setUserForm] = useState({
     email: '',
@@ -571,13 +602,15 @@ export default function Admin() {
   async function fetchAdminData() {
     try {
       // Fetch admin data
-      const [totalUsers, totalNormatives, totalDocuments, usersData, normativesData, documentsData] = await Promise.all([
+      const [totalUsers, totalNormatives, totalDocuments, totalCourses, usersData, normativesData, documentsData, coursesData] = await Promise.all([
         getUsersCount(),
         getNormativesCount(),
         getDocumentsCount(),
+        getCoursesCount(),
         getUsers(profile?.role !== 'superadmin', profile?.id), // Escludi SuperAdmin solo se non sei SuperAdmin
         getNormatives(),
-        getAllDocuments()
+        getAllDocuments(),
+        getAllCourses()
       ]);
 
       setStats({
@@ -590,6 +623,7 @@ export default function Admin() {
       setUsers(usersData);
       setNormatives(normativesData);
       setDocuments(documentsData);
+      setCourses(coursesData);
     } catch (error) {
       console.error('Error fetching admin data:', error);
     } finally {
@@ -687,6 +721,134 @@ export default function Admin() {
       console.error('Error updating password:', error);
       addNotification('error', 'Errore Password', 'Non è stato possibile aggiornare la password');
     }
+  }
+
+  // ==============================================
+  // FUNZIONI GESTIONE CORSI
+  // ==============================================
+
+  async function handleCreateCourse() {
+    if (!hasPermission('education.create')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per creare corsi');
+      return;
+    }
+
+    try {
+      if (!courseForm.title || !courseForm.description || !courseForm.instructor) {
+        addNotification('error', 'Errore Validazione', 'Titolo, descrizione e istruttore sono obbligatori');
+        return;
+      }
+      
+      await createCourse(courseForm);
+      setShowAddCourse(false);
+      setCourseForm({
+        title: '',
+        description: '',
+        duration: '',
+        level: 'beginner',
+        instructor: '',
+        category: '',
+        status: 'draft',
+        rating: 0,
+        tags: [],
+        file_path: '',
+        thumbnail_path: '',
+        price: 0,
+        is_free: true,
+        certificate_template: '',
+        passing_score: 70
+      });
+      setCourseTagInput('');
+      await fetchAdminData();
+      addNotification('success', 'Corso Creato', `Il corso "${courseForm.title}" è stato aggiunto al sistema`);
+    } catch (error) {
+      console.error('Error creating course:', error);
+      addNotification('error', 'Errore Creazione', 'Si è verificato un errore durante la creazione del corso');
+    }
+  }
+
+  async function handleUpdateCourse() {
+    if (!hasPermission('education.edit')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per modificare corsi');
+      return;
+    }
+
+    try {
+      if (!editingCourse) return;
+      
+      await updateCourse(editingCourse.id, courseForm);
+      setEditingCourse(null);
+      setShowEditCourse(false);
+      await fetchAdminData();
+      addNotification('success', 'Corso Aggiornato', `Il corso "${editingCourse.title}" è stato modificato`);
+    } catch (error) {
+      console.error('🚨 Errore in handleUpdateCourse:', error);
+      addNotification('error', 'Errore Aggiornamento', 'Non è stato possibile aggiornare il corso');
+    }
+  }
+
+  async function handleDeleteCourse() {
+    if (!hasPermission('education.delete')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per eliminare corsi');
+      return;
+    }
+
+    const { course } = courseDeleteConfirm;
+    if (!course) return;
+    
+    try {
+      const success = await deleteCourse(course.id);
+      if (success) {
+        await fetchAdminData();
+        addNotification('info', 'Corso Eliminato', `Il corso "${course.title}" è stato rimosso dal sistema`);
+      } else {
+        addNotification('error', 'Errore Eliminazione', 'Il corso non è stato trovato o non può essere eliminato');
+      }
+    } catch (error) {
+      console.error('🚨 Errore in handleDeleteCourse:', error);
+      addNotification('error', 'Errore Eliminazione', 'Si è verificato un errore durante l\'eliminazione del corso');
+    } finally {
+      setCourseDeleteConfirm({ show: false, course: null });
+    }
+  }
+
+  const addCourseTag = () => {
+    if (courseTagInput.trim() && !courseForm.tags?.includes(courseTagInput.trim())) {
+      setCourseForm({
+        ...courseForm,
+        tags: [...(courseForm.tags || []), courseTagInput.trim()]
+      });
+      setCourseTagInput('');
+    }
+  };
+
+  const removeCourseTag = (tag: string) => {
+    setCourseForm({
+      ...courseForm,
+      tags: courseForm.tags?.filter(t => t !== tag) || []
+    });
+  };
+
+  function handleEditCourse(course: any) {
+    setCourseForm({
+      title: course.title,
+      description: course.description,
+      level: course.level,
+      instructor: course.instructor,
+      category: course.category,
+      status: course.status,
+      rating: course.rating,
+      tags: course.tags || [],
+      thumbnail_path: course.thumbnail_path,
+      video_path: course.video_path,
+      document_path: course.document_path,
+      price: course.price,
+      is_free: course.is_free,
+      certificate_template: course.certificate_template,
+      passing_score: course.passing_score
+    });
+    setEditingCourse(course);
+    setShowEditCourse(true);
   }
 
   if (loading) {
@@ -822,7 +984,8 @@ export default function Admin() {
                 { id: 'overview', label: 'Panoramica', icon: Settings },
                 { id: 'users', label: 'Utenti', icon: Users },
                 { id: 'normatives', label: 'Normative', icon: FileText },
-                { id: 'documents', label: 'Documenti', icon: FolderOpen }
+                { id: 'documents', label: 'Documenti', icon: FolderOpen },
+                { id: 'courses', label: 'Formazione', icon: GraduationCap }
               ].map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -854,7 +1017,8 @@ export default function Admin() {
                 { id: 'overview', label: 'Panoramica', icon: Settings },
                 { id: 'users', label: 'Utenti', icon: Users },
                 { id: 'normatives', label: 'Normative', icon: FileText },
-                { id: 'documents', label: 'Documenti', icon: FolderOpen }
+                { id: 'documents', label: 'Documenti', icon: FolderOpen },
+                { id: 'courses', label: 'Formazione', icon: GraduationCap }
               ].map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -1239,6 +1403,97 @@ export default function Admin() {
                               : 'text-gray-300 cursor-not-allowed'
                           }`}
                           title={hasPermission('documents.delete') ? 'Elimina' : 'Permesso negato'}
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'courses' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Gestione Corsi ({courses.length})
+                  </h3>
+                  <button
+                    onClick={() => setShowAddCourse(true)}
+                    disabled={!hasPermission('education.create')}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                      hasPermission('education.create')
+                        ? 'bg-blue-800 text-white hover:bg-blue-900'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    <Plus className="h-5 w-5" />
+                    <span>Aggiungi Corso</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
+                  {courses.map((course) => (
+                    <div
+                      key={course.id}
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3 sm:gap-0"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 mb-1 text-sm sm:text-base line-clamp-2">
+                          {course.title}
+                        </h4>
+                        <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2">
+                          {course.description}
+                        </p>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium w-fit ${
+                            course.level === 'beginner' ? 'bg-green-100 text-green-800' :
+                            course.level === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {course.level === 'beginner' ? 'Principiante' :
+                             course.level === 'intermediate' ? 'Intermedio' : 'Avanzato'}
+                          </span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium w-fit ${
+                            course.status === 'published' ? 'bg-green-100 text-green-800' :
+                            course.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {course.status === 'published' ? 'Pubblicato' :
+                             course.status === 'draft' ? 'Bozza' : 'Archiviato'}
+                          </span>
+                          <span>Istruttore: {course.instructor}</span>
+                          <span>Iscritti: {course.enrollment_count || 0}</span>
+                          {course.is_free ? (
+                            <span className="text-green-600 font-medium">Gratuito</span>
+                          ) : (
+                            <span className="text-blue-600 font-medium">€{course.price}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 sm:space-x-1">
+                        <button
+                          onClick={() => handleEditCourse(course)}
+                          disabled={!hasPermission('education.edit')}
+                          className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
+                            hasPermission('education.edit')
+                              ? 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+                              : 'text-gray-300 cursor-not-allowed'
+                          }`}
+                          title={hasPermission('education.edit') ? 'Modifica' : 'Permesso negato'}
+                        >
+                          <Edit3 className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => setCourseDeleteConfirm({ show: true, course })}
+                          disabled={!hasPermission('education.delete')}
+                          className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
+                            hasPermission('education.delete')
+                              ? 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                              : 'text-gray-300 cursor-not-allowed'
+                          }`}
+                          title={hasPermission('education.delete') ? 'Elimina' : 'Permesso negato'}
                         >
                           <Trash2 className="h-5 w-5" />
                         </button>
@@ -2380,6 +2635,432 @@ export default function Admin() {
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                 >
                   Elimina Documento
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Aggiungi Corso */}
+        {showAddCourse && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Aggiungi Nuovo Corso</h3>
+                <button
+                  onClick={() => setShowAddCourse(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Titolo
+                  </label>
+                  <input
+                    type="text"
+                    value={courseForm.title}
+                    onChange={(e) => setCourseForm({...courseForm, title: e.target.value})}
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Inserisci il titolo del corso"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descrizione
+                  </label>
+                  <textarea
+                    value={courseForm.description}
+                    onChange={(e) => setCourseForm({...courseForm, description: e.target.value})}
+                    rows={3}
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Inserisci la descrizione del corso"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Livello
+                    </label>
+                    <select
+                      value={courseForm.level}
+                      onChange={(e) => setCourseForm({...courseForm, level: e.target.value as 'beginner' | 'intermediate' | 'advanced'})}
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="beginner">Principiante</option>
+                      <option value="intermediate">Intermedio</option>
+                      <option value="advanced">Avanzato</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Stato
+                    </label>
+                    <select
+                      value={courseForm.status}
+                      onChange={(e) => setCourseForm({...courseForm, status: e.target.value as 'draft' | 'published' | 'archived'})}
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="draft">Bozza</option>
+                      <option value="published">Pubblicato</option>
+                      <option value="archived">Archiviato</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Istruttore
+                  </label>
+                  <input
+                    type="text"
+                    value={courseForm.instructor}
+                    onChange={(e) => setCourseForm({...courseForm, instructor: e.target.value})}
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nome dell'istruttore"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Categoria
+                  </label>
+                  <input
+                    type="text"
+                    value={courseForm.category}
+                    onChange={(e) => setCourseForm({...courseForm, category: e.target.value})}
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Categoria del corso"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={courseForm.is_free}
+                        onChange={(e) => setCourseForm({...courseForm, is_free: e.target.checked, price: e.target.checked ? 0 : courseForm.price})}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Corso gratuito</span>
+                    </label>
+                  </div>
+
+                  {!courseForm.is_free && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Prezzo (€)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={courseForm.price}
+                        onChange={(e) => setCourseForm({...courseForm, price: parseFloat(e.target.value) || 0})}
+                        className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tags
+                  </label>
+                  <div className="flex space-x-2 mb-2">
+                    <input
+                      type="text"
+                      value={courseTagInput}
+                      onChange={(e) => setCourseTagInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCourseTag())}
+                      className="flex-1 px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Aggiungi tag..."
+                    />
+                    <button
+                      type="button"
+                      onClick={addCourseTag}
+                      className="px-3 py-3 min-h-[44px] bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Aggiungi
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {courseForm.tags?.map((tag: string, index: number) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => removeCourseTag(tag)}
+                          className="ml-2 text-blue-600 hover:text-blue-800"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowAddCourse(false)}
+                  className="px-4 py-3 min-h-[44px] text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleCreateCourse}
+                  className="px-4 py-3 min-h-[44px] bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                >
+                  Crea Corso
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Modifica Corso */}
+        {showEditCourse && editingCourse && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Modifica Corso</h3>
+                <button
+                  onClick={() => setShowEditCourse(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Titolo
+                  </label>
+                  <input
+                    type="text"
+                    value={courseForm.title}
+                    onChange={(e) => setCourseForm({...courseForm, title: e.target.value})}
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Inserisci il titolo del corso"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descrizione
+                  </label>
+                  <textarea
+                    value={courseForm.description}
+                    onChange={(e) => setCourseForm({...courseForm, description: e.target.value})}
+                    rows={3}
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Inserisci la descrizione del corso"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Livello
+                    </label>
+                    <select
+                      value={courseForm.level}
+                      onChange={(e) => setCourseForm({...courseForm, level: e.target.value as 'beginner' | 'intermediate' | 'advanced'})}
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="beginner">Principiante</option>
+                      <option value="intermediate">Intermedio</option>
+                      <option value="advanced">Avanzato</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Stato
+                    </label>
+                    <select
+                      value={courseForm.status}
+                      onChange={(e) => setCourseForm({...courseForm, status: e.target.value as 'draft' | 'published' | 'archived'})}
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="draft">Bozza</option>
+                      <option value="published">Pubblicato</option>
+                      <option value="archived">Archiviato</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Istruttore
+                  </label>
+                  <input
+                    type="text"
+                    value={courseForm.instructor}
+                    onChange={(e) => setCourseForm({...courseForm, instructor: e.target.value})}
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nome dell'istruttore"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Categoria
+                  </label>
+                  <input
+                    type="text"
+                    value={courseForm.category}
+                    onChange={(e) => setCourseForm({...courseForm, category: e.target.value})}
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Categoria del corso"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={courseForm.is_free}
+                        onChange={(e) => setCourseForm({...courseForm, is_free: e.target.checked, price: e.target.checked ? 0 : courseForm.price})}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Corso gratuito</span>
+                    </label>
+                  </div>
+
+                  {!courseForm.is_free && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Prezzo (€)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={courseForm.price}
+                        onChange={(e) => setCourseForm({...courseForm, price: parseFloat(e.target.value) || 0})}
+                        className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tags
+                  </label>
+                  <div className="flex space-x-2 mb-2">
+                    <input
+                      type="text"
+                      value={courseTagInput}
+                      onChange={(e) => setCourseTagInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCourseTag())}
+                      className="flex-1 px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Aggiungi tag..."
+                    />
+                    <button
+                      type="button"
+                      onClick={addCourseTag}
+                      className="px-3 py-3 min-h-[44px] bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Aggiungi
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {courseForm.tags?.map((tag: string, index: number) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => removeCourseTag(tag)}
+                          className="ml-2 text-blue-600 hover:text-blue-800"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowEditCourse(false)}
+                  className="px-4 py-3 min-h-[44px] text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleUpdateCourse}
+                  className="px-4 py-3 min-h-[44px] bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                >
+                  Salva Modifiche
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Conferma Eliminazione Corso */}
+        {courseDeleteConfirm.show && courseDeleteConfirm.course && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Conferma Eliminazione</h3>
+                <button
+                  onClick={() => setCourseDeleteConfirm({ show: false, course: null })}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <AlertTriangle className="h-6 w-6 text-red-500" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-700">
+                      Sei sicuro di voler eliminare il corso <strong>"{courseDeleteConfirm.course.title}"</strong>?
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Questa azione eliminerà anche tutti i moduli, quiz e iscrizioni associate. L'azione non può essere annullata.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setCourseDeleteConfirm({ show: false, course: null })}
+                  className="px-4 py-3 min-h-[44px] text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleDeleteCourse}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Elimina Corso
                 </button>
               </div>
             </div>

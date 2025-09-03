@@ -1993,3 +1993,603 @@ export async function checkDatabaseTables(): Promise<{ tables: string[], error?:
     return { tables: [], error: (error as Error).message };
   }
 }
+
+// ==============================================
+// INTERFACES PER SISTEMA FORMAZIONE
+// ==============================================
+
+export interface Course {
+  id: string;
+  title: string;
+  description: string;
+  duration: string;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  instructor: string;
+  category: string;
+  status: 'active' | 'draft' | 'archived';
+  modules_count: number;
+  enrollment_count: number;
+  rating: number;
+  tags: string[];
+  file_path?: string;
+  thumbnail_path?: string;
+  price: number;
+  is_free: boolean;
+  certificate_template?: string;
+  passing_score: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CourseModule {
+  id: string;
+  course_id: string;
+  title: string;
+  description: string;
+  type: 'lesson' | 'video' | 'document' | 'quiz';
+  content?: string;
+  video_url?: string;
+  document_url?: string;
+  order_num: number;
+  duration_minutes?: number;
+  is_required: boolean;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Quiz {
+  id: string;
+  module_id: string;
+  title: string;
+  description: string;
+  time_limit: number;
+  passing_score: number;
+  max_attempts: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QuizQuestion {
+  id: string;
+  quiz_id: string;
+  question: string;
+  options: string[];
+  correct_answer: number;
+  explanation?: string;
+  order_num: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Enrollment {
+  id: string;
+  user_id: string;
+  course_id: string;
+  status: 'enrolled' | 'in_progress' | 'completed' | 'failed';
+  enrolled_at: string;
+  completed_at?: string;
+  score?: number;
+  payment_status: 'pending' | 'paid' | 'failed';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QuizAttempt {
+  id: string;
+  user_id: string;
+  quiz_id: string;
+  attempt_number: number;
+  answers: Record<string, any>; // JSONB
+  score: number;
+  time_spent: number;
+  completed_at: string;
+  created_at: string;
+}
+
+export interface CourseStats {
+  totalEnrollments: number;
+  completionRate: number;
+  averageScore: number;
+  averageTimeToComplete: number;
+  dropOffPoints: { module: string; percentage: number }[];
+  userFeedback: { rating: number; comment: string }[];
+}
+
+export interface UserProgress {
+  courseId: string;
+  courseTitle: string;
+  completedModules: number;
+  totalModules: number;
+  currentModule?: string;
+  progressPercentage: number;
+  lastAccessed: string;
+  estimatedCompletion: string;
+}
+
+// ==============================================
+// FUNZIONI CORSI
+// ==============================================
+
+export async function getAllCourses(): Promise<Course[]> {
+  try {
+    console.log('🎓 NEON: Recupero tutti i corsi');
+    const result = await sql`
+      SELECT * FROM courses
+      ORDER BY created_at DESC
+    `;
+    return result as Course[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero corsi:', error);
+    return [];
+  }
+}
+
+export async function getCourseById(id: string): Promise<Course | null> {
+  try {
+    console.log('🎓 NEON: Ricerca corso per ID:', id);
+    const result = await sql`
+      SELECT * FROM courses
+      WHERE id = ${id}
+    `;
+    return result[0] as Course || null;
+  } catch (error) {
+    console.error('🚨 NEON: Errore ricerca corso:', error);
+    return null;
+  }
+}
+
+export async function createCourse(data: Omit<Course, 'id' | 'created_at' | 'updated_at' | 'modules_count' | 'enrollment_count'>): Promise<Course | null> {
+  try {
+    console.log('🎓 NEON: Creazione corso:', data.title);
+    const result = await sql`
+      INSERT INTO courses (
+        title, description, duration, level, instructor, category, status,
+        rating, tags, file_path, thumbnail_path, price, is_free,
+        certificate_template, passing_score
+      )
+      VALUES (
+        ${data.title}, ${data.description}, ${data.duration}, ${data.level},
+        ${data.instructor}, ${data.category}, ${data.status}, ${data.rating},
+        ${data.tags}, ${data.file_path}, ${data.thumbnail_path}, ${data.price},
+        ${data.is_free}, ${data.certificate_template}, ${data.passing_score}
+      )
+      RETURNING *
+    `;
+    return result[0] as Course;
+  } catch (error) {
+    console.error('🚨 NEON: Errore creazione corso:', error);
+    return null;
+  }
+}
+
+export async function updateCourse(id: string, data: Partial<Course>): Promise<Course | null> {
+  try {
+    console.log('🎓 NEON: Aggiornamento corso:', id);
+    const result = await sql`
+      UPDATE courses 
+      SET 
+        title = COALESCE(${data.title}, title),
+        description = COALESCE(${data.description}, description),
+        duration = COALESCE(${data.duration}, duration),
+        level = COALESCE(${data.level}, level),
+        instructor = COALESCE(${data.instructor}, instructor),
+        category = COALESCE(${data.category}, category),
+        status = COALESCE(${data.status}, status),
+        rating = COALESCE(${data.rating}, rating),
+        tags = COALESCE(${data.tags}, tags),
+        file_path = COALESCE(${data.file_path}, file_path),
+        thumbnail_path = COALESCE(${data.thumbnail_path}, thumbnail_path),
+        price = COALESCE(${data.price}, price),
+        is_free = COALESCE(${data.is_free}, is_free),
+        certificate_template = COALESCE(${data.certificate_template}, certificate_template),
+        passing_score = COALESCE(${data.passing_score}, passing_score),
+        updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    return result[0] as Course || null;
+  } catch (error) {
+    console.error('🚨 NEON: Errore aggiornamento corso:', error);
+    return null;
+  }
+}
+
+export async function deleteCourse(id: string): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Eliminazione corso:', id);
+    await sql`DELETE FROM courses WHERE id = ${id}`;
+    return true;
+  } catch (error) {
+    console.error('🚨 NEON: Errore eliminazione corso:', error);
+    return false;
+  }
+}
+
+export async function getCoursesCount(): Promise<number> {
+  try {
+    const result = await sql`SELECT COUNT(*) as count FROM courses`;
+    return parseInt(result[0].count);
+  } catch (error) {
+    console.error('🚨 NEON: Errore conteggio corsi:', error);
+    return 0;
+  }
+}
+
+export async function searchCourses(query: string): Promise<Course[]> {
+  try {
+    console.log('🎓 NEON: Ricerca corsi:', query);
+    const result = await sql`
+      SELECT * FROM courses
+      WHERE 
+        title ILIKE ${'%' + query + '%'} OR
+        description ILIKE ${'%' + query + '%'} OR
+        category ILIKE ${'%' + query + '%'} OR
+        instructor ILIKE ${'%' + query + '%'} OR
+        EXISTS (
+          SELECT 1 FROM unnest(tags) as tag 
+          WHERE tag ILIKE ${'%' + query + '%'}
+        )
+      ORDER BY created_at DESC
+    `;
+    return result as Course[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore ricerca corsi:', error);
+    return [];
+  }
+}
+
+export async function getCoursesByCategory(category: string): Promise<Course[]> {
+  try {
+    console.log('🎓 NEON: Recupero corsi per categoria:', category);
+    const result = await sql`
+      SELECT * FROM courses
+      WHERE category = ${category} AND status = 'active'
+      ORDER BY created_at DESC
+    `;
+    return result as Course[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero corsi per categoria:', error);
+    return [];
+  }
+}
+
+export async function getCoursesByLevel(level: string): Promise<Course[]> {
+  try {
+    console.log('🎓 NEON: Recupero corsi per livello:', level);
+    const result = await sql`
+      SELECT * FROM courses
+      WHERE level = ${level} AND status = 'active'
+      ORDER BY created_at DESC
+    `;
+    return result as Course[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero corsi per livello:', error);
+    return [];
+  }
+}
+
+export async function getPopularCourses(limit: number = 10): Promise<Course[]> {
+  try {
+    console.log('🎓 NEON: Recupero corsi popolari');
+    const result = await sql`
+      SELECT * FROM courses
+      WHERE status = 'active'
+      ORDER BY enrollment_count DESC, rating DESC
+      LIMIT ${limit}
+    `;
+    return result as Course[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero corsi popolari:', error);
+    return [];
+  }
+}
+
+// ==============================================
+// FUNZIONI MODULI
+// ==============================================
+
+export async function getCourseModules(courseId: string): Promise<CourseModule[]> {
+  try {
+    console.log('🎓 NEON: Recupero moduli per corso:', courseId);
+    const result = await sql`
+      SELECT * FROM course_modules
+      WHERE course_id = ${courseId}
+      ORDER BY order_num ASC
+    `;
+    return result as CourseModule[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero moduli:', error);
+    return [];
+  }
+}
+
+export async function createCourseModule(data: Omit<CourseModule, 'id' | 'created_at' | 'updated_at'>): Promise<CourseModule | null> {
+  try {
+    console.log('🎓 NEON: Creazione modulo:', data.title);
+    const result = await sql`
+      INSERT INTO course_modules (
+        course_id, title, description, type, content, video_url, document_url,
+        order_num, duration_minutes, is_required, level
+      )
+      VALUES (
+        ${data.course_id}, ${data.title}, ${data.description}, ${data.type},
+        ${data.content}, ${data.video_url}, ${data.document_url}, ${data.order_num},
+        ${data.duration_minutes}, ${data.is_required}, ${data.level}
+      )
+      RETURNING *
+    `;
+    return result[0] as CourseModule;
+  } catch (error) {
+    console.error('🚨 NEON: Errore creazione modulo:', error);
+    return null;
+  }
+}
+
+export async function updateCourseModule(id: string, data: Partial<CourseModule>): Promise<CourseModule | null> {
+  try {
+    console.log('🎓 NEON: Aggiornamento modulo:', id);
+    const result = await sql`
+      UPDATE course_modules 
+      SET 
+        title = COALESCE(${data.title}, title),
+        description = COALESCE(${data.description}, description),
+        type = COALESCE(${data.type}, type),
+        content = COALESCE(${data.content}, content),
+        video_url = COALESCE(${data.video_url}, video_url),
+        document_url = COALESCE(${data.document_url}, document_url),
+        order_num = COALESCE(${data.order_num}, order_num),
+        duration_minutes = COALESCE(${data.duration_minutes}, duration_minutes),
+        is_required = COALESCE(${data.is_required}, is_required),
+        level = COALESCE(${data.level}, level),
+        updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    return result[0] as CourseModule || null;
+  } catch (error) {
+    console.error('🚨 NEON: Errore aggiornamento modulo:', error);
+    return null;
+  }
+}
+
+export async function deleteCourseModule(id: string): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Eliminazione modulo:', id);
+    await sql`DELETE FROM course_modules WHERE id = ${id}`;
+    return true;
+  } catch (error) {
+    console.error('🚨 NEON: Errore eliminazione modulo:', error);
+    return false;
+  }
+}
+
+// ==============================================
+// FUNZIONI QUIZ
+// ==============================================
+
+export async function getModuleQuiz(moduleId: string): Promise<Quiz | null> {
+  try {
+    console.log('🎓 NEON: Recupero quiz per modulo:', moduleId);
+    const result = await sql`
+      SELECT * FROM quizzes
+      WHERE module_id = ${moduleId}
+    `;
+    return result[0] as Quiz || null;
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero quiz:', error);
+    return null;
+  }
+}
+
+export async function getQuizQuestions(quizId: string): Promise<QuizQuestion[]> {
+  try {
+    console.log('🎓 NEON: Recupero domande quiz:', quizId);
+    const result = await sql`
+      SELECT * FROM quiz_questions
+      WHERE quiz_id = ${quizId}
+      ORDER BY order_num ASC
+    `;
+    return result as QuizQuestion[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero domande quiz:', error);
+    return [];
+  }
+}
+
+export async function createQuiz(data: Omit<Quiz, 'id' | 'created_at' | 'updated_at'>): Promise<Quiz | null> {
+  try {
+    console.log('🎓 NEON: Creazione quiz:', data.title);
+    const result = await sql`
+      INSERT INTO quizzes (
+        module_id, title, description, time_limit, passing_score, max_attempts
+      )
+      VALUES (
+        ${data.module_id}, ${data.title}, ${data.description}, ${data.time_limit},
+        ${data.passing_score}, ${data.max_attempts}
+      )
+      RETURNING *
+    `;
+    return result[0] as Quiz;
+  } catch (error) {
+    console.error('🚨 NEON: Errore creazione quiz:', error);
+    return null;
+  }
+}
+
+export async function createQuizQuestion(data: Omit<QuizQuestion, 'id' | 'created_at' | 'updated_at'>): Promise<QuizQuestion | null> {
+  try {
+    console.log('🎓 NEON: Creazione domanda quiz');
+    const result = await sql`
+      INSERT INTO quiz_questions (
+        quiz_id, question, options, correct_answer, explanation, order_num
+      )
+      VALUES (
+        ${data.quiz_id}, ${data.question}, ${data.options}, ${data.correct_answer},
+        ${data.explanation}, ${data.order_num}
+      )
+      RETURNING *
+    `;
+    return result[0] as QuizQuestion;
+  } catch (error) {
+    console.error('🚨 NEON: Errore creazione domanda quiz:', error);
+    return null;
+  }
+}
+
+// ==============================================
+// FUNZIONI ISCRIZIONI
+// ==============================================
+
+export async function getUserEnrollments(userId: string): Promise<Enrollment[]> {
+  try {
+    console.log('🎓 NEON: Recupero iscrizioni utente:', userId);
+    const result = await sql`
+      SELECT e.*, c.title as course_title
+      FROM enrollments e
+      JOIN courses c ON e.course_id = c.id
+      WHERE e.user_id = ${userId}
+      ORDER BY e.enrolled_at DESC
+    `;
+    return result as Enrollment[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero iscrizioni:', error);
+    return [];
+  }
+}
+
+export async function enrollUserInCourse(userId: string, courseId: string): Promise<Enrollment | null> {
+  try {
+    console.log('🎓 NEON: Iscrizione utente al corso:', { userId, courseId });
+    
+    // Verifica se l'utente è già iscritto
+    const existingEnrollment = await sql`
+      SELECT id FROM enrollments 
+      WHERE user_id = ${userId} AND course_id = ${courseId}
+    `;
+    
+    if (existingEnrollment.length > 0) {
+      throw new Error('Utente già iscritto a questo corso');
+    }
+    
+    const result = await sql`
+      INSERT INTO enrollments (user_id, course_id, status, payment_status)
+      VALUES (${userId}, ${courseId}, 'enrolled', 'pending')
+      RETURNING *
+    `;
+    return result[0] as Enrollment;
+  } catch (error) {
+    console.error('🚨 NEON: Errore iscrizione corso:', error);
+    return null;
+  }
+}
+
+export async function updateEnrollmentProgress(enrollmentId: string, moduleId: string, completed: boolean): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Aggiornamento progresso iscrizione:', { enrollmentId, moduleId, completed });
+    
+    // Logica per aggiornare il progresso dell'utente
+    // Questa funzione può essere estesa per tracciare moduli completati
+    
+    return true;
+  } catch (error) {
+    console.error('🚨 NEON: Errore aggiornamento progresso:', error);
+    return false;
+  }
+}
+
+export async function completeCourse(enrollmentId: string, finalScore: number): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Completamento corso:', { enrollmentId, finalScore });
+    
+    const result = await sql`
+      UPDATE enrollments 
+      SET 
+        status = 'completed',
+        score = ${finalScore},
+        completed_at = NOW(),
+        updated_at = NOW()
+      WHERE id = ${enrollmentId}
+    `;
+    
+    return result.length > 0;
+  } catch (error) {
+    console.error('🚨 NEON: Errore completamento corso:', error);
+    return false;
+  }
+}
+
+// ==============================================
+// FUNZIONI STATISTICHE
+// ==============================================
+
+export async function getCourseStats(courseId: string): Promise<CourseStats> {
+  try {
+    console.log('🎓 NEON: Recupero statistiche corso:', courseId);
+    
+    const [
+      enrollments,
+      completions,
+      scores
+    ] = await Promise.all([
+      sql`SELECT COUNT(*) as count FROM enrollments WHERE course_id = ${courseId}`,
+      sql`SELECT COUNT(*) as count FROM enrollments WHERE course_id = ${courseId} AND status = 'completed'`,
+      sql`SELECT AVG(score) as avg_score FROM enrollments WHERE course_id = ${courseId} AND score IS NOT NULL`
+    ]);
+    
+    const totalEnrollments = parseInt(enrollments[0].count);
+    const totalCompletions = parseInt(completions[0].count);
+    const averageScore = parseFloat(scores[0].avg_score || '0');
+    
+    return {
+      totalEnrollments,
+      completionRate: totalEnrollments > 0 ? (totalCompletions / totalEnrollments) * 100 : 0,
+      averageScore,
+      averageTimeToComplete: 0, // Da implementare
+      dropOffPoints: [], // Da implementare
+      userFeedback: [] // Da implementare
+    };
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero statistiche corso:', error);
+    return {
+      totalEnrollments: 0,
+      completionRate: 0,
+      averageScore: 0,
+      averageTimeToComplete: 0,
+      dropOffPoints: [],
+      userFeedback: []
+    };
+  }
+}
+
+export async function getUserProgress(userId: string, courseId: string): Promise<UserProgress | null> {
+  try {
+    console.log('🎓 NEON: Recupero progresso utente:', { userId, courseId });
+    
+    const [enrollment, course, modules] = await Promise.all([
+      sql`SELECT * FROM enrollments WHERE user_id = ${userId} AND course_id = ${courseId}`,
+      sql`SELECT title FROM courses WHERE id = ${courseId}`,
+      sql`SELECT COUNT(*) as count FROM course_modules WHERE course_id = ${courseId}`
+    ]);
+    
+    if (enrollment.length === 0 || course.length === 0) {
+      return null;
+    }
+    
+    const totalModules = parseInt(modules[0].count);
+    const completedModules = 0; // Da implementare con tabella progresso
+    
+    return {
+      courseId,
+      courseTitle: course[0].title,
+      completedModules,
+      totalModules,
+      progressPercentage: totalModules > 0 ? (completedModules / totalModules) * 100 : 0,
+      lastAccessed: enrollment[0].enrolled_at,
+      estimatedCompletion: '' // Da calcolare
+    };
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero progresso utente:', error);
+    return null;
+  }
+}
