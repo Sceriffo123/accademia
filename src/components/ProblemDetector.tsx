@@ -312,6 +312,11 @@ const ${variableName} = [];
   const warningCount = activeProblems.filter(p => p.severity === 'warning').length;
 
   if (!isVisible) {
+    // Mostra pulsante floating solo se ci sono problemi attivi
+    if (activeProblems.length === 0) {
+      return null;
+    }
+    
     return (
       <div className="fixed top-4 right-4 z-50">
         <button
@@ -319,22 +324,16 @@ const ${variableName} = [];
           className={`flex items-center space-x-2 px-4 py-2 rounded-lg shadow-lg transition-all ${
             errorCount > 0 
               ? 'bg-red-500 text-white animate-pulse' 
-              : warningCount > 0 
-                ? 'bg-yellow-500 text-white' 
-                : 'bg-green-500 text-white'
+              : 'bg-yellow-500 text-white'
           }`}
         >
           <Bug className="h-4 w-4" />
           <span className="font-medium">
-            {errorCount > 0 ? `${errorCount} Errors` : 
-             warningCount > 0 ? `${warningCount} Warnings` : 
-             'No Problems'}
+            {errorCount > 0 ? `${errorCount} Errors` : `${warningCount} Warnings`}
           </span>
-          {activeProblems.length > 0 && (
-            <span className="bg-white bg-opacity-20 px-2 py-1 rounded-full text-xs">
-              {activeProblems.length}
-            </span>
-          )}
+          <span className="bg-white bg-opacity-20 px-2 py-1 rounded-full text-xs">
+            {activeProblems.length}
+          </span>
         </button>
       </div>
     );

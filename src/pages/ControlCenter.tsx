@@ -447,15 +447,15 @@ export default function ControlCenter() {
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center space-x-3">
               <Monitor className="h-8 w-8 text-blue-600" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Centro di Controllo</h1>
-                <p className="text-sm text-gray-600">Dashboard SuperAdmin - Sistema Accademia</p>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Centro di Controllo</h1>
+                <p className="text-xs sm:text-sm text-gray-600">Dashboard SuperAdmin - Sistema Accademia</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <div className={`flex items-center space-x-2 px-3 py-1 rounded-full ${
                 realTimeMonitoring ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
               }`}>
@@ -502,54 +502,54 @@ export default function ControlCenter() {
         <div className="space-y-6">
           {/* Overview Tab */}
           {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-              <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Utenti Totali</p>
                     <p className="text-2xl font-bold text-gray-900">{systemMetrics?.totalUsers}</p>
                   </div>
-                  <Users className="h-8 w-8 text-blue-500" />
+                  <Users className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
                 </div>
               </div>
               
-              <div className="bg-white p-6 rounded-lg shadow-sm border">
+              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Ruoli Sistema</p>
                     <p className="text-2xl font-bold text-gray-900">{systemMetrics?.totalRoles}</p>
                   </div>
-                  <Shield className="h-8 w-8 text-indigo-500" />
+                  <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-indigo-500" />
                 </div>
               </div>
               
-              <div className="bg-white p-6 rounded-lg shadow-sm border">
+              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Permessi Totali</p>
                     <p className="text-2xl font-bold text-gray-900">{systemMetrics?.totalPermissions}</p>
                   </div>
-                  <Monitor className="h-8 w-8 text-green-500" />
+                  <Monitor className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />
                 </div>
               </div>
               
-              <div className="bg-white p-6 rounded-lg shadow-sm border">
+              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Documenti</p>
                     <p className="text-2xl font-bold text-gray-900">{systemMetrics?.totalDocuments}</p>
                   </div>
-                  <FileText className="h-8 w-8 text-cyan-500" />
+                  <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-cyan-500" />
                 </div>
               </div>
               
-              <div className="bg-white p-6 rounded-lg shadow-sm border">
+              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Tabelle DB</p>
                     <p className="text-2xl font-bold text-gray-900">{databaseTables.length}</p>
                   </div>
-                  <Database className="h-8 w-8 text-orange-500" />
+                  <Database className="h-6 w-6 sm:h-8 sm:w-8 text-orange-500" />
                 </div>
               </div>
             </div>
