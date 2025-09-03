@@ -48,6 +48,7 @@ export default function CourseDetail() {
     try {
       setLoading(true);
       console.log('📚 CourseDetail: Caricamento corso:', courseId);
+      console.log('📚 CourseDetail: User ID:', profile?.id);
       
       const [courseData, modulesData, progressData] = await Promise.all([
         getCourseById(courseId!),
@@ -55,23 +56,29 @@ export default function CourseDetail() {
         getUserProgress(profile!.id, courseId!)
       ]);
 
+      console.log('📚 CourseDetail: Risultati caricamento:', {
+        course: courseData,
+        modules: modulesData,
+        progress: progressData
+      });
+
       setCourse(courseData);
       setModules(modulesData);
-      setProgress(progressData);
+      setProgress(progressData || []);
       
       // Seleziona il primo modulo non completato o il primo modulo
       const firstIncomplete = modulesData.find(m => 
-        !progressData.some(p => p.module_id === m.id && p.completed)
+        !(progressData || []).some(p => p.module_id === m.id && p.completed)
       );
       setSelectedModule(firstIncomplete || modulesData[0]);
       
       console.log('📚 CourseDetail: Dati caricati:', {
         course: courseData?.title,
         modules: modulesData.length,
-        progress: progressData.length
+        progress: (progressData || []).length
       });
     } catch (error) {
-      console.error('Errore caricamento corso:', error);
+      console.error('📚 CourseDetail: Errore caricamento corso:', error);
       addNotification('error', 'Errore nel caricamento del corso');
     } finally {
       setLoading(false);

@@ -62,6 +62,9 @@ export default function Education() {
       const transformedCourses: Course[] = coursesData.map(course => {
         const enrollment = userEnrollments.find(e => e.course_id === course.id);
         console.log(`🎓 Education: Corso ${course.title} (${course.id}) - Enrollment:`, enrollment);
+        console.log(`🎓 Education: Enrollment course_id: ${enrollment?.course_id}, Course id: ${course.id}`);
+        console.log(`🎓 Education: Match: ${enrollment?.course_id === course.id}`);
+        console.log(`🎓 Education: isEnrolled will be: ${!!enrollment}`);
         return {
           ...course,
           completed: enrollment?.status === 'completed' || false,
@@ -351,7 +354,10 @@ export default function Education() {
                     </span>
                   ) : course.isEnrolled ? (
                     <button 
-                      onClick={() => navigate(`/course/${course.id}`)}
+                      onClick={() => {
+                        console.log(`🎓 Education: Clicking Continue for course: ${course.title} (${course.id})`);
+                        navigate(`/course/${course.id}`);
+                      }}
                       className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm min-h-[44px]"
                     >
                       <PlayCircle className="h-4 w-4" />
@@ -359,7 +365,10 @@ export default function Education() {
                     </button>
                   ) : (
                     <button 
-                      onClick={() => handleEnroll(course.id)}
+                      onClick={() => {
+                        console.log(`🎓 Education: Clicking Enroll for course: ${course.title} (${course.id}) - isEnrolled: ${course.isEnrolled}`);
+                        handleEnroll(course.id);
+                      }}
                       className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm min-h-[44px]"
                     >
                       <BookOpen className="h-4 w-4" />
