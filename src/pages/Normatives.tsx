@@ -173,7 +173,7 @@ export default function Normatives() {
                 <Link
                   key={normative.id}
                   to={`/normative/${normative.id}`}
-                  className="block bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-4 sm:p-6 border border-gray-100 group">
+                  className="block bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-4 sm:p-6 border border-gray-100 group"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
