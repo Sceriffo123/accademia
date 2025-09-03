@@ -16,6 +16,10 @@ import {
   getUsersCount,
   getAllTableRelations
 } from '../lib/neonDatabase';
+import { 
+  createModuleProgressTable, 
+  checkModuleProgressTable 
+} from '../lib/createModuleProgressTable';
 
 interface TableInfo {
   name: string;
@@ -61,14 +65,27 @@ interface ConstraintInfo {
 }
 
 export default function DatabaseExplorer() {
-  const [tables, setTables] = useState<string[]>([]);
-  const [selectedTable, setSelectedTable] = useState<string>('');
-  const [tableInfo, setTableInfo] = useState<TableInfo | null>(null);
+  const [allTablesInfo, setAllTablesInfo] = useState<TableInfo[]>([]);
+  const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [tableDetails, setTableDetails] = useState<TableInfo | null>(null);
   const [loading, setLoading] = useState(false);
+  const [educationTablesStatus, setEducationTablesStatus] = useState<{
+    module_progress: boolean;
+    courses: boolean;
+    course_modules: boolean;
+    enrollments: boolean;
+  }>({
+    module_progress: false,
+    courses: false,
+    course_modules: false,
+    enrollments: false
+  });
+  const [migrationLoading, setMigrationLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'overview' | 'structure' | 'data' | 'relations'>('overview');
   const [tableData, setTableData] = useState<any[]>([]);
-  const [allTablesInfo, setAllTablesInfo] = useState<TableInfo[]>([]);
+  const [tables, setTables] = useState<string[]>([]);
+  const [tableInfo, setTableInfo] = useState<TableInfo | null>(null);
 
   useEffect(() => {
     loadTables();
@@ -294,8 +311,65 @@ export default function DatabaseExplorer() {
     }
   };
 
-  const filteredTables = tables.filter(table => 
-    table.toLowerCase().includes(searchTerm.toLowerCase())
+  // Funzioni per gestione tabelle formazione
+  const checkEducationTables = async () => {
+    try {
+      setMigrationLoading(true);
+      
+      const moduleProgressExists = await checkModuleProgressTable();
+      
+      // Verifica esistenza altre tabelle formazione
+      const coursesExists = allTablesInfo.some(table => table.name === 'courses');
+      const courseModulesExists = allTablesInfo.some(table => table.name === 'course_modules');
+      const enrollmentsExists = allTablesInfo.some(table => table.name === 'enrollments');
+      
+      setEducationTablesStatus({
+        module_progress: moduleProgressExists,
+        courses: coursesExists,
+        course_modules: courseModulesExists,
+        enrollments: enrollmentsExists
+      });
+      
+      console.log('✅ Verifica tabelle formazione completata:', {
+        module_progress: moduleProgressExists,
+        courses: coursesExists,
+        course_modules: courseModulesExists,
+        enrollments: enrollmentsExists
+      });
+      
+    } catch (error) {
+      console.error('🚨 Errore verifica tabelle formazione:', error);
+    } finally {
+      setMigrationLoading(false);
+    }
+  };
+
+  const createMissingEducationTables = async () => {
+    try {
+      setMigrationLoading(true);
+      
+      if (!educationTablesStatus.module_progress) {
+        console.log('🎓 Creazione tabella module_progress...');
+        const success = await createModuleProgressTable();
+        if (success) {
+          console.log('✅ Tabella module_progress creata');
+          // Ricarica le tabelle per aggiornare la lista
+          await loadTables();
+          await checkEducationTables();
+        } else {
+          console.error('❌ Errore creazione tabella module_progress');
+        }
+      }
+      
+    } catch (error) {
+      console.error('🚨 Errore creazione tabelle formazione:', error);
+    } finally {
+      setMigrationLoading(false);
+    }
+  };
+
+  const filteredTables = allTablesInfo.filter(table => 
+    table.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -308,6 +382,22 @@ export default function DatabaseExplorer() {
             <h2 className="text-xl font-semibold text-gray-900">Database Explorer</h2>
           </div>
           <div className="flex items-center space-x-3">
+            <button
+              onClick={checkEducationTables}
+              disabled={migrationLoading}
+              className="flex items-center space-x-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${migrationLoading ? 'animate-spin' : ''}`} />
+              <span>Verifica Formazione</span>
+            </button>
+            <button
+              onClick={createMissingEducationTables}
+              disabled={migrationLoading}
+              className="flex items-center space-x-2 px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${migrationLoading ? 'animate-spin' : ''}`} />
+              <span>Crea Tabelle</span>
+            </button>
             <button
               onClick={loadTables}
               disabled={loading}

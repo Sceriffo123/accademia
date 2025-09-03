@@ -8,20 +8,6 @@ export async function createModuleProgressTable(): Promise<boolean> {
   try {
     console.log('🎓 NEON: Creazione tabella module_progress...');
     
-    // Verifica se la tabella esiste già
-    const existsResult = await sql`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'module_progress'
-      )
-    `;
-    
-    if (existsResult[0]?.exists) {
-      console.log('✅ Tabella module_progress già esistente');
-      return true;
-    }
-    
     // Crea tabella module_progress
     await sql`
       CREATE TABLE IF NOT EXISTS module_progress (
@@ -49,7 +35,7 @@ export async function createModuleProgressTable(): Promise<boolean> {
     
     console.log('✅ Indici module_progress creati');
     
-    // Crea trigger per updated_at
+    // Crea trigger per updated_at (se non esiste già)
     await sql`
       CREATE OR REPLACE FUNCTION set_updated_at()
       RETURNS TRIGGER AS $$
@@ -60,25 +46,18 @@ export async function createModuleProgressTable(): Promise<boolean> {
       $$ LANGUAGE plpgsql
     `;
     
-    // Verifica se il trigger esiste già
-    const triggerExists = await sql`
-      SELECT EXISTS (
-        SELECT FROM pg_trigger 
-        WHERE tgname = 'trigger_module_progress_updated_at'
-      )
+    await sql`
+      DROP TRIGGER IF EXISTS trigger_module_progress_updated_at ON module_progress
     `;
     
-    if (!triggerExists[0]?.exists) {
-      await sql`
-        CREATE TRIGGER trigger_module_progress_updated_at
-        BEFORE UPDATE ON module_progress
-        FOR EACH ROW
-        EXECUTE FUNCTION set_updated_at()
-      `;
-      console.log('✅ Trigger module_progress creato');
-    } else {
-      console.log('✅ Trigger module_progress già esistente');
-    }
+    await sql`
+      CREATE TRIGGER trigger_module_progress_updated_at
+          BEFORE UPDATE ON module_progress
+          FOR EACH ROW
+          EXECUTE FUNCTION set_updated_at()
+    `;
+    
+    console.log('✅ Trigger module_progress creato');
     
     // Aggiungi commenti per documentazione
     await sql`COMMENT ON TABLE module_progress IS 'Tracking progresso completamento moduli per ogni iscrizione'`;
