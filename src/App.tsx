@@ -10,6 +10,7 @@ import ControlCenter from './pages/ControlCenter';
 import Normatives from './pages/Normatives';
 import Docx from './pages/Docx';
 import Education from './pages/Education';
+import CourseDetail from './pages/CourseDetail';
 import ProtectedRoute from './components/ProtectedRoute';
 import GlobalErrorHandler from './lib/errorHandler';
 // import DatabaseCheck from './components/DatabaseCheck';
@@ -50,6 +51,11 @@ function App() {
             <Route path="/education" element={
               <ProtectedRoute>
                 <Education />
+              </ProtectedRoute>
+            } />
+            <Route path="/course/:id" element={
+              <ProtectedRoute>
+                <CourseDetail />
               </ProtectedRoute>
             } />
             <Route path="/docx" element={

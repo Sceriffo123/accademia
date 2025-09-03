@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   GraduationCap, 
@@ -27,6 +28,7 @@ interface Course extends DBCourse {
 
 export default function Education() {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -330,7 +332,7 @@ export default function Education() {
                     </span>
                   ) : course.isEnrolled ? (
                     <button 
-                      onClick={() => {/* Navigate to course */}}
+                      onClick={() => navigate(`/course/${course.id}`)}
                       className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm min-h-[44px]"
                     >
                       <PlayCircle className="h-4 w-4" />

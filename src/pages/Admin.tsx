@@ -1,7 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getNormativesCount, getUsersCount, getUsers, getNormatives, updateUser, deleteUser, createNewUser, updateUserPassword } from '../lib/api';
-import { createNormative, updateNormative, deleteNormative, getAllDocuments, getDocumentsCount, createDocument, updateDocument, deleteDocument, getUserPermissions, getAllCourses, getCoursesCount, createCourse, updateCourse, deleteCourse, getCourseModules, createCourseModule, updateCourseModule, deleteCourseModule } from '../lib/neonDatabase';
+import { 
+  getAllUsers, 
+  createUser, 
+  updateUser, 
+  deleteUser,
+  getUsersCount,
+  getAllNormatives,
+  createNormative,
+  updateNormative,
+  deleteNormative,
+  getNormativesCount,
+  getAllDocuments,
+  getDocumentsCount,
+  getAllCourses,
+  createCourse,
+  updateCourse,
+  deleteCourse,
+  getCoursesCount
+} from '../lib/neonDatabase';
+import { createModuleProgressTable, checkModuleProgressTable } from '../lib/createModuleProgressTable';
 import { downloadGoogleDriveFile, isGoogleDriveUrl } from '../lib/driveDownload';
 import { generatePDF } from '../lib/pdfGenerator';
 import { 
