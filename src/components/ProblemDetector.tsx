@@ -42,6 +42,17 @@ export default function ProblemDetector() {
   const [isVisible, setIsVisible] = useState(false);
   const [expandedProblem, setExpandedProblem] = useState<string | null>(null);
   const [isMinimized, setIsMinimized] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection useEffect
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // ✅ useEffect SEMPRE chiamato - Hook order consistente
   useEffect(() => {
@@ -260,7 +271,10 @@ const ${variableName} = [];
       // Auto-show per errori critici
       if (problem.severity === 'error') {
         setIsVisible(true);
-        setIsMinimized(false);
+        // Auto-expand solo su desktop, non su mobile
+        if (!isMobile) {
+          setIsMinimized(false);
+        }
       }
       
       return newProblems;
@@ -342,7 +356,7 @@ const ${variableName} = [];
   return (
     <div className="fixed top-4 right-4 z-50 w-full max-w-[90vw] sm:w-96 max-h-[80vh] bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden">
       {/* Header */}
-      <div className={`p-4 border-b flex items-center justify-between ${
+      <div className={`${isMobile ? 'p-2' : 'p-4'} border-b flex items-center justify-between ${
         errorCount > 0 ? 'bg-red-50 border-red-200' :
         warningCount > 0 ? 'bg-yellow-50 border-yellow-200' :
         'bg-green-50 border-green-200'
@@ -353,7 +367,7 @@ const ${variableName} = [];
             warningCount > 0 ? 'text-yellow-600' :
             'text-green-600'
           }`} />
-          <h3 className="font-semibold text-gray-900">Problems</h3>
+          <h3 className={`font-semibold text-gray-900 ${isMobile ? 'text-sm' : 'text-base'}`}>Problems</h3>
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
             errorCount > 0 ? 'bg-red-100 text-red-700' :
             warningCount > 0 ? 'bg-yellow-100 text-yellow-700' :

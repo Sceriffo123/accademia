@@ -72,6 +72,17 @@ export default function SystemAlertPanel() {
     tables: [],
     initialized: false
   });
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection useEffect
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // ✅ useEffect SEMPRE chiamato - Hook order consistente
   useEffect(() => {
@@ -118,8 +129,11 @@ export default function SystemAlertPanel() {
         
         // Auto-expand per errori critici
         if (type === 'error') {
-          setIsExpanded(true);
           setIsVisible(true);
+          // Auto-expand solo su desktop, non su mobile
+          if (!isMobile) {
+            setIsExpanded(true);
+          }
         }
       } catch (e) {
         // Ignore errors in alert handler
@@ -146,8 +160,11 @@ export default function SystemAlertPanel() {
           };
           
           setAlerts(prev => [newAlert, ...prev.slice(0, 49)]);
-          setIsExpanded(true);
           setIsVisible(true);
+          // Auto-expand solo su desktop, non su mobile
+          if (!isMobile) {
+            setIsExpanded(true);
+          }
         }
       } catch (e) {
         // Ignore errors in audit handler
@@ -177,8 +194,11 @@ export default function SystemAlertPanel() {
           };
           
           setAlerts(prev => [newAlert, ...prev.slice(0, 49)]);
-          setIsExpanded(true);
           setIsVisible(true);
+          // Auto-expand solo su desktop, non su mobile
+          if (!isMobile) {
+            setIsExpanded(true);
+          }
         }
       } catch (e) {
         // Ignore errors in console handler
@@ -484,10 +504,10 @@ export default function SystemAlertPanel() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 max-w-md w-full">
+    <div className={`fixed bottom-4 right-4 z-50 ${isMobile ? 'max-w-[90vw] w-[90vw]' : 'max-w-md w-full'}`}>
       <div className="bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden">
         {/* Header */}
-        <div className={`p-4 flex items-center justify-between ${
+        <div className={`${isMobile ? 'p-2' : 'p-4'} flex items-center justify-between ${
           errorCount > 0 || overallStatus.status === 'error' ? 'bg-red-50 border-b border-red-200' :
           warningCount > 0 || overallStatus.status === 'warning' ? 'bg-yellow-50 border-b border-yellow-200' :
           overallStatus.status === 'checking' ? 'bg-blue-50 border-b border-blue-200' :
