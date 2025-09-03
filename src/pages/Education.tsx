@@ -372,10 +372,10 @@ export default function Education() {
                       onClick={() => {
                         const debugMsg = `🎯 DEBUG: Clicking Continue for course: ${course.title} (${course.id}) - Navigate to: /course/${course.id}`;
                         console.log(debugMsg);
+                        console.log('🎯 DEBUG: Current URL before navigate:', window.location.pathname);
                         setDebugInfo(debugMsg);
-                        setTimeout(() => {
-                          navigate(`/course/${course.id}`);
-                        }, 1000); // Ritardo di 1 secondo per vedere il debug
+                        navigate(`/course/${course.id}`);
+                        console.log('🎯 DEBUG: Navigate called, URL after:', window.location.pathname);
                       }}
                       className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm min-h-[44px]"
                     >

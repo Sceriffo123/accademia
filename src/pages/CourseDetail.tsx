@@ -27,9 +27,15 @@ import {
 } from '../lib/neonDatabase';
 
 export default function CourseDetail() {
+  console.log('📚 CourseDetail: Componente caricato!');
+  console.log('📚 CourseDetail: URL corrente:', window.location.pathname);
+  
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const { profile } = useAuth();
+  
+  console.log('📚 CourseDetail: courseId da useParams:', courseId);
+  console.log('📚 CourseDetail: profile:', profile);
   
   const [course, setCourse] = useState<Course | null>(null);
   const [modules, setModules] = useState<CourseModule[]>([]);
@@ -39,8 +45,15 @@ export default function CourseDetail() {
   const [notifications, setNotifications] = useState<{type: 'success' | 'error' | 'info', message: string}[]>([]);
 
   useEffect(() => {
+    console.log('📚 CourseDetail: useEffect chiamato con:', { courseId, profileId: profile?.id });
     if (courseId && profile?.id) {
+      console.log('📚 CourseDetail: Condizioni soddisfatte, chiamando loadCourseData');
       loadCourseData();
+    } else {
+      console.log('📚 CourseDetail: Condizioni NON soddisfatte:', { 
+        hasCourseId: !!courseId, 
+        hasProfileId: !!profile?.id 
+      });
     }
   }, [courseId, profile?.id]);
 
