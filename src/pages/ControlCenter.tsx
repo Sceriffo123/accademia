@@ -37,6 +37,29 @@ interface SystemMetrics {
   lastUpdate: string;
 }
 
+interface DatabaseTable {
+  name: string;
+  records: number;
+  structure: unknown[];
+  lastModified: string;
+}
+
+interface Permission {
+  name: string;
+  level: number;
+  category?: string;
+}
+
+interface Section {
+  name: string;
+  display_name: string;
+  description?: string;
+}
+
+interface RoleData {
+  permissions: string[];
+  sections: string[];
+}
 
 interface DebugLog {
   id: string;
@@ -55,10 +78,10 @@ export default function ControlCenter() {
   // Dati sistema
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
   const [debugLogs, setDebugLogs] = useState<DebugLog[]>([]);
-  const [databaseTables, setDatabaseTables] = useState<any[]>([]);
-  const [roleMatrix, setRoleMatrix] = useState<Map<string, any>>(new Map());
-  const [allPermissions, setAllPermissions] = useState<any[]>([]);
-  const [allSections, setAllSections] = useState<any[]>([]);
+  const [databaseTables, setDatabaseTables] = useState<DatabaseTable[]>([]);
+  const [roleMatrix, setRoleMatrix] = useState<Map<string, RoleData>>(new Map());
+  const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
+  const [allSections, setAllSections] = useState<Section[]>([]);
   const [testLoading, setTestLoading] = useState(false);
   const [testResults, setTestResults] = useState<{type: 'success' | 'error' | 'warning', message: string} | null>(null);
   const [sectionTestLoading, setSectionTestLoading] = useState(false);
@@ -157,8 +180,9 @@ export default function ControlCenter() {
       setDatabaseTables(tables.map(name => ({ name, records: 0, structure: [], lastModified: '' })));
 
       addDebugLog('success', 'SYSTEM_LOAD', 'Dati sistema caricati con successo');
-    } catch (error) {
-      addDebugLog('error', 'SYSTEM_LOAD', `Errore caricamento sistema: ${error}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      addDebugLog('error', 'SYSTEM_LOAD', `Errore caricamento sistema: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -202,9 +226,10 @@ export default function ControlCenter() {
       }
       
       return result;
-    } catch (error) {
-      addDebugLog('error', 'INTEGRITY_CHECK', `Errore verifica integrità: ${error}`);
-      return { isValid: false, errors: [String(error)], warnings: [] };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      addDebugLog('error', 'INTEGRITY_CHECK', `Errore verifica integrità: ${errorMessage}`);
+      return { isValid: false, errors: [errorMessage], warnings: [] };
     }
   };
 
@@ -338,14 +363,15 @@ export default function ControlCenter() {
       addDebugLog('success', 'PERMISSION_VERIFY', 'Verifica completata (sola lettura)');
       
       return true;
-    } catch (error: any) {
-      const errorDetails = error?.message || error?.stack || JSON.stringify(error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorDetails = error instanceof Error ? (error.stack || errorMessage) : String(error);
       addDebugLog('error', 'PERMISSION_TEST', `ERRORE CATTURATO: ${errorDetails}`);
       console.error('🚨 CONTROL CENTER: Errore test permessi:', error);
       
       setTestResults({
         type: 'error',
-        message: `🚨 Errore test: ${error?.message || 'Errore sconosciuto'}`
+        message: `🚨 Errore test: ${errorMessage}`
       });
       
       return false;
@@ -379,14 +405,15 @@ export default function ControlCenter() {
       await loadSystemData();
       
       return success;
-    } catch (error: any) {
-      const errorDetails = error?.message || error?.stack || JSON.stringify(error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorDetails = error instanceof Error ? (error.stack || errorMessage) : String(error);
       addDebugLog('error', 'SECTION_TEST', `ERRORE CATTURATO: ${errorDetails}`);
       console.error('🚨 CONTROL CENTER: Errore test sezioni:', error);
       
       setSectionTestResults({
         type: 'error',
-        message: `🚨 Errore test: ${error?.message || 'Errore sconosciuto'}`
+        message: `🚨 Errore test: ${errorMessage}`
       });
       
       return false;
@@ -646,10 +673,11 @@ export default function ControlCenter() {
                             type: result.source === 'error' ? 'error' : result.isConfigured ? 'success' : 'warning',
                             message: result.message
                           });
-                        } catch (error: any) {
+                        } catch (error: unknown) {
+                          const errorMessage = error instanceof Error ? error.message : String(error);
                           setTestResults({
                             type: 'error',
-                            message: `🚨 Errore verifica sezione: ${error?.message}`
+                            message: `🚨 Errore verifica sezione: ${errorMessage}`
                           });
                         } finally {
                           setTestLoading(false);
@@ -819,8 +847,9 @@ export default function ControlCenter() {
                           const schema = await exportTableSchema();
                           addDebugLog('info', 'SCHEMA_EXPORT', `Schema esportato: ${schema.length} colonne`);
                           console.table(schema);
-                        } catch (error) {
-                          addDebugLog('error', 'SCHEMA_EXPORT', `Errore export schema: ${error}`);
+                        } catch (error: unknown) {
+                          const errorMessage = error instanceof Error ? error.message : String(error);
+                          addDebugLog('error', 'SCHEMA_EXPORT', `Errore export schema: ${errorMessage}`);
                         }
                       }}
                       className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
@@ -834,8 +863,9 @@ export default function ControlCenter() {
                           const { exportAuditLogs } = await import('../lib/auditLogger');
                           exportAuditLogs();
                           addDebugLog('success', 'AUDIT_EXPORT', 'Log di audit esportati come file markdown');
-                        } catch (error) {
-                          addDebugLog('error', 'AUDIT_EXPORT', `Errore export audit logs: ${error}`);
+                        } catch (error: unknown) {
+                          const errorMessage = error instanceof Error ? error.message : String(error);
+                          addDebugLog('error', 'AUDIT_EXPORT', `Errore export audit logs: ${errorMessage}`);
                         }
                       }}
                       className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
