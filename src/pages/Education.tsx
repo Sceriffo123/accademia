@@ -37,11 +37,52 @@ export default function Education() {
 
   // Caricamento corsi dal database
   useEffect(() => {
-    loadCourses();
     if (profile?.id) {
-      loadUserEnrollments();
+      loadCoursesAndEnrollments();
+    } else {
+      loadCourses();
     }
   }, [profile?.id]);
+
+  const loadCoursesAndEnrollments = async () => {
+    try {
+      setLoading(true);
+      console.log('🎓 Education: Caricamento corsi e iscrizioni...');
+      
+      // Carica corsi e iscrizioni in parallelo
+      const [coursesData, userEnrollments] = await Promise.all([
+        getAllCourses(),
+        getUserEnrollments(profile!.id)
+      ]);
+      
+      console.log('🎓 Education: Corsi caricati:', coursesData.length);
+      console.log('🎓 Education: Iscrizioni trovate:', userEnrollments);
+      
+      // Trasforma i dati del database nel formato dell'interfaccia
+      const transformedCourses: Course[] = coursesData.map(course => {
+        const enrollment = userEnrollments.find(e => e.course_id === course.id);
+        console.log(`🎓 Education: Corso ${course.title} (${course.id}) - Enrollment:`, enrollment);
+        return {
+          ...course,
+          completed: enrollment?.status === 'completed' || false,
+          locked: false,    // Da implementare logica di sblocco
+          isEnrolled: !!enrollment
+        };
+      });
+      
+      console.log('🎓 Education: Corsi finali:', transformedCourses.map(c => ({ title: c.title, isEnrolled: c.isEnrolled })));
+      
+      setCourses(transformedCourses);
+      setEnrollments(userEnrollments);
+      addNotification('success', `${coursesData.length} corsi caricati con successo`);
+    } catch (error) {
+      console.error('🚨 Education: Errore caricamento corsi e iscrizioni:', error);
+      addNotification('error', 'Errore nel caricamento dei corsi');
+      setCourses([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadCourses = async () => {
     try {
@@ -70,34 +111,7 @@ export default function Education() {
     }
   };
 
-  const loadUserEnrollments = async () => {
-    if (!profile?.id) return;
-    
-    try {
-      console.log('🎓 Education: Caricamento iscrizioni utente...', profile.id);
-      const userEnrollments = await getUserEnrollments(profile.id);
-      console.log('🎓 Education: Iscrizioni trovate:', userEnrollments);
-      setEnrollments(userEnrollments);
-      
-      // Aggiorna lo stato dei corsi con le informazioni di iscrizione
-      setCourses(prevCourses => {
-        console.log('🎓 Education: Corsi prima del mapping:', prevCourses.length);
-        const updatedCourses = prevCourses.map(course => {
-          const enrollment = userEnrollments.find(e => e.course_id === course.id);
-          console.log(`🎓 Education: Corso ${course.title} (${course.id}) - Enrollment:`, enrollment);
-          return {
-            ...course,
-            isEnrolled: !!enrollment,
-            completed: enrollment?.status === 'completed'
-          };
-        });
-        console.log('🎓 Education: Corsi dopo il mapping:', updatedCourses.map(c => ({ title: c.title, isEnrolled: c.isEnrolled })));
-        return updatedCourses;
-      });
-    } catch (error) {
-      console.error('🚨 Education: Errore caricamento iscrizioni:', error);
-    }
-  };
+
 
   const addNotification = (type: 'success' | 'error' | 'info', message: string) => {
     const id = Date.now().toString();
@@ -132,8 +146,8 @@ export default function Education() {
           )
         );
         
-        // Ricarica le iscrizioni
-        await loadUserEnrollments();
+        // Ricarica corsi e iscrizioni
+        await loadCoursesAndEnrollments();
       } else {
         addNotification('error', 'Errore durante l\'iscrizione al corso');
       }
