@@ -423,12 +423,12 @@ export default function ControlCenter() {
   };
 
   const tabs = [
-    { id: 'overview', label: 'Panoramica', icon: Monitor },
-    { id: 'database', label: 'Database', icon: Database },
-    { id: 'permissions', label: 'Permessi', icon: Shield },
-    { id: 'integrity', label: 'Integrità DB', icon: Shield },
-    { id: 'test', label: 'Test CRUD', icon: Zap },
-    { id: 'debug', label: 'Debug Logs', icon: Bug }
+    { id: 'overview', label: 'Panoramica', shortLabel: 'Home', icon: Monitor },
+    { id: 'database', label: 'Database', shortLabel: 'DB', icon: Database },
+    { id: 'permissions', label: 'Permessi', shortLabel: 'Permessi', icon: Shield },
+    { id: 'integrity', label: 'Integrità DB', shortLabel: 'Integrità', icon: Shield },
+    { id: 'test', label: 'Test CRUD', shortLabel: 'Test', icon: Zap },
+    { id: 'debug', label: 'Debug Logs', shortLabel: 'Debug', icon: Bug }
   ];
 
   if (isLoading) {
@@ -466,10 +466,13 @@ export default function ControlCenter() {
               </div>
               <button
                 onClick={loadSystemData}
-                className="flex items-center space-x-2 px-4 py-3 min-h-[44px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-3 min-h-[44px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <RefreshCw className="h-4 w-4" />
-                <span>Aggiorna</span>
+                <span className="text-xs sm:text-sm font-medium">
+                  <span className="sm:hidden">↻</span>
+                  <span className="hidden sm:inline">Aggiorna</span>
+                </span>
               </button>
             </div>
           </div>
@@ -478,21 +481,24 @@ export default function ControlCenter() {
 
       <div className="container mx-auto px-4 sm:px-6 py-6">
         {/* Navigation Tabs */}
-        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6 overflow-x-auto">
+        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6 overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 px-4 py-3 min-h-[44px] rounded-md transition-colors ${
+                className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-3 min-h-[44px] rounded-md transition-colors whitespace-nowrap flex-shrink-0 ${
                   activeTab === tab.id
                     ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 <Icon className="h-4 w-4" />
-                <span className="font-medium">{tab.label}</span>
+                <span className="font-medium text-xs sm:text-sm">
+                  <span className="sm:hidden">{tab.shortLabel}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </span>
               </button>
             );
           })}
@@ -615,15 +621,15 @@ export default function ControlCenter() {
                   <p className="text-sm text-gray-600 mt-1">Controlla stato DB vs Cache senza modificare nulla</p>
                 </div>
                 <div className="p-4 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <select className="border rounded-lg px-3 py-2" id="verify-role" title="Seleziona ruolo">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <select className="w-full border rounded-lg px-3 py-3 min-h-[44px]" id="verify-role" title="Seleziona ruolo">
                       <option value="">Seleziona Ruolo</option>
                       {Array.from(roleMatrix.keys()).map(role => (
                         <option key={role} value={role}>{role}</option>
                       ))}
                     </select>
                     <select 
-                      className="border rounded-lg px-3 py-2" 
+                      className="w-full border rounded-lg px-3 py-3 min-h-[44px]" 
                       id="verify-type" 
                       title="Tipo verifica"
                       value={verifyType}
@@ -635,7 +641,7 @@ export default function ControlCenter() {
                   </div>
                   <div className="grid grid-cols-1 gap-4">
                     {verifyType === 'permission' && (
-                      <select className="border rounded-lg px-3 py-2" id="verify-permission" title="Seleziona permesso">
+                      <select className="w-full border rounded-lg px-3 py-3 min-h-[44px]" id="verify-permission" title="Seleziona permesso">
                         <option value="">Seleziona Permesso</option>
                         {allPermissions.map(permission => (
                           <option key={permission.id} value={permission.name}>
@@ -645,7 +651,7 @@ export default function ControlCenter() {
                       </select>
                     )}
                     {verifyType === 'section' && (
-                      <select className="border rounded-lg px-3 py-2" id="verify-section" title="Seleziona sezione">
+                      <select className="w-full border rounded-lg px-3 py-3 min-h-[44px]" id="verify-section" title="Seleziona sezione">
                         <option value="">Seleziona Sezione</option>
                         {allSections.map(section => (
                           <option key={section.id} value={section.name}>
@@ -835,10 +841,13 @@ export default function ControlCenter() {
                   <div className="flex space-x-2">
                     <button
                       onClick={runIntegrityCheck}
-                      className="flex items-center space-x-2 px-4 py-3 min-h-[44px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-3 min-h-[44px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       <Shield className="h-4 w-4" />
-                      <span>Verifica Integrità</span>
+                      <span className="text-xs sm:text-sm font-medium">
+                        <span className="sm:hidden">Verifica</span>
+                        <span className="hidden sm:inline">Verifica Integrità</span>
+                      </span>
                     </button>
                     <button
                       onClick={async () => {
@@ -855,7 +864,10 @@ export default function ControlCenter() {
                       className="flex items-center space-x-2 px-4 py-3 min-h-[44px] bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                     >
                       <Database className="h-4 w-4" />
-                      <span>Export Schema</span>
+                      <span className="text-xs sm:text-sm font-medium">
+                        <span className="sm:hidden">Schema</span>
+                        <span className="hidden sm:inline">Export Schema</span>
+                      </span>
                     </button>
                     <button
                       onClick={async () => {
@@ -871,7 +883,10 @@ export default function ControlCenter() {
                       className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                     >
                       <Shield className="h-4 w-4" />
-                      <span>Export Audit</span>
+                      <span className="text-xs sm:text-sm font-medium">
+                        <span className="sm:hidden">Audit</span>
+                        <span className="hidden sm:inline">Export Audit</span>
+                      </span>
                     </button>
                   </div>
                 </div>
