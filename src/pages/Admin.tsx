@@ -984,59 +984,59 @@ export default function Admin() {
                         </div>
                       </div>
                       
-                      <div className="flex flex-wrap items-center gap-2 sm:gap-2">
-                            {editingUser?.id === user.id ? (
+                                            <div className="flex flex-wrap items-center gap-2 sm:gap-2">
+                        {editingUser?.id === user.id ? (
                           <>
-                                <button
-                                  onClick={handleUpdateUser}
-                              className="p-2 min-h-[44px] min-w-[44px] text-gray-400 hover:text-green-600 transition-colors"
-                                  title="Salva"
-                                >
-                                  <Save className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => setEditingUser(null)}
-                              className="p-2 min-h-[44px] min-w-[44px] text-gray-400 hover:text-red-600 transition-colors"
-                                  title="Annulla"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
+                            <button
+                              onClick={handleUpdateUser}
+                              className="p-3 min-h-[48px] min-w-[48px] text-gray-400 hover:text-green-600 transition-colors rounded-lg hover:bg-green-50"
+                              title="Salva"
+                            >
+                              <Save className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => setEditingUser(null)}
+                              className="p-3 min-h-[48px] min-w-[48px] text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+                              title="Annulla"
+                            >
+                              <X className="h-5 w-5" />
+                            </button>
                           </>
-                            ) : (
+                        ) : (
                           <>
-                                <button
-                                  onClick={() => setEditingUser({...user})}
-                                  disabled={!hasPermission('users.edit')}
-                              className={`p-2 min-h-[44px] min-w-[44px] transition-colors ${
-                                    hasPermission('users.edit')
-                                      ? 'text-gray-400 hover:text-blue-600'
-                                      : 'text-gray-300 cursor-not-allowed'
-                                  }`}
-                                  title={hasPermission('users.edit') ? 'Modifica' : 'Permesso negato'}
-                                >
-                                  <Edit3 className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => setShowPasswordModal(user)}
-                              className="p-2 min-h-[44px] min-w-[44px] text-gray-400 hover:text-yellow-600 transition-colors"
-                                  title="Cambia Password"
-                                >
-                                  <Key className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteUser(user.id, user.email)}
-                                  disabled={!hasPermission('users.delete')}
-                              className={`p-2 min-h-[44px] min-w-[44px] transition-colors ${
-                                    hasPermission('users.delete')
-                                      ? 'text-gray-400 hover:text-red-600'
-                                      : 'text-gray-300 cursor-not-allowed'
-                                  }`}
-                                  title={hasPermission('users.delete') ? 'Elimina' : 'Permesso negato'}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
+                            <button
+                              onClick={() => setEditingUser({...user})}
+                              disabled={!hasPermission('users.edit')}
+                              className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
+                                hasPermission('users.edit')
+                                  ? 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                                  : 'text-gray-300 cursor-not-allowed'
+                              }`}
+                              title={hasPermission('users.edit') ? 'Modifica' : 'Permesso negato'}
+                            >
+                              <Edit3 className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => setShowPasswordModal(user)}
+                              className="p-3 min-h-[48px] min-w-[48px] text-gray-400 hover:text-yellow-600 transition-colors rounded-lg hover:bg-yellow-50"
+                              title="Cambia Password"
+                            >
+                              <Key className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(user.id, user.email)}
+                              disabled={!hasPermission('users.delete')}
+                              className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
+                                hasPermission('users.delete')
+                                  ? 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                                  : 'text-gray-300 cursor-not-allowed'
+                              }`}
+                              title={hasPermission('users.delete') ? 'Elimina' : 'Permesso negato'}
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </button>
                           </>
-                            )}
+                        )}
                       </div>
                     </div>
                       ))}
@@ -1096,34 +1096,34 @@ export default function Admin() {
                       <div className="flex flex-wrap items-center gap-2 sm:gap-2">
                         <button 
                           onClick={() => console.log('View normative:', normative.id)}
-                          className="p-2 min-h-[44px] min-w-[44px] text-gray-400 hover:text-blue-600 transition-colors"
+                          className="p-3 min-h-[48px] min-w-[48px] text-gray-400 hover:text-blue-600 transition-colors rounded-lg hover:bg-blue-50"
                           title="Visualizza"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-5 w-5" />
                         </button>
                         <button 
                           onClick={() => handleEditNormative(normative)}
                           disabled={!hasPermission('normatives.edit')}
-                          className={`p-2 min-h-[44px] min-w-[44px] transition-colors ${
+                          className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
                             hasPermission('normatives.edit')
-                              ? 'text-gray-400 hover:text-green-600'
+                              ? 'text-gray-400 hover:text-green-600 hover:bg-green-50'
                               : 'text-gray-300 cursor-not-allowed'
                           }`}
                           title={hasPermission('normatives.edit') ? 'Modifica' : 'Permesso negato'}
                         >
-                          <Edit3 className="h-4 w-4" />
+                          <Edit3 className="h-5 w-5" />
                         </button>
                         <button 
                           onClick={() => handleDeleteNormative(normative.id, normative.title)}
                           disabled={!hasPermission('normatives.delete')}
-                          className={`p-2 min-h-[44px] min-w-[44px] transition-colors ${
+                          className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
                             hasPermission('normatives.delete')
-                              ? 'text-gray-400 hover:text-red-600'
+                              ? 'text-gray-400 hover:text-red-600 hover:bg-red-50'
                               : 'text-gray-300 cursor-not-allowed'
                           }`}
                           title={hasPermission('normatives.delete') ? 'Elimina' : 'Permesso negato'}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-5 w-5" />
                         </button>
                       </div>
                     </div>
@@ -1193,54 +1193,54 @@ export default function Admin() {
                       <div className="flex flex-wrap items-center gap-2 sm:gap-2">
                         <button
                           onClick={() => setViewingDocument(document)}
-                          className="p-2 min-h-[44px] min-w-[44px] text-gray-400 hover:text-blue-600 transition-colors"
+                          className="p-3 min-h-[48px] min-w-[48px] text-gray-400 hover:text-blue-600 transition-colors rounded-lg hover:bg-blue-50"
                           title="Visualizza"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-5 w-5" />
                         </button>
                         <button
                           onClick={() => handleDownloadDocumentPDF(document)}
-                          className="p-2 min-h-[44px] min-w-[44px] text-gray-400 hover:text-purple-600 transition-colors"
+                          className="p-3 min-h-[48px] min-w-[48px] text-gray-400 hover:text-purple-600 transition-colors rounded-lg hover:bg-purple-50"
                           title="Scarica PDF"
                         >
-                          <Download className="h-4 w-4" />
+                          <Download className="h-5 w-5" />
                         </button>
                         {document.file_path && (
                           <button
                             onClick={() => handleDownloadOriginalFile(document)}
-                            className={`p-2 min-h-[44px] min-w-[44px] transition-colors ${
+                            className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
                               isGoogleDriveUrl(document.file_path) 
-                                ? 'text-gray-400 hover:text-green-600' 
-                                : 'text-gray-400 hover:text-blue-600'
+                                ? 'text-gray-400 hover:text-green-600 hover:bg-green-50' 
+                                : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
                             }`}
                             title={isGoogleDriveUrl(document.file_path) ? "Scarica da Google Drive" : "Scarica File Originale"}
                           >
-                            <FileText className="h-4 w-4" />
+                            <FileText className="h-5 w-5" />
                           </button>
                         )}
                         <button
                           onClick={() => handleEditDocument(document)}
                           disabled={!hasPermission('documents.edit')}
-                          className={`p-2 transition-colors ${
+                          className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
                             hasPermission('documents.edit')
-                              ? 'text-gray-400 hover:text-green-600'
+                              ? 'text-gray-400 hover:text-green-600 hover:bg-green-50'
                               : 'text-gray-300 cursor-not-allowed'
                           }`}
                           title={hasPermission('documents.edit') ? 'Modifica' : 'Permesso negato'}
                         >
-                          <Edit3 className="h-4 w-4" />
+                          <Edit3 className="h-5 w-5" />
                         </button>
                         <button
                           onClick={() => handleDeleteDocument(document.id, document.title)}
                           disabled={!hasPermission('documents.delete')}
-                          className={`p-2 transition-colors ${
+                          className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
                             hasPermission('documents.delete')
-                              ? 'text-gray-400 hover:text-red-600'
+                              ? 'text-gray-400 hover:text-red-600 hover:bg-red-50'
                               : 'text-gray-300 cursor-not-allowed'
                           }`}
                           title={hasPermission('documents.delete') ? 'Elimina' : 'Permesso negato'}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-5 w-5" />
                         </button>
                       </div>
                     </div>
