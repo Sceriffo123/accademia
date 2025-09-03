@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   Shield, 
@@ -82,7 +82,7 @@ export default function ControlCenter() {
   const [allPermissions, setAllPermissions] = useState<any[]>([]);
   const [allSections, setAllSections] = useState<any[]>([]);
   const [testLoading, setTestLoading] = useState(false);
-  const [testResults, setTestResults] = useState<{type: 'success' | 'error', message: string} | null>(null);
+  const [testResults, setTestResults] = useState<{type: 'success' | 'error' | 'warning', message: string} | null>(null);
   const [sectionTestLoading, setSectionTestLoading] = useState(false);
   const [sectionTestResults, setSectionTestResults] = useState<{type: 'success' | 'error', message: string} | null>(null);
   const [realTimeMonitoring, setRealTimeMonitoring] = useState(false);
@@ -276,43 +276,127 @@ export default function ControlCenter() {
     }
   };
 
+  const verifyPermissionState = async (role: string, permission: string): Promise<{
+    currentValue: boolean;
+    isConfigured: boolean;
+    source: 'database' | 'cache' | 'error';
+    message: string;
+    dbValue?: boolean;
+    cacheValue?: boolean;
+  }> => {
+    try {
+      const { sql } = await import('../lib/neonDatabase');
+      const dbResult = await sql`
+        SELECT rp.granted 
+        FROM role_permissions rp
+        JOIN roles r ON r.id = rp.role_id
+        JOIN permissions p ON p.id = rp.permission_id
+        WHERE r.name = ${role} AND p.name = ${permission}
+      `;
+      
+      const cacheValue = roleMatrix.get(role)?.[permission] || false;
+      const dbValue = dbResult.length > 0 ? dbResult[0].granted : false;
+      const isConfigured = dbResult.length > 0;
+      const isConsistent = dbValue === cacheValue;
+      
+      return {
+        currentValue: dbValue,
+        dbValue,
+        cacheValue,
+        isConfigured,
+        source: isConsistent ? 'database' : 'cache',
+        message: isConfigured 
+          ? `✅ ${permission} per ${role}: ${dbValue ? 'ABILITATO' : 'DISABILITATO'} (DB: ${dbValue}, Cache: ${cacheValue})`
+          : `❌ ${permission} per ${role}: NON CONFIGURATO nel database`
+      };
+      
+    } catch (error: any) {
+      return {
+        currentValue: false,
+        isConfigured: false,
+        source: 'error',
+        message: `🚨 Errore verifica: ${error?.message}`
+      };
+    }
+  };
+
+  const verifySectionState = async (role: string, section: string): Promise<{
+    currentValue: boolean;
+    isConfigured: boolean;
+    source: 'database' | 'cache' | 'error'; 
+    message: string;
+    dbValue?: boolean;
+    cacheValue?: boolean;
+  }> => {
+    try {
+      const { sql } = await import('../lib/neonDatabase');
+      const dbResult = await sql`
+        SELECT rs.visible 
+        FROM role_sections rs
+        JOIN roles r ON r.id = rs.role_id
+        JOIN sections s ON s.id = rs.section_id
+        WHERE r.name = ${role} AND s.name = ${section}
+      `;
+      
+      const cacheValue = roleMatrix.get(role)?.sections?.includes(section) || false;
+      const dbValue = dbResult.length > 0 ? dbResult[0].visible : false;
+      const isConfigured = dbResult.length > 0;
+      const isConsistent = dbValue === cacheValue;
+      
+      return {
+        currentValue: dbValue,
+        dbValue,
+        cacheValue,
+        isConfigured,
+        source: isConsistent ? 'database' : 'cache',
+        message: isConfigured 
+          ? `✅ ${section} per ${role}: ${dbValue ? 'VISIBILE' : 'NASCOSTA'} (DB: ${dbValue}, Cache: ${cacheValue})`
+          : `❌ ${section} per ${role}: NON CONFIGURATA nel database`
+      };
+      
+    } catch (error: any) {
+      return {
+        currentValue: false,
+        isConfigured: false,
+        source: 'error',
+        message: `🚨 Errore verifica: ${error?.message}`
+      };
+    }
+  };
+
   const testPermissionOperation = async (role: string, permission: string, granted: boolean) => {
     setTestLoading(true);
     setTestResults(null);
-    addDebugLog('info', 'PERMISSION_TEST', `Verifica: ${role} -> ${permission} (target: ${granted})`);
+    addDebugLog('info', 'PERMISSION_VERIFY', `Verifica: ${role} -> ${permission}`);
     
     try {
-      // VERIFICA DI SOLA LETTURA - NON MODIFICA I DATI
-      const currentValue = roleMatrix.get(role)?.[permission] || false;
+      const result = await verifyPermissionState(role, permission);
       
-      addDebugLog('info', 'PERMISSION_TEST', 
-        `Stato attuale: ${currentValue}, Target: ${granted}`);
+      addDebugLog('info', 'PERMISSION_VERIFY', result.message);
       
-      // Simula il risultato senza modificare
-      const wouldSucceed = currentValue !== granted; // Cambierebbe qualcosa?
-      const statusMatch = currentValue === granted; // È già nel stato desiderato?
-      
-      if (statusMatch) {
+      if (result.source === 'error') {
         setTestResults({
-          type: 'info',
-          message: `ℹ️ Permesso '${permission}' è già ${granted ? 'abilitato' : 'disabilitato'} per ruolo '${role}' (nessuna modifica necessaria)`
+          type: 'error',
+          message: result.message
         });
-      } else if (wouldSucceed) {
-        setTestResults({
-          type: 'success', 
-          message: `✅ Test OK: Permesso '${permission}' può essere ${granted ? 'abilitato' : 'disabilitato'} per ruolo '${role}' (attualmente: ${currentValue ? 'abilitato' : 'disabilitato'})`
-        });
-      } else {
+      } else if (!result.isConfigured) {
         setTestResults({
           type: 'warning',
-          message: `⚠️ Configurazione già presente: '${permission}' per '${role}' è ${currentValue ? 'abilitato' : 'disabilitato'}`
+          message: `⚠️ ${result.message} - Permesso non trovato nel database`
+        });
+      } else {
+        const consistent = result.dbValue === result.cacheValue;
+        setTestResults({
+          type: consistent ? 'success' : 'warning',
+          message: consistent 
+            ? `✅ ${result.message} - Sincronizzato correttamente`
+            : `⚠️ ${result.message} - INCONSISTENZA rilevata!`
         });
       }
       
-      // NON ricarica dati poiché non modifica nulla
-      addDebugLog('success', 'PERMISSION_TEST', 'Test completato (sola lettura)');
+      addDebugLog('success', 'PERMISSION_VERIFY', 'Verifica completata (sola lettura)');
       
-      return true; // Test sempre riuscito
+      return true;
     } catch (error: any) {
       const errorDetails = error?.message || error?.stack || JSON.stringify(error);
       addDebugLog('error', 'PERMISSION_TEST', `ERRORE CATTURATO: ${errorDetails}`);
@@ -546,19 +630,27 @@ export default function ControlCenter() {
           {/* Test CRUD Tab */}
           {activeTab === 'test' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Verifica Singola */}
               <div className="bg-white rounded-lg shadow-sm border">
                 <div className="p-4 border-b">
-                  <h3 className="text-lg font-semibold text-gray-900">Test Matrice Permessi</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">🔍 Verifica Singola (Solo Lettura)</h3>
+                  <p className="text-sm text-gray-600 mt-1">Controlla stato DB vs Cache senza modificare nulla</p>
                 </div>
                 <div className="p-4 space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <select className="border rounded-lg px-3 py-2" id="test-role" title="Seleziona ruolo">
+                  <div className="grid grid-cols-2 gap-4">
+                    <select className="border rounded-lg px-3 py-2" id="verify-role" title="Seleziona ruolo">
                       <option value="">Seleziona Ruolo</option>
                       {Array.from(roleMatrix.keys()).map(role => (
                         <option key={role} value={role}>{role}</option>
                       ))}
                     </select>
-                    <select className="border rounded-lg px-3 py-2" id="test-permission" title="Seleziona permesso">
+                    <select className="border rounded-lg px-3 py-2" id="verify-type" title="Tipo verifica">
+                      <option value="permission">Permesso</option>
+                      <option value="section">Sezione</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4">
+                    <select className="border rounded-lg px-3 py-2" id="verify-permission" title="Seleziona permesso">
                       <option value="">Seleziona Permesso</option>
                       {allPermissions.map(permission => (
                         <option key={permission.id} value={permission.name}>
@@ -566,32 +658,57 @@ export default function ControlCenter() {
                         </option>
                       ))}
                     </select>
-                    <select className="border rounded-lg px-3 py-2" id="test-granted" title="Stato permesso">
-                      <option value="true">Abilitato</option>
-                      <option value="false">Disabilitato</option>
+                    <select className="border rounded-lg px-3 py-2" id="verify-section" title="Seleziona sezione" style={{display: 'none'}}>
+                      <option value="">Seleziona Sezione</option>
+                      {allSections.map(section => (
+                        <option key={section.id} value={section.name}>
+                          {section.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <button
-                    onClick={() => {
-                      const role = (document.getElementById('test-role') as HTMLSelectElement)?.value;
-                      const permission = (document.getElementById('test-permission') as HTMLSelectElement)?.value;
-                      const granted = (document.getElementById('test-granted') as HTMLSelectElement)?.value === 'true';
-                      if (role && permission) testPermissionOperation(role, permission, granted);
+                    onClick={async () => {
+                      const role = (document.getElementById('verify-role') as HTMLSelectElement)?.value;
+                      const type = (document.getElementById('verify-type') as HTMLSelectElement)?.value;
+                      const permission = (document.getElementById('verify-permission') as HTMLSelectElement)?.value;
+                      const section = (document.getElementById('verify-section') as HTMLSelectElement)?.value;
+                      
+                      if (role && type === 'permission' && permission) {
+                        testPermissionOperation(role, permission, true); // parametro granted ignorato nella nuova versione
+                      } else if (role && type === 'section' && section) {
+                        setTestLoading(true);
+                        setTestResults(null);
+                        try {
+                          const result = await verifySectionState(role, section);
+                          setTestResults({
+                            type: result.source === 'error' ? 'error' : result.isConfigured ? 'success' : 'warning',
+                            message: result.message
+                          });
+                        } catch (error: any) {
+                          setTestResults({
+                            type: 'error',
+                            message: `🚨 Errore verifica sezione: ${error?.message}`
+                          });
+                        } finally {
+                          setTestLoading(false);
+                        }
+                      }
                     }}
                     disabled={testLoading}
                     className={`w-full py-2 rounded-lg transition-colors ${
                       testLoading 
                         ? 'bg-gray-400 cursor-not-allowed' 
-                        : 'bg-blue-600 hover:bg-blue-700'
+                        : 'bg-green-600 hover:bg-green-700'
                     } text-white`}
                   >
                     {testLoading ? (
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Testing...
+                        Verificando...
                       </div>
                     ) : (
-                      'Test Aggiornamento Permesso'
+                      '🔍 Verifica Stato (Solo Lettura)'
                     )}
                   </button>
                   
@@ -600,6 +717,8 @@ export default function ControlCenter() {
                     <div className={`p-3 rounded-lg border ${
                       testResults.type === 'success' 
                         ? 'bg-green-50 border-green-200 text-green-800'
+                        : testResults.type === 'warning'
+                        ? 'bg-yellow-50 border-yellow-200 text-yellow-800'
                         : 'bg-red-50 border-red-200 text-red-800'
                     }`}>
                       <div className="font-medium">{testResults.message}</div>
