@@ -629,7 +629,7 @@ export default function Admin() {
         getDocumentsCount(),
         getCoursesCount(),
         getAllUsers(profile?.role !== 'superadmin', profile?.id), // Escludi SuperAdmin solo se non sei SuperAdmin
-        getNormatives(),
+        getAllNormatives(),
         getAllDocuments(),
         getAllCourses()
       ]);
