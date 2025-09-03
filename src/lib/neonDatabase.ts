@@ -2592,15 +2592,24 @@ export async function getUserProgress(userId: string, courseId: string): Promise
     
     const totalModules = parseInt(modules[0].count);
     
-    // Recupera progresso moduli completati
-    const progressResult = await sql`
-      SELECT COUNT(*) as count 
-      FROM module_progress mp
-      JOIN enrollments e ON mp.enrollment_id = e.id
-      WHERE e.user_id = ${userId} AND e.course_id = ${courseId} AND mp.completed = true
-    `;
-    
-    const completedModules = parseInt(progressResult[0]?.count || 0);
+    // Verifica se la tabella module_progress esiste
+    let completedModules = 0;
+    try {
+      const progressResult = await sql`
+        SELECT COUNT(*) as count 
+        FROM module_progress mp
+        JOIN enrollments e ON mp.enrollment_id = e.id
+        WHERE e.user_id = ${userId} AND e.course_id = ${courseId} AND mp.completed = true
+      `;
+      completedModules = parseInt(progressResult[0]?.count || 0);
+    } catch (error: any) {
+      if (error.code === '42P01') { // relation does not exist
+        console.log('⚠️ NEON: Tabella module_progress non esiste, usando progresso 0');
+        completedModules = 0;
+      } else {
+        throw error;
+      }
+    }
     
     return {
       courseId,
