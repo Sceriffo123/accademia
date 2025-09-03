@@ -21,7 +21,8 @@ import {
   AlertTriangle,
   Info,
   FolderOpen,
-  Download
+  Download,
+  ChevronRight
 } from 'lucide-react';
 
 interface AdminStats {
@@ -728,7 +729,7 @@ export default function Admin() {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 sm:px-6 py-8">
       <div className="max-w-6xl mx-auto">
         {/* Toast Notifications */}
         <div className="fixed top-4 right-4 z-50 space-y-2">
@@ -785,7 +786,7 @@ export default function Admin() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-8">
           {statCards.map((stat, index) => {
             const Icon = stat.icon;
             return (
@@ -814,8 +815,9 @@ export default function Admin() {
 
         {/* Tabs */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
-          <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6">
+          {/* Mobile Tab Navigation */}
+          <div className="md:hidden p-4">
+            <div className="space-y-2">
               {[
                 { id: 'overview', label: 'Panoramica', icon: Settings },
                 { id: 'users', label: 'Utenti', icon: Users },
@@ -827,18 +829,51 @@ export default function Admin() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    className={`w-full flex items-center justify-between p-4 min-h-[44px] rounded-lg transition-colors ${
                       activeTab === tab.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
                     }`}
                   >
-                    <Icon className="h-5 w-5" />
-                    <span>{tab.label}</span>
+                    <div className="flex items-center space-x-3">
+                      <Icon className="h-5 w-5" />
+                      <span className="font-medium">{tab.label}</span>
+                    </div>
+                    <ChevronRight className="h-4 w-4" />
                   </button>
                 );
               })}
-            </nav>
+            </div>
+          </div>
+
+          {/* Desktop Tab Navigation */}
+          <div className="hidden md:block">
+            <div className="border-b border-gray-200">
+              <nav className="flex space-x-8 px-6">
+                {[
+                  { id: 'overview', label: 'Panoramica', icon: Settings },
+                  { id: 'users', label: 'Utenti', icon: Users },
+                  { id: 'normatives', label: 'Normative', icon: FileText },
+                  { id: 'documents', label: 'Documenti', icon: FolderOpen }
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        activeTab === tab.id
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
           </div>
 
           <div className="p-6">
@@ -1244,7 +1279,7 @@ export default function Admin() {
                     type="email"
                     value={userForm.email}
                     onChange={(e) => setUserForm({...userForm, email: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="email@esempio.com"
                   />
                 </div>
@@ -1255,7 +1290,7 @@ export default function Admin() {
                     type="text"
                     value={userForm.full_name}
                     onChange={(e) => setUserForm({...userForm, full_name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Nome e Cognome"
                   />
                 </div>
@@ -1266,7 +1301,7 @@ export default function Admin() {
                     type="password"
                     value={userForm.password}
                     onChange={(e) => setUserForm({...userForm, password: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Minimo 6 caratteri"
                   />
                 </div>
@@ -1276,7 +1311,7 @@ export default function Admin() {
                   <select
                     value={userForm.role}
                     onChange={(e) => setUserForm({...userForm, role: e.target.value as 'user' | 'admin' | 'superadmin' | 'operator'})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="user">Utente</option>
                     <option value="operator">Operatore</option>
@@ -1291,13 +1326,13 @@ export default function Admin() {
               <div className="flex items-center justify-end space-x-3 mt-6">
                 <button
                   onClick={() => setShowAddUser(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  className="px-4 py-3 min-h-[44px] text-gray-600 hover:text-gray-800 transition-colors"
                 >
                   Annulla
                 </button>
                 <button
                   onClick={handleCreateUser}
-                  className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                  className="px-4 py-3 min-h-[44px] bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
                 >
                   Crea Utente
                 </button>
@@ -1327,7 +1362,7 @@ export default function Admin() {
                     type="text"
                     value={normativeForm.title}
                     onChange={(e) => setNormativeForm({...normativeForm, title: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Titolo della normativa"
                   />
                 </div>
@@ -1338,18 +1373,18 @@ export default function Admin() {
                     type="text"
                     value={normativeForm.reference_number}
                     onChange={(e) => setNormativeForm({...normativeForm, reference_number: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Es: D.Lgs. 285/1992"
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
                     <select
                       value={normativeForm.type}
                       onChange={(e) => setNormativeForm({...normativeForm, type: e.target.value as 'law' | 'regulation' | 'ruling'})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="law">Legge</option>
                       <option value="regulation">Regolamento</option>
@@ -1363,20 +1398,20 @@ export default function Admin() {
                       type="text"
                       value={normativeForm.category}
                       onChange={(e) => setNormativeForm({...normativeForm, category: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Es: Trasporto Pubblico"
                     />
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Data Pubblicazione *</label>
                     <input
                       type="date"
                       value={normativeForm.publication_date}
                       onChange={(e) => setNormativeForm({...normativeForm, publication_date: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                   
@@ -1386,19 +1421,19 @@ export default function Admin() {
                       type="date"
                       value={normativeForm.effective_date}
                       onChange={(e) => setNormativeForm({...normativeForm, effective_date: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Nome File</label>
                     <input
                       type="text"
                       value={normativeForm.filename}
                       onChange={(e) => setNormativeForm({...normativeForm, filename: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="documento.pdf"
                     />
                   </div>
@@ -1409,7 +1444,7 @@ export default function Admin() {
                       type="text"
                       value={normativeForm.file_path}
                       onChange={(e) => setNormativeForm({...normativeForm, file_path: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="https://drive.google.com/file/d/..."
                     />
                   </div>
@@ -1421,7 +1456,7 @@ export default function Admin() {
                     value={normativeForm.content}
                     onChange={(e) => setNormativeForm({...normativeForm, content: e.target.value})}
                     rows={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Testo completo della normativa..."
                   />
                 </div>
@@ -1434,13 +1469,13 @@ export default function Admin() {
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="flex-1 px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Aggiungi tag..."
                     />
                     <button
                       type="button"
                       onClick={handleAddTag}
-                      className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                      className="px-3 py-3 min-h-[44px] bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                     >
                       Aggiungi
                     </button>
@@ -1468,13 +1503,13 @@ export default function Admin() {
               <div className="flex items-center justify-end space-x-3 mt-6">
                 <button
                   onClick={() => setShowAddNormative(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  className="px-4 py-3 min-h-[44px] text-gray-600 hover:text-gray-800 transition-colors"
                 >
                   Annulla
                 </button>
                 <button
                   onClick={handleCreateNormative}
-                  className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                  className="px-4 py-3 min-h-[44px] bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
                 >
                   Crea Normativa
                 </button>
@@ -1504,7 +1539,7 @@ export default function Admin() {
                     type="text"
                     value={editingNormative.title}
                     onChange={(e) => setEditingNormative({...editingNormative, title: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 
@@ -1514,17 +1549,17 @@ export default function Admin() {
                     type="text"
                     value={editingNormative.reference_number}
                     onChange={(e) => setEditingNormative({...editingNormative, reference_number: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
                     <select
                       value={editingNormative.type}
                       onChange={(e) => setEditingNormative({...editingNormative, type: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="law">Legge</option>
                       <option value="regulation">Regolamento</option>
@@ -1538,19 +1573,19 @@ export default function Admin() {
                       type="text"
                       value={editingNormative.category}
                       onChange={(e) => setEditingNormative({...editingNormative, category: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Data Pubblicazione *</label>
                     <input
                       type="date"
                       value={editingNormative.publication_date}
                       onChange={(e) => setEditingNormative({...editingNormative, publication_date: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                   
@@ -1560,19 +1595,19 @@ export default function Admin() {
                       type="date"
                       value={editingNormative.effective_date}
                       onChange={(e) => setEditingNormative({...editingNormative, effective_date: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Nome File</label>
                     <input
                       type="text"
                       value={editingNormative.filename || ''}
                       onChange={(e) => setEditingNormative({...editingNormative, filename: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="documento.pdf"
                     />
                   </div>
@@ -1583,7 +1618,7 @@ export default function Admin() {
                       type="text"
                       value={editingNormative.file_path || ''}
                       onChange={(e) => setEditingNormative({...editingNormative, file_path: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="https://drive.google.com/file/d/..."
                     />
                   </div>
@@ -1595,7 +1630,7 @@ export default function Admin() {
                     value={editingNormative.content}
                     onChange={(e) => setEditingNormative({...editingNormative, content: e.target.value})}
                     rows={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 
@@ -1608,12 +1643,12 @@ export default function Admin() {
                       onChange={(e) => setTagInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleAddTagToEditing()}
                       placeholder="Aggiungi tag..."
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="flex-1 px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     <button
                       type="button"
                       onClick={handleAddTagToEditing}
-                      className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                      className="px-4 py-3 min-h-[44px] bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
                     >
                       Aggiungi
                     </button>
@@ -1644,13 +1679,13 @@ export default function Admin() {
               <div className="flex items-center justify-end space-x-3 mt-6">
                 <button
                   onClick={() => setShowEditNormative(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  className="px-4 py-3 min-h-[44px] text-gray-600 hover:text-gray-800 transition-colors"
                 >
                   Annulla
                 </button>
                 <button
                   onClick={handleUpdateNormative}
-                  className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                  className="px-4 py-3 min-h-[44px] bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
                 >
                   Salva Modifiche
                 </button>
@@ -1681,7 +1716,7 @@ export default function Admin() {
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Minimo 6 caratteri"
                   />
                 </div>
@@ -1690,13 +1725,13 @@ export default function Admin() {
               <div className="flex items-center justify-end space-x-3 mt-6">
                 <button
                   onClick={() => setShowPasswordModal(null)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  className="px-4 py-3 min-h-[44px] text-gray-600 hover:text-gray-800 transition-colors"
                 >
                   Annulla
                 </button>
                 <button
                   onClick={handleUpdatePassword}
-                  className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                  className="px-4 py-3 min-h-[44px] bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
                 >
                   Aggiorna Password
                 </button>
@@ -1719,14 +1754,14 @@ export default function Admin() {
               </div>
               
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Titolo *</label>
                     <input
                       type="text"
                       value={documentForm.title}
                       onChange={(e) => setDocumentForm({...documentForm, title: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Titolo del documento"
                     />
                   </div>
@@ -1737,7 +1772,7 @@ export default function Admin() {
                       type="text"
                       value={documentForm.filename}
                       onChange={(e) => setDocumentForm({...documentForm, filename: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="nomefile.pdf"
                     />
                   </div>
@@ -1749,18 +1784,18 @@ export default function Admin() {
                     value={documentForm.description}
                     onChange={(e) => setDocumentForm({...documentForm, description: e.target.value})}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Descrizione del documento..."
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
                     <select
                       value={documentForm.type}
                       onChange={(e) => setDocumentForm({...documentForm, type: e.target.value as 'template' | 'form' | 'guide' | 'report'})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="template">Template</option>
                       <option value="form">Modulo</option>
@@ -1775,20 +1810,20 @@ export default function Admin() {
                       type="text"
                       value={documentForm.category}
                       onChange={(e) => setDocumentForm({...documentForm, category: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Es: Amministrazione"
                     />
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Dimensione (KB)</label>
                     <input
                       type="number"
                       value={documentForm.file_size}
                       onChange={(e) => setDocumentForm({...documentForm, file_size: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="1024"
                     />
                   </div>
@@ -1799,7 +1834,7 @@ export default function Admin() {
                       type="text"
                       value={documentForm.version}
                       onChange={(e) => setDocumentForm({...documentForm, version: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="1.0"
                     />
                   </div>
@@ -1809,7 +1844,7 @@ export default function Admin() {
                     <select
                       value={documentForm.status}
                       onChange={(e) => setDocumentForm({...documentForm, status: e.target.value as 'active' | 'draft' | 'archived'})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="active">Attivo</option>
                       <option value="draft">Bozza</option>
@@ -1818,14 +1853,14 @@ export default function Admin() {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Percorso File</label>
                     <input
                       type="text"
                       value={documentForm.file_path}
                       onChange={(e) => setDocumentForm({...documentForm, file_path: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="/uploads/documenti/"
                     />
                   </div>
@@ -1836,7 +1871,7 @@ export default function Admin() {
                       type="text"
                       value={documentForm.mime_type}
                       onChange={(e) => setDocumentForm({...documentForm, mime_type: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="application/pdf"
                     />
                   </div>
@@ -1850,13 +1885,13 @@ export default function Admin() {
                       value={documentTagInput}
                       onChange={(e) => setDocumentTagInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddDocumentTag())}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="flex-1 px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Aggiungi tag..."
                     />
                     <button
                       type="button"
                       onClick={handleAddDocumentTag}
-                      className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                      className="px-3 py-3 min-h-[44px] bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                     >
                       Aggiungi
                     </button>
@@ -1884,13 +1919,13 @@ export default function Admin() {
               <div className="flex items-center justify-end space-x-3 mt-6">
                 <button
                   onClick={() => setShowAddDocument(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  className="px-4 py-3 min-h-[44px] text-gray-600 hover:text-gray-800 transition-colors"
                 >
                   Annulla
                 </button>
                 <button
                   onClick={handleCreateDocument}
-                  className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                  className="px-4 py-3 min-h-[44px] bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
                 >
                   Crea Documento
                 </button>
@@ -1914,7 +1949,7 @@ export default function Admin() {
               </div>
 
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Titolo</label>
                     <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
@@ -1937,7 +1972,7 @@ export default function Admin() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
                     <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
@@ -1962,7 +1997,7 @@ export default function Admin() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Dimensione</label>
                     <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
@@ -1992,7 +2027,7 @@ export default function Admin() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Percorso File</label>
                     <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm">
@@ -2028,7 +2063,7 @@ export default function Admin() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Download</label>
                     <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
@@ -2079,7 +2114,7 @@ export default function Admin() {
                 </div>
                 <button
                   onClick={() => setViewingDocument(null)}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  className="px-4 py-3 min-h-[44px] bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
                 >
                   Chiudi
                 </button>
@@ -2103,14 +2138,14 @@ export default function Admin() {
               </div>
 
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Titolo *</label>
                     <input
                       type="text"
                       value={editingDocument.title}
                       onChange={(e) => setEditingDocument({...editingDocument, title: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
 
@@ -2120,7 +2155,7 @@ export default function Admin() {
                       type="text"
                       value={editingDocument.filename}
                       onChange={(e) => setEditingDocument({...editingDocument, filename: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -2131,17 +2166,17 @@ export default function Admin() {
                     value={editingDocument.description || ''}
                     onChange={(e) => setEditingDocument({...editingDocument, description: e.target.value})}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
                     <select
                       value={editingDocument.type}
                       onChange={(e) => setEditingDocument({...editingDocument, type: e.target.value as 'template' | 'form' | 'guide' | 'report'})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="template">Template</option>
                       <option value="form">Modulo</option>
@@ -2156,19 +2191,19 @@ export default function Admin() {
                       type="text"
                       value={editingDocument.category}
                       onChange={(e) => setEditingDocument({...editingDocument, category: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Dimensione (KB)</label>
                     <input
                       type="number"
                       value={editingDocument.file_size || ''}
                       onChange={(e) => setEditingDocument({...editingDocument, file_size: e.target.value ? parseInt(e.target.value) : undefined})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
 
@@ -2178,7 +2213,7 @@ export default function Admin() {
                       type="text"
                       value={editingDocument.version || ''}
                       onChange={(e) => setEditingDocument({...editingDocument, version: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
 
@@ -2187,7 +2222,7 @@ export default function Admin() {
                     <select
                       value={editingDocument.status}
                       onChange={(e) => setEditingDocument({...editingDocument, status: e.target.value as 'active' | 'draft' | 'archived'})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="active">Attivo</option>
                       <option value="draft">Bozza</option>
@@ -2196,14 +2231,14 @@ export default function Admin() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Percorso File</label>
                     <input
                       type="text"
                       value={editingDocument.file_path || ''}
                       onChange={(e) => setEditingDocument({...editingDocument, file_path: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
 
@@ -2213,19 +2248,19 @@ export default function Admin() {
                       type="text"
                       value={editingDocument.mime_type || ''}
                       onChange={(e) => setEditingDocument({...editingDocument, mime_type: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Conteggio Download</label>
                     <input
                       type="number"
                       value={editingDocument.download_count || 0}
                       onChange={(e) => setEditingDocument({...editingDocument, download_count: parseInt(e.target.value) || 0})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       min="0"
                     />
                   </div>
@@ -2236,7 +2271,7 @@ export default function Admin() {
                       type="datetime-local"
                       value={editingDocument.created_at ? new Date(editingDocument.created_at).toISOString().slice(0, 16) : ''}
                       onChange={(e) => setEditingDocument({...editingDocument, created_at: e.target.value ? new Date(e.target.value).toISOString() : null})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
 
@@ -2246,7 +2281,7 @@ export default function Admin() {
                       type="datetime-local"
                       value={editingDocument.updated_at ? new Date(editingDocument.updated_at).toISOString().slice(0, 16) : ''}
                       onChange={(e) => setEditingDocument({...editingDocument, updated_at: e.target.value ? new Date(e.target.value).toISOString() : null})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -2259,13 +2294,13 @@ export default function Admin() {
                       value={documentTagInput}
                       onChange={(e) => setDocumentTagInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddDocumentTagToEditing())}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="flex-1 px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Aggiungi tag..."
                     />
                     <button
                       type="button"
                       onClick={handleAddDocumentTagToEditing}
-                      className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                      className="px-3 py-3 min-h-[44px] bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                     >
                       Aggiungi
                     </button>
@@ -2296,13 +2331,13 @@ export default function Admin() {
               <div className="flex items-center justify-end space-x-3 mt-6">
                 <button
                   onClick={() => setShowEditDocument(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  className="px-4 py-3 min-h-[44px] text-gray-600 hover:text-gray-800 transition-colors"
                 >
                   Annulla
                 </button>
                 <button
                   onClick={handleUpdateDocument}
-                  className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                  className="px-4 py-3 min-h-[44px] bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
                 >
                   Salva Modifiche
                 </button>
@@ -2343,7 +2378,7 @@ export default function Admin() {
               <div className="flex items-center justify-end space-x-3 mt-6">
                 <button
                   onClick={() => setDeleteConfirm({ show: false, document: null })}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  className="px-4 py-3 min-h-[44px] text-gray-600 hover:text-gray-800 transition-colors"
                 >
                   Annulla
                 </button>
