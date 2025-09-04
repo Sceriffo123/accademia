@@ -32,7 +32,7 @@ import {
   Settings, Users, FileText, FolderOpen, GraduationCap, Plus, Edit3, Trash2, 
   Eye, Download, Save, X, Key, ChevronRight, AlertCircle, CheckCircle, 
   Info, XCircle, Calendar, Clock, User, Mail, Shield, BookOpen, PlayCircle,
-  ChevronUp, ChevronDown
+  ChevronUp, ChevronDown, BarChart3
 } from 'lucide-react';
 
 interface AdminStats {
@@ -1921,7 +1921,7 @@ export default function Admin() {
             )}
           </div>
         </div>
-
+        
         {/* Modal Aggiungi Utente */}
         {showAddUser && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -3888,6 +3888,8 @@ export default function Admin() {
         </div>
       </div>
     )}
+    </div>
+    </div>
     </>
   );
 }
