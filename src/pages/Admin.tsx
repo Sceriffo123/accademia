@@ -3526,6 +3526,256 @@ export default function Admin() {
             </div>
           </div>
         )}
+
+        {/* Modal Aggiungi/Modifica Modulo */}
+        {showAddModule && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold text-gray-900">
+                    {editingModule ? 'Modifica Modulo' : 'Aggiungi Nuovo Modulo'}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setShowAddModule(false);
+                      setEditingModule(null);
+                      setModuleForm({
+                        course_id: '',
+                        title: '',
+                        description: '',
+                        type: 'lesson',
+                        content: '',
+                        video_url: '',
+                        document_url: '',
+                        order_num: 1,
+                        duration_minutes: 30,
+                        is_required: true,
+                        level: 'beginner'
+                      });
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+
+                <form onSubmit={editingModule ? handleUpdateModule : handleCreateModule} className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Corso */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Corso *
+                      </label>
+                      <select
+                        value={moduleForm.course_id}
+                        onChange={(e) => setModuleForm({...moduleForm, course_id: e.target.value})}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Seleziona corso</option>
+                        {courses.map(course => (
+                          <option key={course.id} value={course.id}>{course.title}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Titolo */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Titolo Modulo *
+                      </label>
+                      <input
+                        type="text"
+                        value={moduleForm.title}
+                        onChange={(e) => setModuleForm({...moduleForm, title: e.target.value})}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Es: Introduzione al Corso"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Descrizione */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Descrizione
+                    </label>
+                    <textarea
+                      value={moduleForm.description}
+                      onChange={(e) => setModuleForm({...moduleForm, description: e.target.value})}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Descrizione del modulo..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Tipo */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Tipo *
+                      </label>
+                      <select
+                        value={moduleForm.type}
+                        onChange={(e) => setModuleForm({...moduleForm, type: e.target.value})}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="lesson">Lezione</option>
+                        <option value="video">Video</option>
+                        <option value="document">Documento</option>
+                        <option value="quiz">Quiz</option>
+                      </select>
+                    </div>
+
+                    {/* Livello */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Livello *
+                      </label>
+                      <select
+                        value={moduleForm.level}
+                        onChange={(e) => setModuleForm({...moduleForm, level: e.target.value})}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="beginner">Principiante</option>
+                        <option value="intermediate">Intermedio</option>
+                        <option value="advanced">Avanzato</option>
+                      </select>
+                    </div>
+
+                    {/* Ordine */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Ordine
+                      </label>
+                      <input
+                        type="number"
+                        value={moduleForm.order_num}
+                        onChange={(e) => setModuleForm({...moduleForm, order_num: parseInt(e.target.value) || 1})}
+                        min="1"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Durata */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Durata (minuti)
+                      </label>
+                      <input
+                        type="number"
+                        value={moduleForm.duration_minutes}
+                        onChange={(e) => setModuleForm({...moduleForm, duration_minutes: parseInt(e.target.value) || 0})}
+                        min="0"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    {/* Richiesto */}
+                    <div className="flex items-center space-x-3">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={moduleForm.is_required}
+                          onChange={(e) => setModuleForm({...moduleForm, is_required: e.target.checked})}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">Modulo richiesto</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Contenuto */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Contenuto
+                    </label>
+                    <textarea
+                      value={moduleForm.content}
+                      onChange={(e) => setModuleForm({...moduleForm, content: e.target.value})}
+                      rows={4}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Contenuto del modulo..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Video URL */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        URL Video
+                      </label>
+                      <input
+                        type="url"
+                        value={moduleForm.video_url}
+                        onChange={(e) => setModuleForm({...moduleForm, video_url: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="https://..."
+                      />
+                    </div>
+
+                    {/* Document URL */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        URL Documento
+                      </label>
+                      <input
+                        type="url"
+                        value={moduleForm.document_url}
+                        onChange={(e) => setModuleForm({...moduleForm, document_url: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Pulsanti */}
+                  <div className="flex justify-end space-x-3 pt-6 border-t">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddModule(false);
+                        setEditingModule(null);
+                        setModuleForm({
+                          course_id: '',
+                          title: '',
+                          description: '',
+                          type: 'lesson',
+                          content: '',
+                          video_url: '',
+                          document_url: '',
+                          order_num: 1,
+                          duration_minutes: 30,
+                          is_required: true,
+                          level: 'beginner'
+                        });
+                      }}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Annulla
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!hasPermission('education.create') && !hasPermission('education.update')}
+                      className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${
+                        hasPermission('education.create') || hasPermission('education.update')
+                          ? 'bg-blue-800 hover:bg-blue-900'
+                          : 'bg-gray-300 cursor-not-allowed'
+                      }`}
+                    >
+                      {editingModule ? 'Aggiorna Modulo' : 'Crea Modulo'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
