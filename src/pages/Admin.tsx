@@ -758,8 +758,14 @@ export default function Admin() {
     setNotifications(prev => prev.filter(n => n.id !== id));
   }
 
-  async function fetchAdminData() {
+  const fetchAdminData = async () => {
+    console.log('🔄 DEBUG fetchAdminData - INIZIO');
+    console.log('🔄 DEBUG - activeTab prima del fetch:', activeTab);
+    console.log('🔄 DEBUG - educationTab prima del fetch:', educationTab);
+    
     try {
+      setLoading(true);
+      
       // Fetch admin data
       const [totalUsers, totalNormatives, totalDocuments, totalCourses, usersData, normativesData, documentsData, coursesData] = await Promise.all([
         getUsersCount(),
@@ -772,36 +778,37 @@ export default function Admin() {
         getAllCourses()
       ]);
 
+      console.log('🔄 DEBUG - Dati ricevuti, setting states...');
+      
+      setUsers(usersData || []);
+      setNormatives(normativesData || []);
+      setDocuments(documentsData || []);
+      setCourses(coursesData || []);
+
       // Carica moduli se c'è un corso selezionato
       let modulesData: any[] = [];
       if (selectedCourse) {
         modulesData = await getCourseModules(selectedCourse);
-      } else if (educationTab === 'modules' && courses.length > 0) {
+      } else if (educationTab === 'modules' && coursesData.length > 0) {
         // Se siamo nella tab moduli ma non c'è corso selezionato, carica moduli del primo corso
-        modulesData = await getCourseModules(courses[0].id);
-        setSelectedCourse(courses[0].id);
+        modulesData = await getCourseModules(coursesData[0].id);
+        setSelectedCourse(coursesData[0].id);
       }
+      
+      setModules(modulesData || []);
 
-      setStats({
-        totalUsers,
-        totalNormatives,
-        totalDocuments,
-        totalCourses,
-        totalViews: 1247, // Mock data
-        newUsersThisMonth: 23 // Mock data
-      });
-
-      setUsers(usersData);
-      setNormatives(normativesData);
-      setDocuments(documentsData);
-      setCourses(coursesData);
-      setModules(modulesData);
+      console.log('🔄 DEBUG - activeTab dopo il fetch:', activeTab);
+      console.log('🔄 DEBUG - educationTab dopo il fetch:', educationTab);
+      
+      setLoading(false);
+      console.log('🔄 DEBUG fetchAdminData - FINE');
     } catch (error) {
-      console.error('Error fetching admin data:', error);
-    } finally {
+      console.error('🚨 Error fetching admin data:', error);
+      console.log('🔄 DEBUG - activeTab in caso di errore:', activeTab);
+      console.log('🔄 DEBUG - educationTab in caso di errore:', educationTab);
       setLoading(false);
     }
-  }
+  };
 
   async function handleCreateUser() {
     // Verifica permessi prima di procedere
@@ -1037,28 +1044,48 @@ export default function Admin() {
   }
 
   async function handleUpdateModule() {
+    console.log('🔧 DEBUG handleUpdateModule - INIZIO');
+    console.log('🔧 DEBUG - Current activeTab:', activeTab);
+    console.log('🔧 DEBUG - Current educationTab:', educationTab);
+    console.log('🔧 DEBUG - editingModule:', editingModule);
+    console.log('🔧 DEBUG - moduleForm:', moduleForm);
+    
     if (!hasPermission('education.edit')) {
+      console.log('🔧 DEBUG - Permessi negati');
       addNotification('error', 'Accesso Negato', 'Non hai i permessi per modificare moduli');
       return;
     }
 
     try {
       if (!editingModule) {
+        console.log('🔧 DEBUG - Nessun modulo in editing, uscita');
         return;
       }
       
+      console.log('🔧 DEBUG - Chiamata updateCourseModule con ID:', editingModule.id);
       const result = await updateCourseModule(editingModule.id, moduleForm);
+      console.log('🔧 DEBUG - Risultato updateCourseModule:', result);
       
       if (!result) {
         throw new Error('updateCourseModule returned null - module not found or update failed');
       }
       
+      console.log('🔧 DEBUG - Prima di chiudere modal - activeTab:', activeTab, 'educationTab:', educationTab);
+      
       setEditingModule(null);
       setShowAddModule(false);
+      setShowEditModule(false);
+      console.log('🔧 DEBUG - Modal chiuso, stati resettati');
+      
+      console.log('🔧 DEBUG - Prima di fetchAdminData - activeTab:', activeTab, 'educationTab:', educationTab);
       await fetchAdminData();
+      console.log('🔧 DEBUG - Dopo fetchAdminData - activeTab:', activeTab, 'educationTab:', educationTab);
+      
       addNotification('success', 'Modulo Aggiornato', `Il modulo "${editingModule.title}" è stato modificato`);
+      console.log('🔧 DEBUG handleUpdateModule - FINE SUCCESSO');
     } catch (error) {
       console.error('🚨 Errore in handleUpdateModule:', error);
+      console.log('🔧 DEBUG - Errore durante update - activeTab:', activeTab, 'educationTab:', educationTab);
       addNotification('error', 'Errore Aggiornamento', 'Non è stato possibile aggiornare il modulo');
     }
   }
