@@ -1014,13 +1014,6 @@ export default function Admin() {
     try {
       await createCourseModule(moduleForm);
       
-      // Aggiorna solo i moduli invece di ricaricare tutto
-      if (moduleFilters.course) {
-        await loadModulesForCourse(moduleFilters.course);
-      } else {
-        await loadAllModules();
-      }
-      
       setShowAddModule(false);
       setModuleForm({
         course_id: '',
@@ -1035,6 +1028,7 @@ export default function Admin() {
         is_required: true,
         level: 'beginner'
       });
+      await fetchAdminData();
       addNotification('success', 'Modulo Creato', `Il modulo "${moduleForm.title}" è stato aggiunto al sistema`);
     } catch (error) {
       console.error('Error creating module:', error);
@@ -1059,15 +1053,9 @@ export default function Admin() {
         throw new Error('updateCourseModule returned null - module not found or update failed');
       }
       
-      // Aggiorna solo i moduli invece di ricaricare tutto
-      if (moduleFilters.course) {
-        await loadModulesForCourse(moduleFilters.course);
-      } else {
-        await loadAllModules();
-      }
-      
       setEditingModule(null);
       setShowAddModule(false);
+      await fetchAdminData();
       addNotification('success', 'Modulo Aggiornato', `Il modulo "${editingModule.title}" è stato modificato`);
     } catch (error) {
       console.error('🚨 Errore in handleUpdateModule:', error);
@@ -1084,12 +1072,7 @@ export default function Admin() {
     try {
       const success = await deleteCourseModule(moduleId);
       if (success) {
-        // Aggiorna solo i moduli invece di ricaricare tutto
-        if (moduleFilters.course) {
-          await loadModulesForCourse(moduleFilters.course);
-        } else {
-          await loadAllModules();
-        }
+        await fetchAdminData();
         addNotification('info', 'Modulo Eliminato', `Il modulo "${moduleTitle}" è stato rimosso dal sistema`);
       } else {
         addNotification('error', 'Errore Eliminazione', 'Il modulo non è stato trovato o non può essere eliminato');
@@ -1115,7 +1098,7 @@ export default function Admin() {
       level: module.level
     });
     setEditingModule(module);
-    setShowAddModule(true);
+    setShowEditModule(true);
   }
 
   function handleEditCourse(course: any) {
@@ -3604,7 +3587,7 @@ export default function Admin() {
         )}
 
         {/* Modal Aggiungi/Modifica Modulo */}
-        {showAddModule && (
+        {(showAddModule || showEditModule) && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
@@ -3615,6 +3598,7 @@ export default function Admin() {
                   <button
                     onClick={() => {
                       setShowAddModule(false);
+                      setShowEditModule(false);
                       setEditingModule(null);
                       setModuleForm({
                         course_id: '',
@@ -3816,6 +3800,7 @@ export default function Admin() {
                       type="button"
                       onClick={() => {
                         setShowAddModule(false);
+                        setShowEditModule(false);
                         setEditingModule(null);
                         setModuleForm({
                           course_id: '',
