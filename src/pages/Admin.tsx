@@ -49,7 +49,8 @@ import {
   ChevronRight,
   GraduationCap,
   BookOpen,
-  PlayCircle
+  PlayCircle,
+  RefreshCw
 } from 'lucide-react';
 
 interface AdminStats {
@@ -195,12 +196,18 @@ export default function Admin() {
     loadUserPermissions();
   }, []);
 
-  // Carica moduli quando cambia il corso selezionato
+  // Carica moduli quando cambia il corso selezionato o quando si entra nella tab moduli
   useEffect(() => {
-    if (selectedCourse && educationTab === 'modules') {
-      loadModulesForCourse(selectedCourse);
+    if (educationTab === 'modules' && courses.length > 0) {
+      if (moduleFilters.course) {
+        // Se c'è un filtro corso specifico, carica solo quei moduli
+        loadModulesForCourse(moduleFilters.course);
+      } else {
+        // Altrimenti carica tutti i moduli
+        loadAllModules();
+      }
     }
-  }, [selectedCourse, educationTab]);
+  }, [educationTab, moduleFilters.course, courses]);
 
   async function loadModulesForCourse(courseId: string) {
     try {
@@ -208,6 +215,24 @@ export default function Admin() {
       setModules(modulesData);
     } catch (error) {
       console.error('Error loading modules:', error);
+    }
+  }
+
+  async function loadAllModules() {
+    try {
+      console.log('🎓 Admin: Caricamento tutti i moduli...');
+      // Carica moduli di tutti i corsi
+      const allModules = [];
+      for (const course of courses) {
+        console.log(`🎓 Admin: Caricamento moduli per corso: ${course.title} (${course.id})`);
+        const courseModules = await getCourseModules(course.id);
+        console.log(`🎓 Admin: Trovati ${courseModules.length} moduli per corso ${course.title}`);
+        allModules.push(...courseModules);
+      }
+      console.log(`🎓 Admin: Totale moduli caricati: ${allModules.length}`);
+      setModules(allModules);
+    } catch (error) {
+      console.error('Error loading all modules:', error);
     }
   }
 
@@ -1275,35 +1300,35 @@ export default function Admin() {
                 </div>
                 
                 <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
-                  {users.map((user) => (
+                      {users.map((user) => (
                     <div
                       key={user.id}
                       className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3 sm:gap-0"
                     >
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-gray-900 mb-1 text-sm sm:text-base line-clamp-2">
-                          {editingUser?.id === user.id ? (
-                            <input
-                              type="text"
-                              value={editingUser.full_name}
-                              onChange={(e) => setEditingUser({...editingUser, full_name: e.target.value})}
+                            {editingUser?.id === user.id ? (
+                              <input
+                                type="text"
+                                value={editingUser.full_name}
+                                onChange={(e) => setEditingUser({...editingUser, full_name: e.target.value})}
                               className="w-full px-3 py-2 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                            />
-                          ) : (
-                            user.full_name
-                          )}
+                              />
+                            ) : (
+                              user.full_name
+                            )}
                         </h4>
                         <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2">
-                          {editingUser?.id === user.id ? (
-                            <input
-                              type="email"
-                              value={editingUser.email}
-                              onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
+                            {editingUser?.id === user.id ? (
+                              <input
+                                type="email"
+                                value={editingUser.email}
+                                onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
                               className="w-full px-3 py-2 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                            />
-                          ) : (
-                            user.email
-                          )}
+                              />
+                            ) : (
+                              user.email
+                            )}
                         </p>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium w-fit ${
@@ -1338,58 +1363,58 @@ export default function Admin() {
                       </div>
                       
                                             <div className="flex flex-wrap items-center gap-2 sm:gap-2">
-                        {editingUser?.id === user.id ? (
+                            {editingUser?.id === user.id ? (
                           <>
-                            <button
-                              onClick={handleUpdateUser}
+                                <button
+                                  onClick={handleUpdateUser}
                               className="p-3 min-h-[48px] min-w-[48px] text-gray-400 hover:text-green-600 transition-colors rounded-lg hover:bg-green-50"
-                              title="Salva"
-                            >
+                                  title="Salva"
+                                >
                               <Save className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => setEditingUser(null)}
+                                </button>
+                                <button
+                                  onClick={() => setEditingUser(null)}
                               className="p-3 min-h-[48px] min-w-[48px] text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
-                              title="Annulla"
-                            >
+                                  title="Annulla"
+                                >
                               <X className="h-5 w-5" />
-                            </button>
+                                </button>
                           </>
-                        ) : (
+                            ) : (
                           <>
-                            <button
-                              onClick={() => setEditingUser({...user})}
-                              disabled={!hasPermission('users.edit')}
+                                <button
+                                  onClick={() => setEditingUser({...user})}
+                                  disabled={!hasPermission('users.edit')}
                               className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
-                                hasPermission('users.edit')
+                                    hasPermission('users.edit')
                                   ? 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
-                                  : 'text-gray-300 cursor-not-allowed'
-                              }`}
-                              title={hasPermission('users.edit') ? 'Modifica' : 'Permesso negato'}
-                            >
+                                      : 'text-gray-300 cursor-not-allowed'
+                                  }`}
+                                  title={hasPermission('users.edit') ? 'Modifica' : 'Permesso negato'}
+                                >
                               <Edit3 className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => setShowPasswordModal(user)}
+                                </button>
+                                <button
+                                  onClick={() => setShowPasswordModal(user)}
                               className="p-3 min-h-[48px] min-w-[48px] text-gray-400 hover:text-yellow-600 transition-colors rounded-lg hover:bg-yellow-50"
-                              title="Cambia Password"
-                            >
+                                  title="Cambia Password"
+                                >
                               <Key className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(user.id, user.email)}
-                              disabled={!hasPermission('users.delete')}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteUser(user.id, user.email)}
+                                  disabled={!hasPermission('users.delete')}
                               className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
-                                hasPermission('users.delete')
+                                    hasPermission('users.delete')
                                   ? 'text-gray-400 hover:text-red-600 hover:bg-red-50'
-                                  : 'text-gray-300 cursor-not-allowed'
-                              }`}
-                              title={hasPermission('users.delete') ? 'Elimina' : 'Permesso negato'}
-                            >
+                                      : 'text-gray-300 cursor-not-allowed'
+                                  }`}
+                                  title={hasPermission('users.delete') ? 'Elimina' : 'Permesso negato'}
+                                >
                               <Trash2 className="h-5 w-5" />
-                            </button>
+                                </button>
                           </>
-                        )}
+                            )}
                       </div>
                     </div>
                       ))}
@@ -1729,18 +1754,27 @@ export default function Admin() {
                       <h3 className="text-lg font-semibold text-gray-900">
                         Gestione Moduli ({modules.length})
                       </h3>
-                      <button
-                        onClick={() => setShowAddModule(true)}
-                        disabled={!hasPermission('education.create')}
-                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                          hasPermission('education.create')
-                            ? 'bg-blue-800 text-white hover:bg-blue-900'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
-                      >
-                        <Plus className="h-5 w-5" />
-                        <span>Aggiungi Modulo</span>
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => loadAllModules()}
+                          className="flex items-center space-x-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          <span>Ricarica</span>
+                        </button>
+                        <button
+                          onClick={() => setShowAddModule(true)}
+                          disabled={!hasPermission('education.create')}
+                          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                            hasPermission('education.create')
+                              ? 'bg-blue-800 text-white hover:bg-blue-900'
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          }`}
+                        >
+                          <Plus className="h-5 w-5" />
+                          <span>Aggiungi Modulo</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* Filtri Moduli */}
@@ -1748,8 +1782,13 @@ export default function Admin() {
                       <select
                         value={moduleFilters.course}
                         onChange={(e) => {
-                          setModuleFilters({...moduleFilters, course: e.target.value});
-                          setSelectedCourse(e.target.value);
+                          const courseId = e.target.value;
+                          setModuleFilters({...moduleFilters, course: courseId});
+                          if (courseId) {
+                            loadModulesForCourse(courseId);
+                          } else {
+                            loadAllModules();
+                          }
                         }}
                         className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
@@ -1782,7 +1821,14 @@ export default function Admin() {
                     </div>
 
                     <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
-                      {modules.map((module) => (
+                      {modules.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                          <p className="text-lg font-medium">Nessun modulo trovato</p>
+                          <p className="text-sm">Seleziona un corso o aggiungi un nuovo modulo</p>
+                        </div>
+                      ) : (
+                        modules.map((module) => (
                         <div
                           key={module.id}
                           className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3 sm:gap-0"
@@ -1849,7 +1895,8 @@ export default function Admin() {
                             </button>
                           </div>
                         </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
