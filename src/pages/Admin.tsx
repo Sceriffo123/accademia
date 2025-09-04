@@ -972,6 +972,14 @@ export default function Admin() {
 
     try {
       await createCourseModule(moduleForm);
+      
+      // Aggiorna solo i moduli invece di ricaricare tutto
+      if (moduleFilters.course) {
+        await loadModulesForCourse(moduleFilters.course);
+      } else {
+        await loadAllModules();
+      }
+      
       setShowAddModule(false);
       setModuleForm({
         course_id: '',
@@ -986,7 +994,6 @@ export default function Admin() {
         is_required: true,
         level: 'beginner'
       });
-      await fetchAdminData();
       addNotification('success', 'Modulo Creato', `Il modulo "${moduleForm.title}" è stato aggiunto al sistema`);
     } catch (error) {
       console.error('Error creating module:', error);
@@ -995,10 +1002,6 @@ export default function Admin() {
   }
 
   async function handleUpdateModule() {
-    console.log('🔧 DEBUG: handleUpdateModule called');
-    console.log('🔧 DEBUG: editingModule:', editingModule);
-    console.log('🔧 DEBUG: moduleForm:', moduleForm);
-    
     if (!hasPermission('education.edit')) {
       addNotification('error', 'Accesso Negato', 'Non hai i permessi per modificare moduli');
       return;
@@ -1006,26 +1009,24 @@ export default function Admin() {
 
     try {
       if (!editingModule) {
-        console.log('🚨 ERROR: No editingModule found');
         return;
       }
       
-      console.log('🔧 DEBUG: Calling updateCourseModule...');
-      console.log('🔧 DEBUG: Module ID:', editingModule.id);
-      console.log('🔧 DEBUG: Module Form Data:', JSON.stringify(moduleForm, null, 2));
-      
       const result = await updateCourseModule(editingModule.id, moduleForm);
-      console.log('🔧 DEBUG: updateCourseModule result:', result);
       
       if (!result) {
         throw new Error('updateCourseModule returned null - module not found or update failed');
       }
       
-      console.log('🔧 DEBUG: updateCourseModule successful');
+      // Aggiorna solo i moduli invece di ricaricare tutto
+      if (moduleFilters.course) {
+        await loadModulesForCourse(moduleFilters.course);
+      } else {
+        await loadAllModules();
+      }
       
       setEditingModule(null);
-      setShowAddModule(false); // CORREZIONE: usa showAddModule invece di showEditModule
-      await fetchAdminData();
+      setShowAddModule(false);
       addNotification('success', 'Modulo Aggiornato', `Il modulo "${editingModule.title}" è stato modificato`);
     } catch (error) {
       console.error('🚨 Errore in handleUpdateModule:', error);
@@ -1042,7 +1043,12 @@ export default function Admin() {
     try {
       const success = await deleteCourseModule(moduleId);
       if (success) {
-        await fetchAdminData();
+        // Aggiorna solo i moduli invece di ricaricare tutto
+        if (moduleFilters.course) {
+          await loadModulesForCourse(moduleFilters.course);
+        } else {
+          await loadAllModules();
+        }
         addNotification('info', 'Modulo Eliminato', `Il modulo "${moduleTitle}" è stato rimosso dal sistema`);
       } else {
         addNotification('error', 'Errore Eliminazione', 'Il modulo non è stato trovato o non può essere eliminato');
@@ -1054,7 +1060,6 @@ export default function Admin() {
   }
 
   function handleEditModule(module: any) {
-    console.log('🔧 DEBUG: handleEditModule called with:', module);
     setModuleForm({
       course_id: module.course_id,
       title: module.title,
@@ -1069,8 +1074,7 @@ export default function Admin() {
       level: module.level
     });
     setEditingModule(module);
-    setShowAddModule(true); // CORREZIONE: usa showAddModule invece di showEditModule
-    console.log('🔧 DEBUG: Modal should open now - showAddModule set to true');
+    setShowAddModule(true);
   }
 
   function handleEditCourse(course: any) {
@@ -1952,14 +1956,7 @@ export default function Admin() {
                           </div>
                           <div className="flex items-center space-x-2 sm:space-x-1">
                             <button
-                              onClick={() => {
-                                console.log('🔧 DEBUG: Clicking Edit Module Button');
-                                console.log('🔧 DEBUG: Module data:', module);
-                                console.log('🔧 DEBUG: Has permission:', hasPermission('education.edit'));
-                                console.log('🔧 DEBUG: showAddModule state:', showAddModule);
-                                console.log('🔧 DEBUG: editingModule state:', editingModule);
-                                handleEditModule(module);
-                              }}
+                              onClick={() => handleEditModule(module)}
                               disabled={!hasPermission('education.edit')}
                               className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
                                 hasPermission('education.edit')
