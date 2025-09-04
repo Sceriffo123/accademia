@@ -1017,7 +1017,12 @@ export default function Admin() {
   // FUNZIONI HANDLER MODULI
   // ==============================================
 
-  async function handleCreateModule() {
+  async function handleCreateModule(e?: React.FormEvent) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     if (!hasPermission('education.create')) {
       addNotification('error', 'Accesso Negato', 'Non hai i permessi per creare moduli');
       return;
@@ -1048,7 +1053,12 @@ export default function Admin() {
     }
   }
 
-  async function handleUpdateModule() {
+  async function handleUpdateModule(e?: React.FormEvent) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     console.log('🔧 DEBUG handleUpdateModule - INIZIO');
     console.log('🔧 DEBUG - Current activeTab:', activeTab);
     console.log('🔧 DEBUG - Current educationTab:', educationTab);
