@@ -1752,10 +1752,7 @@ export default function Admin() {
                     </div>
                   ))}
                 </div>
-<<<<<<< Updated upstream
                 )}
-=======
->>>>>>> Stashed changes
 
                 {/* Sezione Moduli */}
                 {educationTab === 'modules' && (
