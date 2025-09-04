@@ -196,30 +196,32 @@ export default function Admin() {
     loadUserPermissions();
   }, []);
 
-  // Carica moduli quando cambia il corso selezionato o quando si entra nella tab moduli
+  // Carica moduli quando si entra nella tab moduli o cambia il filtro corso
   useEffect(() => {
     console.log('🔧 DEBUG useEffect modules:', {
       educationTab,
       coursesLength: courses.length,
-      moduleFiltersCourse: moduleFilters.course
+      moduleFiltersCourse: moduleFilters.course,
+      loading
     });
     
-    if (educationTab === 'modules') {
+    if (educationTab === 'modules' && !loading) {
+      // Aspetta che il loading iniziale sia completato
       if (courses.length > 0) {
         if (moduleFilters.course) {
-          // Se c'è un filtro corso specifico, carica solo quei moduli
           console.log('🔧 DEBUG: Loading modules for specific course:', moduleFilters.course);
           loadModulesForCourse(moduleFilters.course);
         } else {
-          // Altrimenti carica tutti i moduli
           console.log('🔧 DEBUG: Loading all modules');
           loadAllModules();
         }
       } else {
-        console.log('🔧 DEBUG: No courses available yet, waiting...');
+        // Se non ci sono corsi, carica comunque i corsi prima
+        console.log('🔧 DEBUG: No courses available, loading courses first...');
+        loadCoursesAndThenModules();
       }
     }
-  }, [educationTab, moduleFilters.course, courses]);
+  }, [educationTab, moduleFilters.course, courses, loading]);
 
   async function loadModulesForCourse(courseId: string) {
     try {
@@ -227,6 +229,26 @@ export default function Admin() {
       setModules(modulesData);
     } catch (error) {
       console.error('Error loading modules:', error);
+    }
+  }
+
+  async function loadCoursesAndThenModules() {
+    try {
+      console.log('🎓 Admin: Caricamento corsi prima dei moduli...');
+      const coursesData = await getAllCourses();
+      setCourses(coursesData);
+      console.log(`🎓 Admin: ${coursesData.length} corsi caricati, ora carico i moduli...`);
+      
+      // Ora carica i moduli con i corsi appena caricati
+      const allModules = [];
+      for (const course of coursesData) {
+        const courseModules = await getCourseModules(course.id);
+        allModules.push(...courseModules);
+      }
+      console.log(`🎓 Admin: Totale moduli caricati: ${allModules.length}`);
+      setModules(allModules);
+    } catch (error) {
+      console.error('Error loading courses and modules:', error);
     }
   }
 
