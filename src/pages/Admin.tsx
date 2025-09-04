@@ -1,4 +1,22 @@
-import React, { useState, useEffect } from 'react';
+1926 |         {showAddUser && (Error:   Failed to scan for dependencies from entries:
+  /home/project/index.html
+
+  ✘ [ERROR] Unterminated regular expression
+
+    src/pages/Admin.tsx:1923:14:
+      1923 │         </div>
+           ╵               ^
+
+
+    at failureErrorWithLog (/home/project/node_modules/esbuild/lib/main.js:1462:15)
+    at eval (/home/project/node_modules/esbuild/lib/main.js:935:25)
+    at runOnEndCallbacks (/home/project/node_modules/esbuild/lib/main.js:1305:45)
+    at buildResponseToResult (/home/project/node_modules/esbuild/lib/main.js:933:7)
+    at eval (/home/project/node_modules/esbuild/lib/main.js:945:9)
+    at <anonymous> (https://zp1v56uxy8rdx5ypatb0ockcb9tr6a-oci3-0ahitwmq.w-credentialless-staticblitz.com/blitz.96435430.js:31:27890)
+    at new Promise (https://zp1v56uxy8rdx5ypatb0ockcb9tr6a-oci3-0ahitwmq.w-credentialless-staticblitz.com/blitz.96435430.js:31:27849)
+    at requestCallbacks.on-end (/home/project/node_modules/esbuild/lib/main.js:944:54)
+    at handleRequest (/home/project/node_modules/esbuild/lib/main.js:637:17)import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   getAllUsers, 
@@ -19,33 +37,20 @@ import {
   updateCourse,
   deleteCourse,
   getCoursesCount,
+  getCourseModules,
+  createCourseModule,
+  updateCourseModule,
+  deleteCourseModule,
   getUserPermissions
 } from '../lib/neonDatabase';
 import { createModuleProgressTable, checkModuleProgressTable } from '../lib/createModuleProgressTable';
 import { downloadGoogleDriveFile, isGoogleDriveUrl } from '../lib/driveDownload';
 import { generatePDF } from '../lib/pdfGenerator';
 import { 
-  Users, 
-  FileText, 
-  Plus, 
-  Edit3, 
-  Trash2, 
-  Eye,
-  Settings,
-  BarChart3,
-  X,
-  Save,
-  Key,
-  CheckCircle,
-  AlertCircle,
-  AlertTriangle,
-  Info,
-  FolderOpen,
-  Download,
-  ChevronRight,
-  GraduationCap,
-  BookOpen,
-  PlayCircle
+  Settings, Users, FileText, FolderOpen, GraduationCap, Plus, Edit3, Trash2, 
+  Eye, Download, Save, X, Key, ChevronRight, AlertCircle, CheckCircle, 
+  Info, XCircle, Calendar, Clock, User, Mail, Shield, BookOpen, PlayCircle,
+  ChevronUp, ChevronDown, BarChart3
 } from 'lucide-react';
 
 interface AdminStats {
@@ -66,7 +71,8 @@ interface Notification {
 
 export default function Admin() {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'normatives' | 'documents' | 'courses'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'normatives' | 'documents' | 'education'>('overview');
+  const [educationTab, setEducationTab] = useState<'courses' | 'modules'>('courses');
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
     totalNormatives: 0,
@@ -151,6 +157,28 @@ export default function Admin() {
   const [courseModules, setCourseModules] = useState<any[]>([]);
   const [showCourseModules, setShowCourseModules] = useState(false);
 
+  // Stati per gestione moduli
+  const [modules, setModules] = useState<any[]>([]);
+  const [moduleFilters, setModuleFilters] = useState({
+    courseId: '',
+    type: ''
+  });
+  const [showAddModule, setShowAddModule] = useState(false);
+  const [showEditModule, setShowEditModule] = useState(false);
+  const [editingModule, setEditingModule] = useState<any>(null);
+  const [moduleDeleteConfirm, setModuleDeleteConfirm] = useState<{show: boolean, module?: any}>({show: false});
+  const [moduleForm, setModuleForm] = useState({
+    title: '',
+    description: '',
+    content: '',
+    type: 'lesson' as 'lesson' | 'quiz',
+    course_id: '',
+    order_num: 1,
+    is_required: true,
+    duration_minutes: 0,
+    quiz_id: ''
+  });
+
   const [userForm, setUserForm] = useState({
     email: '',
     full_name: '',
@@ -176,6 +204,168 @@ export default function Admin() {
 
   const hasPermission = (permission: string): boolean => {
     return userPermissions.includes(permission);
+  };
+
+  // Computed value per moduli filtrati
+  const filteredModules = modules.filter(module => {
+    if (moduleFilters.courseId && module.course_id !== moduleFilters.courseId) {
+      return false;
+    }
+    if (moduleFilters.type && module.type !== moduleFilters.type) {
+      return false;
+    }
+    return true;
+  });
+
+  // Funzioni per gestione moduli
+  const handleModuleOrderChange = async (moduleId: string, newOrder: number) => {
+    try {
+      await updateCourseModule(moduleId, { order_num: newOrder });
+      setModules(modules.map(m => m.id === moduleId ? {...m, order_num: newOrder} : m));
+      addNotification('success', 'Successo', 'Ordine modulo aggiornato');
+    } catch (error) {
+      console.error('Errore aggiornamento ordine modulo:', error);
+      addNotification('error', 'Errore', 'Impossibile aggiornare ordine modulo');
+    }
+  };
+
+  const handleMoveModuleUp = async (module: any) => {
+    const courseModules = modules.filter(m => m.course_id === module.course_id).sort((a, b) => a.order_num - b.order_num);
+    const currentIndex = courseModules.findIndex(m => m.id === module.id);
+    
+    if (currentIndex > 0) {
+      const prevModule = courseModules[currentIndex - 1];
+      await handleModuleOrderChange(module.id, prevModule.order_num);
+      await handleModuleOrderChange(prevModule.id, module.order_num);
+    }
+  };
+
+  const handleMoveModuleDown = async (module: any) => {
+    const courseModules = modules.filter(m => m.course_id === module.course_id).sort((a, b) => a.order_num - b.order_num);
+    const currentIndex = courseModules.findIndex(m => m.id === module.id);
+    
+    if (currentIndex < courseModules.length - 1) {
+      const nextModule = courseModules[currentIndex + 1];
+      await handleModuleOrderChange(module.id, nextModule.order_num);
+      await handleModuleOrderChange(nextModule.id, module.order_num);
+    }
+  };
+
+  const handleEditModule = (module: any) => {
+    setEditingModule(module);
+    setModuleForm({
+      title: module.title,
+      description: module.description || '',
+      content: module.content || '',
+      type: module.type,
+      course_id: module.course_id,
+      order_num: module.order_num,
+      is_required: module.is_required,
+      duration_minutes: module.duration_minutes || 0,
+      quiz_id: module.quiz_id || ''
+    });
+    setShowEditModule(true);
+  };
+
+  // Handler per aggiungere nuovo modulo
+  const handleAddModule = async () => {
+    if (!hasPermission('education.create')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per creare moduli');
+      return;
+    }
+
+    try {
+      if (!moduleForm.title || !moduleForm.course_id || !moduleForm.type) {
+        addNotification('error', 'Errore Validazione', 'Titolo, corso e tipo sono obbligatori');
+        return;
+      }
+
+      await createCourseModule({
+        title: moduleForm.title,
+        description: moduleForm.description,
+        content: moduleForm.content,
+        type: moduleForm.type,
+        course_id: moduleForm.course_id,
+        order_num: moduleForm.order_num,
+        is_required: moduleForm.is_required,
+        duration_minutes: moduleForm.duration_minutes,
+        quiz_id: moduleForm.quiz_id || null
+      });
+
+      setShowAddModule(false);
+      setModuleForm({
+        title: '',
+        description: '',
+        content: '',
+        type: 'lesson',
+        course_id: '',
+        order_num: 1,
+        is_required: true,
+        duration_minutes: 0,
+        quiz_id: ''
+      });
+      await fetchAdminData();
+      addNotification('success', 'Modulo Creato', `Il modulo "${moduleForm.title}" è stato aggiunto al sistema`);
+    } catch (error) {
+      console.error('Error creating module:', error);
+      addNotification('error', 'Errore Creazione', 'Si è verificato un errore durante la creazione del modulo');
+    }
+  };
+
+  // Handler per aggiornare modulo
+  const handleUpdateModule = async () => {
+    if (!hasPermission('education.edit')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per modificare moduli');
+      return;
+    }
+
+    try {
+      if (!moduleForm.title || !moduleForm.course_id || !moduleForm.type) {
+        addNotification('error', 'Errore Validazione', 'Titolo, corso e tipo sono obbligatori');
+        return;
+      }
+
+      await updateCourseModule(editingModule.id, {
+        title: moduleForm.title,
+        description: moduleForm.description,
+        content: moduleForm.content,
+        type: moduleForm.type,
+        course_id: moduleForm.course_id,
+        order_num: moduleForm.order_num,
+        is_required: moduleForm.is_required,
+        duration_minutes: moduleForm.duration_minutes,
+        quiz_id: moduleForm.quiz_id || null
+      });
+
+      setEditingModule(null);
+      setShowEditModule(false);
+      await fetchAdminData();
+      addNotification('success', 'Modulo Aggiornato', `Il modulo "${moduleForm.title}" è stato modificato`);
+    } catch (error) {
+      console.error('Error updating module:', error);
+      addNotification('error', 'Errore Aggiornamento', 'Si è verificato un errore durante l\'aggiornamento del modulo');
+    }
+  };
+
+  // Handler per eliminare modulo
+  const handleDeleteModule = async (moduleId: string, moduleTitle: string) => {
+    if (!hasPermission('education.delete')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per eliminare moduli');
+      return;
+    }
+
+    try {
+      const success = await deleteCourseModule(moduleId);
+      if (success) {
+        await fetchAdminData();
+        addNotification('info', 'Modulo Eliminato', `Il modulo "${moduleTitle}" è stato rimosso dal sistema`);
+      } else {
+        addNotification('error', 'Errore Eliminazione', 'Il modulo non è stato trovato o non può essere eliminato');
+      }
+    } catch (error) {
+      console.error('Error deleting module:', error);
+      addNotification('error', 'Errore Eliminazione', 'Si è verificato un errore durante l\'eliminazione del modulo');
+    }
   };
 
   // Handler per creazione normativa
@@ -635,6 +825,18 @@ export default function Admin() {
         getAllCourses()
       ]);
 
+      // Carica tutti i moduli
+      const allModules = [];
+      for (const course of coursesData) {
+        try {
+          const courseModules = await getCourseModules(course.id);
+          allModules.push(...courseModules);
+        } catch (error) {
+          console.error(`Errore caricamento moduli per corso ${course.id}:`, error);
+        }
+      }
+      setModules(allModules);
+
       setStats({
         totalUsers,
         totalNormatives,
@@ -929,8 +1131,9 @@ export default function Admin() {
   ];
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-8">
-      <div className="max-w-6xl mx-auto">
+    <>
+      <div className="container mx-auto px-4 sm:px-6 py-8">
+        <div className="max-w-6xl mx-auto">
         {/* Toast Notifications */}
         <div className="fixed top-4 right-4 z-50 space-y-2">
           {notifications.map((notification) => {
@@ -1023,7 +1226,7 @@ export default function Admin() {
                 { id: 'users', label: 'Utenti', icon: Users },
                 { id: 'normatives', label: 'Normative', icon: FileText },
                 { id: 'documents', label: 'Documenti', icon: FolderOpen },
-                { id: 'courses', label: 'Formazione', icon: GraduationCap }
+                { id: 'education', label: 'Formazione', icon: GraduationCap }
               ].map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -1049,32 +1252,32 @@ export default function Admin() {
 
           {/* Desktop Tab Navigation */}
           <div className="hidden md:block">
-          <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6">
-              {[
-                { id: 'overview', label: 'Panoramica', icon: Settings },
-                { id: 'users', label: 'Utenti', icon: Users },
-                { id: 'normatives', label: 'Normative', icon: FileText },
-                { id: 'documents', label: 'Documenti', icon: FolderOpen },
-                { id: 'courses', label: 'Formazione', icon: GraduationCap }
-              ].map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                      activeTab === tab.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
+            <div className="border-b border-gray-200">
+              <nav className="flex space-x-8 px-6">
+                {[
+                  { id: 'overview', label: 'Panoramica', icon: Settings },
+                  { id: 'users', label: 'Utenti', icon: Users },
+                  { id: 'normatives', label: 'Normative', icon: FileText },
+                  { id: 'documents', label: 'Documenti', icon: FolderOpen },
+                  { id: 'education', label: 'Formazione', icon: GraduationCap }
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        activeTab === tab.id
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
             </div>
           </div>
 
@@ -1451,25 +1654,54 @@ export default function Admin() {
               </div>
             )}
 
-            {activeTab === 'courses' && (
+            {activeTab === 'education' && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Gestione Corsi ({courses.length})
-                  </h3>
-                  <button
-                    onClick={() => setShowAddCourse(true)}
-                    disabled={!hasPermission('education.create')}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                      hasPermission('education.create')
-                        ? 'bg-blue-800 text-white hover:bg-blue-900'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
-                  >
-                    <Plus className="h-5 w-5" />
-                    <span>Aggiungi Corso</span>
-                  </button>
+                {/* Sottotab Formazione */}
+                <div className="border-b border-gray-200">
+                  <nav className="flex space-x-8">
+                    <button
+                      onClick={() => setEducationTab('courses')}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        educationTab === 'courses'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Corsi
+                    </button>
+                    <button
+                      onClick={() => setEducationTab('modules')}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        educationTab === 'modules'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Moduli
+                    </button>
+                  </nav>
                 </div>
+
+                {/* Sezione Corsi */}
+                {educationTab === 'courses' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Gestione Corsi ({courses.length})
+                      </h3>
+                      <button
+                        onClick={() => setShowAddCourse(true)}
+                        disabled={!hasPermission('education.create')}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                          hasPermission('education.create')
+                            ? 'bg-blue-800 text-white hover:bg-blue-900'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                      >
+                        <Plus className="h-5 w-5" />
+                        <span>Aggiungi Corso</span>
+                      </button>
+                    </div>
 
                 <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
                   {courses.map((course) => (
@@ -1539,6 +1771,170 @@ export default function Admin() {
                     </div>
                   ))}
                 </div>
+
+                {/* Sezione Moduli */}
+                {educationTab === 'modules' && (
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Gestione Moduli
+                      </h3>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <select
+                          value={moduleFilters.courseId}
+                          onChange={(e) => setModuleFilters({...moduleFilters, courseId: e.target.value})}
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        >
+                          <option value="">Tutti i corsi</option>
+                          {courses.map((course) => (
+                            <option key={course.id} value={course.id}>
+                              {course.title}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          value={moduleFilters.type}
+                          onChange={(e) => setModuleFilters({...moduleFilters, type: e.target.value})}
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        >
+                          <option value="">Tutti i tipi</option>
+                          <option value="lesson">Lezioni</option>
+                          <option value="quiz">Quiz</option>
+                        </select>
+                        <button
+                          onClick={() => setShowAddModule(true)}
+                          disabled={!hasPermission('education.create')}
+                          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${
+                            hasPermission('education.create')
+                              ? 'bg-blue-800 text-white hover:bg-blue-900'
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          }`}
+                        >
+                          <Plus className="h-5 w-5" />
+                          <span>Aggiungi Modulo</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Lista Moduli */}
+                    <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
+                      {filteredModules.length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="text-gray-400 mb-4">
+                            <BookOpen className="h-12 w-12 mx-auto" />
+                          </div>
+                          <p className="text-gray-600">
+                            {moduleFilters.courseId || moduleFilters.type 
+                              ? 'Nessun modulo trovato con i filtri selezionati' 
+                              : 'Nessun modulo presente'}
+                          </p>
+                          <p className="text-sm text-gray-500 mt-2">
+                            {hasPermission('education.create') 
+                              ? 'Aggiungi il primo modulo per iniziare'
+                              : 'Non hai i permessi per aggiungere moduli'}
+                          </p>
+                        </div>
+                      ) : (
+                        filteredModules.map((module) => (
+                          <div
+                            key={module.id}
+                            className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3 sm:gap-0"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-medium text-gray-900 text-sm sm:text-base line-clamp-2">
+                                  {module.title}
+                                </h4>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  module.type === 'lesson' 
+                                    ? 'bg-blue-100 text-blue-800' 
+                                    : 'bg-purple-100 text-purple-800'
+                                }`}>
+                                  {module.type === 'lesson' ? 'Lezione' : 'Quiz'}
+                                </span>
+                              </div>
+                              <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2">
+                                {module.description || 'Nessuna descrizione'}
+                              </p>
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
+                                <span>
+                                  Corso: {courses.find(c => c.id === module.course_id)?.title || 'N/A'}
+                                </span>
+                                <span>Ordine: {module.order_num}</span>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium w-fit ${
+                                  module.is_required 
+                                    ? 'bg-red-100 text-red-800' 
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {module.is_required ? 'Obbligatorio' : 'Opzionale'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2 sm:space-x-1">
+                              <div className="flex items-center space-x-1">
+                                <input
+                                  type="number"
+                                  value={module.order_num}
+                                  onChange={(e) => handleModuleOrderChange(module.id, parseInt(e.target.value) || 1)}
+                                  className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                                  min="1"
+                                />
+                                <button
+                                  onClick={() => handleMoveModuleUp(module)}
+                                  disabled={!hasPermission('education.edit')}
+                                  className={`p-2 min-h-[36px] min-w-[36px] transition-colors rounded-lg ${
+                                    hasPermission('education.edit')
+                                      ? 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                                      : 'text-gray-300 cursor-not-allowed'
+                                  }`}
+                                  title="Sposta su"
+                                >
+                                  <ChevronUp className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleMoveModuleDown(module)}
+                                  disabled={!hasPermission('education.edit')}
+                                  className={`p-2 min-h-[36px] min-w-[36px] transition-colors rounded-lg ${
+                                    hasPermission('education.edit')
+                                      ? 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                                      : 'text-gray-300 cursor-not-allowed'
+                                  }`}
+                                  title="Sposta giù"
+                                >
+                                  <ChevronDown className="h-4 w-4" />
+                                </button>
+                              </div>
+                              <button
+                                onClick={() => handleEditModule(module)}
+                                disabled={!hasPermission('education.edit')}
+                                className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
+                                  hasPermission('education.edit')
+                                    ? 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+                                    : 'text-gray-300 cursor-not-allowed'
+                                }`}
+                                title={hasPermission('education.edit') ? 'Modifica' : 'Permesso negato'}
+                              >
+                                <Edit3 className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => setModuleDeleteConfirm({ show: true, module })}
+                                disabled={!hasPermission('education.delete')}
+                                className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
+                                  hasPermission('education.delete')
+                                    ? 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                                    : 'text-gray-300 cursor-not-allowed'
+                                }`}
+                                title={hasPermission('education.delete') ? 'Elimina' : 'Permesso negato'}
+                              >
+                                <Trash2 className="h-5 w-5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -3104,7 +3500,414 @@ export default function Admin() {
             </div>
           </div>
         )}
+
+        {/* Modal Creazione Modulo */}
+        {showAddModule && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-semibold text-gray-900">Aggiungi Nuovo Modulo</h3>
+                  <button
+                    onClick={() => setShowAddModule(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Titolo *
+                    </label>
+                    <input
+                      type="text"
+                      value={moduleForm.title}
+                      onChange={(e) => setModuleForm({...moduleForm, title: e.target.value})}
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Inserisci il titolo del modulo"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Corso *
+                    </label>
+                    <select
+                      value={moduleForm.course_id}
+                      onChange={(e) => setModuleForm({...moduleForm, course_id: e.target.value})}
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Seleziona un corso</option>
+                      {courses.map((course) => (
+                        <option key={course.id} value={course.id}>{course.title}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tipo *
+                    </label>
+                    <select
+                      value={moduleForm.type}
+                      onChange={(e) => setModuleForm({...moduleForm, type: e.target.value as 'lesson' | 'quiz'})}
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="lesson">Lezione</option>
+                      <option value="quiz">Quiz</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Descrizione
+                    </label>
+                    <textarea
+                      value={moduleForm.description}
+                      onChange={(e) => setModuleForm({...moduleForm, description: e.target.value})}
+                      rows={3}
+                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Descrizione del modulo"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Contenuto
+                    </label>
+                    <textarea
+                      value={moduleForm.content}
+                      onChange={(e) => setModuleForm({...moduleForm, content: e.target.value})}
+                      rows={5}
+                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Contenuto del modulo"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Ordine
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={moduleForm.order_num}
+                        onChange={(e) => setModuleForm({...moduleForm, order_num: parseInt(e.target.value) || 1})}
+                        className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Durata (minuti)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={moduleForm.duration_minutes}
+                        onChange={(e) => setModuleForm({...moduleForm, duration_minutes: parseInt(e.target.value) || 0})}
+                        className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={moduleForm.is_required}
+                        onChange={(e) => setModuleForm({...moduleForm, is_required: e.target.checked})}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Modulo obbligatorio</span>
+                    </label>
+                  </div>
+
+                  {moduleForm.type === 'quiz' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        ID Quiz
+                      </label>
+                      <input
+                        type="text"
+                        value={moduleForm.quiz_id}
+                        onChange={(e) => setModuleForm({...moduleForm, quiz_id: e.target.value})}
+                        className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="ID del quiz associato"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6 pt-6 border-t">
+                  <button
+                    onClick={() => setShowAddModule(false)}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={handleAddModule}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Crea Modulo
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Modifica Modulo */}
+        {showEditModule && editingModule && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-semibold text-gray-900">Modifica Modulo</h3>
+                  <button
+                    onClick={() => setShowEditModule(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Titolo *
+                    </label>
+                    <input
+                      type="text"
+                      value={moduleForm.title}
+                      onChange={(e) => setModuleForm({...moduleForm, title: e.target.value})}
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Inserisci il titolo del modulo"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Corso *
+                    </label>
+                    <select
+                      value={moduleForm.course_id}
+                      onChange={(e) => setModuleForm({...moduleForm, course_id: e.target.value})}
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Seleziona un corso</option>
+                      {courses.map((course) => (
+                        <option key={course.id} value={course.id}>{course.title}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tipo *
+                    </label>
+                    <select
+                      value={moduleForm.type}
+                      onChange={(e) => setModuleForm({...moduleForm, type: e.target.value as 'lesson' | 'quiz'})}
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="lesson">Lezione</option>
+                      <option value="quiz">Quiz</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Descrizione
+                    </label>
+                    <textarea
+                      value={moduleForm.description}
+                      onChange={(e) => setModuleForm({...moduleForm, description: e.target.value})}
+                      rows={3}
+                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Descrizione del modulo"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Contenuto
+                    </label>
+                    <textarea
+                      value={moduleForm.content}
+                      onChange={(e) => setModuleForm({...moduleForm, content: e.target.value})}
+                      rows={5}
+                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Contenuto del modulo"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Ordine
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={moduleForm.order_num}
+                        onChange={(e) => setModuleForm({...moduleForm, order_num: parseInt(e.target.value) || 1})}
+                        className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Durata (minuti)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={moduleForm.duration_minutes}
+                        onChange={(e) => setModuleForm({...moduleForm, duration_minutes: parseInt(e.target.value) || 0})}
+                        className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={moduleForm.is_required}
+                        onChange={(e) => setModuleForm({...moduleForm, is_required: e.target.checked})}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Modulo obbligatorio</span>
+                    </label>
+                  </div>
+
+                  {moduleForm.type === 'quiz' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        ID Quiz
+                      </label>
+                      <input
+                        type="text"
+                        value={moduleForm.quiz_id}
+                        onChange={(e) => setModuleForm({...moduleForm, quiz_id: e.target.value})}
+                        className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="ID del quiz associato"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6 pt-6 border-t">
+                  <button
+                    onClick={() => setShowEditModule(false)}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={handleUpdateModule}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Salva Modifiche
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
+
+    {/* Modal Aggiungi Utente */}
+    {showAddUser && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Aggiungi Nuovo Utente</h3>
+            <button
+              onClick={() => setShowAddUser(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email *
+              </label>
+              <input
+                type="email"
+                value={userForm.email}
+                onChange={(e) => setUserForm({...userForm, email: e.target.value})}
+                className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Inserisci email"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nome Completo *
+              </label>
+              <input
+                type="text"
+                value={userForm.full_name}
+                onChange={(e) => setUserForm({...userForm, full_name: e.target.value})}
+                className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Inserisci nome completo"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Password *
+              </label>
+              <input
+                type="password"
+                value={userForm.password}
+                onChange={(e) => setUserForm({...userForm, password: e.target.value})}
+                className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Inserisci password"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ruolo *
+              </label>
+              <select
+                value={userForm.role}
+                onChange={(e) => setUserForm({...userForm, role: e.target.value as 'user' | 'admin' | 'superadmin' | 'operator'})}
+                className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="user">Utente</option>
+                <option value="operator">Operatore</option>
+                <option value="admin">Amministratore</option>
+                <option value="superadmin">Super Amministratore</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center justify-end space-x-3 mt-6">
+            <button
+              onClick={() => setShowAddUser(false)}
+              className="px-4 py-3 min-h-[44px] text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              Annulla
+            </button>
+            <button
+              onClick={handleCreateUser}
+              className="px-4 py-3 min-h-[44px] bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+            >
+              Crea Utente
+            </button>
+          </div>
+        </div>
+      </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
