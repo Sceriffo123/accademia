@@ -1978,7 +1978,7 @@ export default function Admin() {
                       </div>
                     </div>
 
-                    <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
+                    <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 overflow-x-auto">
                       {filteredModules.length === 0 ? (
                         <div className="text-center py-8 text-gray-500">
                           <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
@@ -3630,8 +3630,8 @@ export default function Admin() {
 
         {/* Modal Aggiungi/Modifica Modulo */}
         {(showAddModule || showEditModule) && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[95vh] overflow-y-auto mx-2 sm:mx-0">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold text-gray-900">
@@ -3712,7 +3712,7 @@ export default function Admin() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {/* Tipo */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
