@@ -1113,8 +1113,9 @@ export default function Admin() {
   ];
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-8">
-      <div className="max-w-6xl mx-auto">
+    <>
+      <div className="container mx-auto px-4 sm:px-6 py-8">
+        <div className="max-w-6xl mx-auto">
         {/* Toast Notifications */}
         <div className="fixed top-4 right-4 z-50 space-y-2">
           {notifications.map((notification) => {
@@ -1752,7 +1753,6 @@ export default function Admin() {
                     </div>
                   ))}
                 </div>
-                )}
 
                 {/* Sezione Moduli */}
                 {educationTab === 'modules' && (
@@ -3804,5 +3804,6 @@ export default function Admin() {
         )}
       </div>
     </div>
+    </>
   );
 }
