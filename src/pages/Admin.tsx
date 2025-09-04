@@ -236,6 +236,29 @@ export default function Admin() {
     }
   }
 
+  // Funzione per filtrare i moduli
+  const getFilteredModules = () => {
+    const filtered = modules.filter(module => {
+      // Filtro per tipo
+      if (moduleFilters.type && module.type !== moduleFilters.type) {
+        return false;
+      }
+      // Filtro per livello
+      if (moduleFilters.level && module.level !== moduleFilters.level) {
+        return false;
+      }
+      return true;
+    });
+    
+    console.log(`🎓 Admin: Filtri attivi - Tipo: ${moduleFilters.type || 'Tutti'}, Livello: ${moduleFilters.level || 'Tutti'}`);
+    console.log(`🎓 Admin: Moduli totali: ${modules.length}, Moduli filtrati: ${filtered.length}`);
+    
+    return filtered;
+  };
+
+  // Moduli filtrati
+  const filteredModules = getFilteredModules();
+
   const loadUserPermissions = async () => {
     try {
       if (profile?.role) {
@@ -1752,12 +1775,22 @@ export default function Admin() {
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-semibold text-gray-900">
-                        Gestione Moduli ({modules.length})
+                        Gestione Moduli ({filteredModules.length} di {modules.length})
                       </h3>
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => loadAllModules()}
+                          onClick={() => {
+                            setModuleFilters({ course: '', type: '', level: '' });
+                            loadAllModules();
+                          }}
                           className="flex items-center space-x-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          <span>Reset Filtri</span>
+                        </button>
+                        <button
+                          onClick={() => loadAllModules()}
+                          className="flex items-center space-x-2 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
                         >
                           <RefreshCw className="h-4 w-4" />
                           <span>Ricarica</span>
@@ -1778,7 +1811,30 @@ export default function Admin() {
                     </div>
 
                     {/* Filtri Moduli */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-4">
+                      {/* Indicatori filtri attivi */}
+                      {(moduleFilters.course || moduleFilters.type || moduleFilters.level) && (
+                        <div className="flex flex-wrap items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                          <span className="text-sm font-medium text-blue-800">Filtri attivi:</span>
+                          {moduleFilters.course && (
+                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                              Corso: {courses.find(c => c.id === moduleFilters.course)?.title || 'Sconosciuto'}
+                            </span>
+                          )}
+                          {moduleFilters.type && (
+                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                              Tipo: {moduleFilters.type}
+                            </span>
+                          )}
+                          {moduleFilters.level && (
+                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
+                              Livello: {moduleFilters.level}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <select
                         value={moduleFilters.course}
                         onChange={(e) => {
@@ -1818,17 +1874,22 @@ export default function Admin() {
                         <option value="intermediate">Intermedio</option>
                         <option value="advanced">Avanzato</option>
                       </select>
+                      </div>
                     </div>
 
                     <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
-                      {modules.length === 0 ? (
+                      {filteredModules.length === 0 ? (
                         <div className="text-center py-8 text-gray-500">
                           <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                          <p className="text-lg font-medium">Nessun modulo trovato</p>
-                          <p className="text-sm">Seleziona un corso o aggiungi un nuovo modulo</p>
+                          <p className="text-lg font-medium">
+                            {modules.length === 0 ? 'Nessun modulo trovato' : 'Nessun modulo corrisponde ai filtri'}
+                          </p>
+                          <p className="text-sm">
+                            {modules.length === 0 ? 'Seleziona un corso o aggiungi un nuovo modulo' : 'Prova a modificare i filtri o aggiungi un nuovo modulo'}
+                          </p>
                         </div>
                       ) : (
-                        modules.map((module) => (
+                        filteredModules.map((module) => (
                         <div
                           key={module.id}
                           className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3 sm:gap-0"
