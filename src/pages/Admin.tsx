@@ -1234,32 +1234,32 @@ export default function Admin() {
 
           {/* Desktop Tab Navigation */}
           <div className="hidden md:block">
-          <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6">
-              {[
-                { id: 'overview', label: 'Panoramica', icon: Settings },
-                { id: 'users', label: 'Utenti', icon: Users },
-                { id: 'normatives', label: 'Normative', icon: FileText },
-                { id: 'documents', label: 'Documenti', icon: FolderOpen },
-                { id: 'education', label: 'Formazione', icon: GraduationCap }
-              ].map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                      activeTab === tab.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
+            <div className="border-b border-gray-200">
+              <nav className="flex space-x-8 px-6">
+                {[
+                  { id: 'overview', label: 'Panoramica', icon: Settings },
+                  { id: 'users', label: 'Utenti', icon: Users },
+                  { id: 'normatives', label: 'Normative', icon: FileText },
+                  { id: 'documents', label: 'Documenti', icon: FolderOpen },
+                  { id: 'education', label: 'Formazione', icon: GraduationCap }
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        activeTab === tab.id
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
             </div>
           </div>
 
@@ -3804,6 +3804,90 @@ export default function Admin() {
         )}
       </div>
     </div>
+
+    {/* Modal Aggiungi Utente */}
+    {showAddUser && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Aggiungi Nuovo Utente</h3>
+            <button
+              onClick={() => setShowAddUser(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email *
+              </label>
+              <input
+                type="email"
+                value={userForm.email}
+                onChange={(e) => setUserForm({...userForm, email: e.target.value})}
+                className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Inserisci email"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nome Completo *
+              </label>
+              <input
+                type="text"
+                value={userForm.full_name}
+                onChange={(e) => setUserForm({...userForm, full_name: e.target.value})}
+                className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Inserisci nome completo"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Password *
+              </label>
+              <input
+                type="password"
+                value={userForm.password}
+                onChange={(e) => setUserForm({...userForm, password: e.target.value})}
+                className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Inserisci password"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ruolo *
+              </label>
+              <select
+                value={userForm.role}
+                onChange={(e) => setUserForm({...userForm, role: e.target.value as 'user' | 'admin' | 'superadmin' | 'operator'})}
+                className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="user">Utente</option>
+                <option value="operator">Operatore</option>
+                <option value="admin">Amministratore</option>
+                <option value="superadmin">Super Amministratore</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center justify-end space-x-3 mt-6">
+            <button
+              onClick={() => setShowAddUser(false)}
+              className="px-4 py-3 min-h-[44px] text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              Annulla
+            </button>
+            <button
+              onClick={handleCreateUser}
+              className="px-4 py-3 min-h-[44px] bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+            >
+              Crea Utente
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </>
   );
 }
