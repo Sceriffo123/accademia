@@ -995,17 +995,36 @@ export default function Admin() {
   }
 
   async function handleUpdateModule() {
+    console.log('🔧 DEBUG: handleUpdateModule called');
+    console.log('🔧 DEBUG: editingModule:', editingModule);
+    console.log('🔧 DEBUG: moduleForm:', moduleForm);
+    
     if (!hasPermission('education.edit')) {
       addNotification('error', 'Accesso Negato', 'Non hai i permessi per modificare moduli');
       return;
     }
 
     try {
-      if (!editingModule) return;
+      if (!editingModule) {
+        console.log('🚨 ERROR: No editingModule found');
+        return;
+      }
       
-      await updateCourseModule(editingModule.id, moduleForm);
+      console.log('🔧 DEBUG: Calling updateCourseModule...');
+      console.log('🔧 DEBUG: Module ID:', editingModule.id);
+      console.log('🔧 DEBUG: Module Form Data:', JSON.stringify(moduleForm, null, 2));
+      
+      const result = await updateCourseModule(editingModule.id, moduleForm);
+      console.log('🔧 DEBUG: updateCourseModule result:', result);
+      
+      if (!result) {
+        throw new Error('updateCourseModule returned null - module not found or update failed');
+      }
+      
+      console.log('🔧 DEBUG: updateCourseModule successful');
+      
       setEditingModule(null);
-      setShowEditModule(false);
+      setShowAddModule(false); // CORREZIONE: usa showAddModule invece di showEditModule
       await fetchAdminData();
       addNotification('success', 'Modulo Aggiornato', `Il modulo "${editingModule.title}" è stato modificato`);
     } catch (error) {
@@ -3537,14 +3556,6 @@ export default function Admin() {
         )}
 
         {/* Modal Aggiungi/Modifica Modulo */}
-        {showAddModule && (
-          <div className="fixed inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center z-50 p-4">
-            <div className="bg-yellow-200 border-4 border-red-500 p-4 rounded-lg">
-              <p className="text-red-800 font-bold">🔧 DEBUG: MODAL APERTO! showAddModule = true</p>
-              <p className="text-red-800">editingModule: {editingModule ? 'SÌ' : 'NO'}</p>
-            </div>
-          </div>
-        )}
         {showAddModule && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
