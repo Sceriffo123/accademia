@@ -788,11 +788,16 @@ export default function Admin() {
       // Carica moduli se c'è un corso selezionato
       let modulesData: any[] = [];
       if (selectedCourse) {
+        console.log('🔄 DEBUG - Caricamento moduli per corso selezionato:', selectedCourse);
         modulesData = await getCourseModules(selectedCourse);
       } else if (educationTab === 'modules' && coursesData.length > 0) {
-        // Se siamo nella tab moduli ma non c'è corso selezionato, carica moduli del primo corso
-        modulesData = await getCourseModules(coursesData[0].id);
-        setSelectedCourse(coursesData[0].id);
+        // Se siamo nella tab moduli ma non c'è corso selezionato, carica TUTTI i moduli
+        console.log('🔄 DEBUG - Caricamento TUTTI i moduli per la sezione Moduli');
+        for (const course of coursesData) {
+          const courseModules = await getCourseModules(course.id);
+          modulesData.push(...courseModules);
+        }
+        console.log('🔄 DEBUG - Totale moduli caricati:', modulesData.length);
       }
       
       setModules(modulesData || []);
