@@ -1035,6 +1035,7 @@ export default function Admin() {
   }
 
   function handleEditModule(module: any) {
+    console.log('🔧 DEBUG: handleEditModule called with:', module);
     setModuleForm({
       course_id: module.course_id,
       title: module.title,
@@ -1049,7 +1050,8 @@ export default function Admin() {
       level: module.level
     });
     setEditingModule(module);
-    setShowEditModule(true);
+    setShowAddModule(true); // CORREZIONE: usa showAddModule invece di showEditModule
+    console.log('🔧 DEBUG: Modal should open now - showAddModule set to true');
   }
 
   function handleEditCourse(course: any) {
@@ -1931,7 +1933,14 @@ export default function Admin() {
                           </div>
                           <div className="flex items-center space-x-2 sm:space-x-1">
                             <button
-                              onClick={() => handleEditModule(module)}
+                              onClick={() => {
+                                console.log('🔧 DEBUG: Clicking Edit Module Button');
+                                console.log('🔧 DEBUG: Module data:', module);
+                                console.log('🔧 DEBUG: Has permission:', hasPermission('education.edit'));
+                                console.log('🔧 DEBUG: showAddModule state:', showAddModule);
+                                console.log('🔧 DEBUG: editingModule state:', editingModule);
+                                handleEditModule(module);
+                              }}
                               disabled={!hasPermission('education.edit')}
                               className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
                                 hasPermission('education.edit')
@@ -3528,6 +3537,14 @@ export default function Admin() {
         )}
 
         {/* Modal Aggiungi/Modifica Modulo */}
+        {showAddModule && (
+          <div className="fixed inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center z-50 p-4">
+            <div className="bg-yellow-200 border-4 border-red-500 p-4 rounded-lg">
+              <p className="text-red-800 font-bold">🔧 DEBUG: MODAL APERTO! showAddModule = true</p>
+              <p className="text-red-800">editingModule: {editingModule ? 'SÌ' : 'NO'}</p>
+            </div>
+          </div>
+        )}
         {showAddModule && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
