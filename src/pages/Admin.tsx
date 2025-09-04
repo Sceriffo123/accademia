@@ -198,13 +198,25 @@ export default function Admin() {
 
   // Carica moduli quando cambia il corso selezionato o quando si entra nella tab moduli
   useEffect(() => {
-    if (educationTab === 'modules' && courses.length > 0) {
-      if (moduleFilters.course) {
-        // Se c'è un filtro corso specifico, carica solo quei moduli
-        loadModulesForCourse(moduleFilters.course);
+    console.log('🔧 DEBUG useEffect modules:', {
+      educationTab,
+      coursesLength: courses.length,
+      moduleFiltersCourse: moduleFilters.course
+    });
+    
+    if (educationTab === 'modules') {
+      if (courses.length > 0) {
+        if (moduleFilters.course) {
+          // Se c'è un filtro corso specifico, carica solo quei moduli
+          console.log('🔧 DEBUG: Loading modules for specific course:', moduleFilters.course);
+          loadModulesForCourse(moduleFilters.course);
+        } else {
+          // Altrimenti carica tutti i moduli
+          console.log('🔧 DEBUG: Loading all modules');
+          loadAllModules();
+        }
       } else {
-        // Altrimenti carica tutti i moduli
-        loadAllModules();
+        console.log('🔧 DEBUG: No courses available yet, waiting...');
       }
     }
   }, [educationTab, moduleFilters.course, courses]);
@@ -221,6 +233,13 @@ export default function Admin() {
   async function loadAllModules() {
     try {
       console.log('🎓 Admin: Caricamento tutti i moduli...');
+      console.log('🎓 Admin: Corsi disponibili:', courses.length);
+      
+      if (courses.length === 0) {
+        console.log('🚨 ERROR: No courses available to load modules from');
+        return;
+      }
+      
       // Carica moduli di tutti i corsi
       const allModules = [];
       for (const course of courses) {
@@ -1803,6 +1822,16 @@ export default function Admin() {
                         Gestione Moduli ({filteredModules.length} di {modules.length})
                       </h3>
                       <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => {
+                            console.log('🔧 DEBUG: Manual load all modules clicked');
+                            loadAllModules();
+                          }}
+                          className="flex items-center space-x-2 px-3 py-2 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          <span>Carica Moduli</span>
+                        </button>
                         <button
                           onClick={() => {
                             setModuleFilters({ course: '', type: '', level: '' });
