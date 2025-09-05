@@ -2473,6 +2473,39 @@ export async function deleteQuiz(id: string): Promise<boolean> {
   }
 }
 
+export async function updateQuizQuestion(id: string, data: Partial<QuizQuestion>): Promise<QuizQuestion | null> {
+  try {
+    console.log('🎓 NEON: Aggiornamento domanda quiz:', id);
+    const result = await sql`
+      UPDATE quiz_questions 
+      SET 
+        question = COALESCE(${data.question}, question),
+        options = COALESCE(${data.options}, options),
+        correct_answer = COALESCE(${data.correct_answer}, correct_answer),
+        explanation = COALESCE(${data.explanation}, explanation),
+        order_num = COALESCE(${data.order_num}, order_num),
+        updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    return result[0] as QuizQuestion || null;
+  } catch (error) {
+    console.error('🚨 NEON: Errore aggiornamento domanda quiz:', error);
+    return null;
+  }
+}
+
+export async function deleteQuizQuestion(id: string): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Eliminazione domanda quiz:', id);
+    const result = await sql`DELETE FROM quiz_questions WHERE id = ${id}`;
+    return result.length > 0;
+  } catch (error) {
+    console.error('🚨 NEON: Errore eliminazione domanda quiz:', error);
+    return false;
+  }
+}
+
 export async function createQuizQuestion(data: Omit<QuizQuestion, 'id' | 'created_at' | 'updated_at'>): Promise<QuizQuestion | null> {
   try {
     console.log('🎓 NEON: Creazione domanda quiz');
