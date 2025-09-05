@@ -4767,26 +4767,35 @@ export default function Admin() {
                           </h5>
                           
                           {/* Opzioni di risposta */}
-                          <div className="space-y-2 mb-3">
+                          <div className="space-y-3 mb-4">
                             {question.options.map((option, optIndex) => (
                               <div
                                 key={optIndex}
-                                className={`flex items-center space-x-2 p-2 rounded ${
+                                className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all ${
                                   optIndex === question.correct_answer
-                                    ? 'bg-green-100 border border-green-200'
-                                    : 'bg-white border border-gray-200'
+                                    ? 'bg-green-50 border-green-300 shadow-md ring-2 ring-green-200'
+                                    : 'bg-white border-gray-200 hover:border-gray-300'
                                 }`}
                               >
-                                <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                <span className={`text-sm font-bold w-8 h-8 text-center px-2 py-1 rounded-full flex items-center justify-center ${
                                   optIndex === question.correct_answer
-                                    ? 'bg-green-200 text-green-800'
+                                    ? 'bg-green-200 text-green-800 ring-2 ring-green-300'
                                     : 'bg-gray-200 text-gray-600'
                                 }`}>
                                   {String.fromCharCode(65 + optIndex)}
                                 </span>
-                                <span className="text-sm">{option}</span>
+                                <span className={`text-sm flex-1 ${
+                                  optIndex === question.correct_answer
+                                    ? 'text-green-900 font-semibold'
+                                    : 'text-gray-700'
+                                }`}>
+                                  {option}
+                                </span>
                                 {optIndex === question.correct_answer && (
-                                  <CheckCircle className="h-4 w-4 text-green-600 ml-auto" />
+                                  <div className="flex items-center space-x-2 text-green-600 flex-shrink-0">
+                                    <CheckCircle className="h-5 w-5" />
+                                    <span className="text-xs font-bold uppercase">Corretta</span>
+                                  </div>
                                 )}
                               </div>
                             ))}
@@ -4876,15 +4885,26 @@ export default function Admin() {
                     </label>
                     <div className="space-y-3">
                       {questionForm.options.map((option, index) => (
-                        <div key={index} className="flex items-center space-x-3">
+                        <div 
+                          key={index} 
+                          className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all duration-200 ${
+                            questionForm.correct_answer === index
+                              ? 'border-green-500 bg-green-50 shadow-md ring-2 ring-green-200'
+                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
                           <input
                             type="radio"
                             name="correct_answer"
                             checked={questionForm.correct_answer === index}
                             onChange={() => setQuestionForm({...questionForm, correct_answer: index})}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                            className="h-5 w-5 text-green-600 focus:ring-green-500 focus:ring-2"
                           />
-                          <span className="text-sm font-medium text-gray-600 w-6">
+                          <span className={`text-sm font-bold w-8 h-8 text-center px-2 py-1 rounded-full flex items-center justify-center ${
+                            questionForm.correct_answer === index
+                              ? 'bg-green-200 text-green-800 ring-2 ring-green-300'
+                              : 'bg-gray-200 text-gray-600'
+                          }`}>
                             {String.fromCharCode(65 + index)}
                           </span>
                           <input
@@ -4895,15 +4915,36 @@ export default function Admin() {
                               newOptions[index] = e.target.value;
                               setQuestionForm({...questionForm, options: newOptions});
                             }}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className={`flex-1 px-4 py-3 border-0 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm ${
+                              questionForm.correct_answer === index
+                                ? 'bg-green-50 text-green-900 font-semibold placeholder-green-400'
+                                : 'bg-white text-gray-900 placeholder-gray-400'
+                            }`}
                             placeholder={`Opzione ${String.fromCharCode(65 + index)}`}
                           />
+                          {questionForm.correct_answer === index && (
+                            <div className="flex items-center space-x-2 text-green-600 flex-shrink-0">
+                              <CheckCircle className="h-5 w-5" />
+                              <span className="text-xs font-bold uppercase">Corretta</span>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      Seleziona il radio button accanto alla risposta corretta
-                    </p>
+                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-start space-x-3">
+                        <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm text-blue-800 font-medium mb-1">
+                            💡 Come selezionare la risposta corretta
+                          </p>
+                          <p className="text-sm text-blue-700">
+                            Clicca sul radio button (○) accanto alla risposta che vuoi rendere corretta. 
+                            La risposta selezionata sarà evidenziata in verde con l'icona ✓ e la scritta "Corretta".
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Spiegazione */}
@@ -4998,15 +5039,26 @@ export default function Admin() {
                     </label>
                     <div className="space-y-3">
                       {editingQuestion.options.map((option, index) => (
-                        <div key={index} className="flex items-center space-x-3">
+                        <div 
+                          key={index} 
+                          className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all duration-200 ${
+                            editingQuestion.correct_answer === index
+                              ? 'border-green-500 bg-green-50 shadow-md ring-2 ring-green-200'
+                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
                           <input
                             type="radio"
                             name="correct_answer_edit"
                             checked={editingQuestion.correct_answer === index}
                             onChange={() => setEditingQuestion({...editingQuestion, correct_answer: index})}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                            className="h-5 w-5 text-green-600 focus:ring-green-500 focus:ring-2"
                           />
-                          <span className="text-sm font-medium text-gray-600 w-6">
+                          <span className={`text-sm font-bold w-8 h-8 text-center px-2 py-1 rounded-full flex items-center justify-center ${
+                            editingQuestion.correct_answer === index
+                              ? 'bg-green-200 text-green-800 ring-2 ring-green-300'
+                              : 'bg-gray-200 text-gray-600'
+                          }`}>
                             {String.fromCharCode(65 + index)}
                           </span>
                           <input
@@ -5017,15 +5069,36 @@ export default function Admin() {
                               newOptions[index] = e.target.value;
                               setEditingQuestion({...editingQuestion, options: newOptions});
                             }}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className={`flex-1 px-4 py-3 border-0 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm ${
+                              editingQuestion.correct_answer === index
+                                ? 'bg-green-50 text-green-900 font-semibold placeholder-green-400'
+                                : 'bg-white text-gray-900 placeholder-gray-400'
+                            }`}
                             placeholder={`Opzione ${String.fromCharCode(65 + index)}`}
                           />
+                          {editingQuestion.correct_answer === index && (
+                            <div className="flex items-center space-x-2 text-green-600 flex-shrink-0">
+                              <CheckCircle className="h-5 w-5" />
+                              <span className="text-xs font-bold uppercase">Corretta</span>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      Seleziona il radio button accanto alla risposta corretta
-                    </p>
+                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-start space-x-3">
+                        <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm text-blue-800 font-medium mb-1">
+                            💡 Come selezionare la risposta corretta
+                          </p>
+                          <p className="text-sm text-blue-700">
+                            Clicca sul radio button (○) accanto alla risposta che vuoi rendere corretta. 
+                            La risposta selezionata sarà evidenziata in verde con l'icona ✓ e la scritta "Corretta".
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Spiegazione */}
