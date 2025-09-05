@@ -23,6 +23,10 @@ import {
   createCourseModule,
   updateCourseModule,
   deleteCourseModule,
+  getModuleQuiz,
+  getQuizQuestions,
+  createQuiz,
+  createQuizQuestion,
   getUserPermissions
 } from '../lib/neonDatabase';
 import { createModuleProgressTable, checkModuleProgressTable } from '../lib/createModuleProgressTable';
@@ -31,26 +35,31 @@ import { generatePDF } from '../lib/pdfGenerator';
 import { 
   Users, 
   FileText, 
+  BookOpen, 
+  BarChart3, 
   Plus, 
   Edit3, 
   Trash2, 
-  Eye,
-  Settings,
-  BarChart3,
-  X,
-  Save,
-  Key,
-  CheckCircle,
-  AlertCircle,
-  AlertTriangle,
-  Info,
-  FolderOpen,
+  Save, 
+  X, 
+  Upload,
   Download,
-  ChevronRight,
+  Search,
+  Filter,
+  Calendar,
+  Clock,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Info,
+  Eye,
+  RefreshCw,
   GraduationCap,
-  BookOpen,
-  PlayCircle,
-  RefreshCw
+  Settings,
+  FolderOpen,
+  ChevronRight,
+  Key,
+  AlertTriangle
 } from 'lucide-react';
 
 interface AdminStats {
@@ -83,6 +92,7 @@ export default function Admin() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
   const [modules, setModules] = useState<any[]>([]);
+  const [quizzes, setQuizzes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddNormative, setShowAddNormative] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
@@ -98,7 +108,7 @@ export default function Admin() {
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   
   // Stati per sezione Formazione
-  const [educationTab, setEducationTab] = useState<'courses' | 'modules'>('courses');
+  const [educationTab, setEducationTab] = useState<'courses' | 'modules' | 'quiz'>('courses');
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [moduleFilters, setModuleFilters] = useState({
     course: '',
@@ -221,6 +231,11 @@ export default function Admin() {
         loadCoursesAndThenModules();
       }
     }
+
+    if (educationTab === 'quiz' && !loading) {
+      console.log('🎯 DEBUG: Loading quizzes');
+      loadAllQuizzes();
+    }
   }, [educationTab, moduleFilters.course, courses, loading]);
 
   async function loadModulesForCourse(courseId: string) {
@@ -274,6 +289,48 @@ export default function Admin() {
       setModules(allModules);
     } catch (error) {
       console.error('Error loading all modules:', error);
+    }
+  }
+
+  async function loadAllQuizzes() {
+    try {
+      console.log('🎯 Admin: Caricamento tutti i quiz...');
+      console.log('🎯 Admin: Corsi disponibili:', courses.length);
+      
+      if (courses.length === 0) {
+        console.log('🚨 ERROR: No courses available to load quizzes from');
+        return;
+      }
+      
+      const allQuizzes = [];
+      for (const course of courses) {
+        console.log(`🎯 Admin: Caricamento moduli per corso: ${course.title} (${course.id})`);
+        const courseModules = await getCourseModules(course.id);
+        console.log(`🎯 Admin: Trovati ${courseModules.length} moduli per corso ${course.title}`);
+        
+        for (const module of courseModules) {
+          try {
+            const moduleQuiz = await getModuleQuiz(module.id);
+            if (moduleQuiz) {
+              allQuizzes.push({
+                ...moduleQuiz,
+                course_name: course.title,
+                module_name: module.name,
+                course_id: course.id,
+                module_id: module.id
+              });
+              console.log(`🎯 Admin: Quiz trovato per modulo ${module.name}`);
+            }
+          } catch (error) {
+            // Se non c'è quiz per questo modulo, continua
+            console.log(`🎯 Admin: Nessun quiz trovato per modulo ${module.name}`);
+          }
+        }
+      }
+      console.log(`🎯 Admin: Totale quiz caricati: ${allQuizzes.length}`);
+      setQuizzes(allQuizzes);
+    } catch (error) {
+      console.error('Error loading quizzes:', error);
     }
   }
 
@@ -1766,6 +1823,16 @@ export default function Admin() {
                     >
                       Moduli
                     </button>
+                    <button
+                      onClick={() => setEducationTab('quiz')}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        educationTab === 'quiz'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Quiz
+                    </button>
                   </nav>
                 </div>
 
@@ -2057,6 +2124,100 @@ export default function Admin() {
                             </button>
                           </div>
                         </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sezione Quiz */}
+                {educationTab === 'quiz' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Gestione Quiz ({quizzes.length})
+                      </h3>
+                      <button
+                        onClick={() => {/* TODO: Implementare creazione quiz */}}
+                        disabled={!hasPermission('education.create')}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                          hasPermission('education.create')
+                            ? 'bg-blue-800 text-white hover:bg-blue-900'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                      >
+                        <Plus className="h-5 w-5" />
+                        <span>Aggiungi Quiz</span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
+                      {quizzes.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <div className="text-6xl mb-4">🎯</div>
+                          <h4 className="text-lg font-medium mb-2">Nessun quiz trovato</h4>
+                          <p className="text-sm">I quiz vengono creati automaticamente quando aggiungi domande ai moduli dei corsi.</p>
+                        </div>
+                      ) : (
+                        quizzes.map((quiz) => (
+                          <div
+                            key={quiz.id}
+                            className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3 sm:gap-0"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-gray-900 mb-1 text-sm sm:text-base line-clamp-2">
+                                {quiz.title}
+                              </h4>
+                              <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2">
+                                Corso: {quiz.course_name} • Modulo: {quiz.module_name}
+                              </p>
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
+                                <span className="px-2 py-1 rounded-full text-xs font-medium w-fit bg-blue-100 text-blue-800">
+                                  {quiz.passing_score}% per superare
+                                </span>
+                                <span className="px-2 py-1 rounded-full text-xs font-medium w-fit bg-green-100 text-green-800">
+                                  {quiz.time_limit ? `${quiz.time_limit} min` : 'Tempo illimitato'}
+                                </span>
+                                <span className="whitespace-nowrap">
+                                  {new Date(quiz.created_at).toLocaleDateString('it-IT')}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-2">
+                              <button
+                                onClick={() => {/* TODO: Implementare visualizzazione domande */}}
+                                className="p-3 min-h-[48px] min-w-[48px] text-gray-400 hover:text-blue-600 transition-colors rounded-lg hover:bg-blue-50"
+                                title="Visualizza Domande"
+                              >
+                                <Eye className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => {/* TODO: Implementare modifica quiz */}}
+                                disabled={!hasPermission('education.edit')}
+                                className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
+                                  hasPermission('education.edit')
+                                    ? 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+                                    : 'text-gray-300 cursor-not-allowed'
+                                }`}
+                                title={hasPermission('education.edit') ? 'Modifica' : 'Permesso negato'}
+                              >
+                                <Edit3 className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => {/* TODO: Implementare eliminazione quiz */}}
+                                disabled={!hasPermission('education.delete')}
+                                className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
+                                  hasPermission('education.delete')
+                                    ? 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                                    : 'text-gray-300 cursor-not-allowed'
+                                }`}
+                                title={hasPermission('education.delete') ? 'Elimina' : 'Permesso negato'}
+                              >
+                                <Trash2 className="h-5 w-5" />
+                              </button>
+                            </div>
+                          </div>
                         ))
                       )}
                     </div>
