@@ -2431,6 +2431,48 @@ export async function createQuiz(data: Omit<Quiz, 'id' | 'created_at' | 'updated
   }
 }
 
+export async function updateQuiz(id: string, data: Partial<Quiz>): Promise<Quiz | null> {
+  try {
+    console.log('🎓 NEON: Aggiornamento quiz:', id);
+    const result = await sql`
+      UPDATE quizzes 
+      SET 
+        title = COALESCE(${data.title}, title),
+        description = COALESCE(${data.description}, description),
+        time_limit = COALESCE(${data.time_limit}, time_limit),
+        passing_score = COALESCE(${data.passing_score}, passing_score),
+        max_attempts = COALESCE(${data.max_attempts}, max_attempts),
+        updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    return result[0] as Quiz || null;
+  } catch (error) {
+    console.error('🚨 NEON: Errore aggiornamento quiz:', error);
+    return null;
+  }
+}
+
+export async function deleteQuiz(id: string): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Eliminazione quiz:', id);
+    
+    // Prima elimina le domande associate
+    await sql`DELETE FROM quiz_questions WHERE quiz_id = ${id}`;
+    
+    // Poi elimina i tentativi associati
+    await sql`DELETE FROM quiz_attempts WHERE quiz_id = ${id}`;
+    
+    // Infine elimina il quiz
+    const result = await sql`DELETE FROM quizzes WHERE id = ${id}`;
+    
+    return result.length > 0;
+  } catch (error) {
+    console.error('🚨 NEON: Errore eliminazione quiz:', error);
+    return false;
+  }
+}
+
 export async function createQuizQuestion(data: Omit<QuizQuestion, 'id' | 'created_at' | 'updated_at'>): Promise<QuizQuestion | null> {
   try {
     console.log('🎓 NEON: Creazione domanda quiz');

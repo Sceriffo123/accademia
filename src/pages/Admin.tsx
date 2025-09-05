@@ -27,6 +27,8 @@ import {
   getQuizQuestions,
   createQuiz,
   createQuizQuestion,
+  updateQuiz,
+  deleteQuiz,
   getUserPermissions
 } from '../lib/neonDatabase';
 import { createModuleProgressTable, checkModuleProgressTable } from '../lib/createModuleProgressTable';
@@ -93,6 +95,9 @@ export default function Admin() {
   const [courses, setCourses] = useState<any[]>([]);
   const [modules, setModules] = useState<any[]>([]);
   const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [showAddQuiz, setShowAddQuiz] = useState(false);
+  const [showEditQuiz, setShowEditQuiz] = useState(false);
+  const [editingQuiz, setEditingQuiz] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showAddNormative, setShowAddNormative] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
@@ -129,6 +134,16 @@ export default function Admin() {
     duration_minutes: 0,
     is_required: true,
     level: 'beginner' as 'beginner' | 'intermediate' | 'advanced'
+  });
+
+  // Form per quiz
+  const [quizForm, setQuizForm] = useState({
+    module_id: '',
+    title: '',
+    description: '',
+    time_limit: 30,
+    passing_score: 60,
+    max_attempts: 3
   });
 
   // Stati per gestione normative (aggiunti correttamente)
@@ -332,6 +347,154 @@ export default function Admin() {
     } catch (error) {
       console.error('Error loading quizzes:', error);
     }
+  }
+
+  // Handler per creazione quiz
+  async function handleCreateQuiz() {
+    if (!hasPermission('education.create')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per creare quiz');
+      return;
+    }
+
+    try {
+      if (!quizForm.module_id || !quizForm.title || !quizForm.description) {
+        addNotification('error', 'Errore Validazione', 'Modulo, titolo e descrizione sono obbligatori');
+        return;
+      }
+
+      if (quizForm.passing_score < 1 || quizForm.passing_score > 100) {
+        addNotification('error', 'Errore Validazione', 'Il punteggio minimo deve essere tra 1 e 100');
+        return;
+      }
+
+      if (quizForm.time_limit < 1) {
+        addNotification('error', 'Errore Validazione', 'Il tempo limite deve essere almeno 1 minuto');
+        return;
+      }
+
+      if (quizForm.max_attempts < 1) {
+        addNotification('error', 'Errore Validazione', 'Il numero massimo di tentativi deve essere almeno 1');
+        return;
+      }
+
+      const newQuiz = await createQuiz({
+        module_id: quizForm.module_id,
+        title: quizForm.title,
+        description: quizForm.description,
+        time_limit: quizForm.time_limit,
+        passing_score: quizForm.passing_score,
+        max_attempts: quizForm.max_attempts
+      });
+
+      if (newQuiz) {
+        addNotification('success', 'Quiz Creato', `Il quiz "${quizForm.title}" è stato creato con successo`);
+        setShowAddQuiz(false);
+        setQuizForm({
+          module_id: '',
+          title: '',
+          description: '',
+          time_limit: 30,
+          passing_score: 60,
+          max_attempts: 3
+        });
+        loadAllQuizzes(); // Ricarica la lista quiz
+      }
+    } catch (error) {
+      console.error('Error creating quiz:', error);
+      addNotification('error', 'Errore Creazione', 'Si è verificato un errore durante la creazione del quiz');
+    }
+  }
+
+  // Handler per modifica quiz
+  async function handleUpdateQuiz() {
+    if (!hasPermission('education.edit')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per modificare quiz');
+      return;
+    }
+
+    try {
+      if (!editingQuiz) {
+        console.error('❌ Nessun quiz da modificare');
+        return;
+      }
+
+      if (!editingQuiz.title || !editingQuiz.description) {
+        addNotification('error', 'Errore Validazione', 'Titolo e descrizione sono obbligatori');
+        return;
+      }
+
+      if (editingQuiz.passing_score < 1 || editingQuiz.passing_score > 100) {
+        addNotification('error', 'Errore Validazione', 'Il punteggio minimo deve essere tra 1 e 100');
+        return;
+      }
+
+      if (editingQuiz.time_limit < 1) {
+        addNotification('error', 'Errore Validazione', 'Il tempo limite deve essere almeno 1 minuto');
+        return;
+      }
+
+      if (editingQuiz.max_attempts < 1) {
+        addNotification('error', 'Errore Validazione', 'Il numero massimo di tentativi deve essere almeno 1');
+        return;
+      }
+
+      const success = await updateQuiz(editingQuiz.id, {
+        title: editingQuiz.title,
+        description: editingQuiz.description,
+        time_limit: editingQuiz.time_limit,
+        passing_score: editingQuiz.passing_score,
+        max_attempts: editingQuiz.max_attempts
+      });
+
+      if (success) {
+        addNotification('success', 'Quiz Aggiornato', `Il quiz "${editingQuiz.title}" è stato aggiornato con successo`);
+        setShowEditQuiz(false);
+        setEditingQuiz(null);
+        loadAllQuizzes(); // Ricarica la lista quiz
+      }
+    } catch (error) {
+      console.error('Error updating quiz:', error);
+      addNotification('error', 'Errore Aggiornamento', 'Non è stato possibile aggiornare il quiz');
+    }
+  }
+
+  // Handler per eliminazione quiz
+  async function handleDeleteQuiz(quizId: string, quizTitle: string) {
+    if (!hasPermission('education.delete')) {
+      addNotification('error', 'Accesso Negato', 'Non hai i permessi per eliminare quiz');
+      return;
+    }
+
+    if (!confirm(`Sei sicuro di voler eliminare il quiz "${quizTitle}"? Questa azione eliminerà anche tutte le domande associate.`)) {
+      return;
+    }
+    
+    try {
+      const success = await deleteQuiz(quizId);
+      if (success) {
+        loadAllQuizzes(); // Ricarica la lista quiz
+        addNotification('success', 'Quiz Eliminato', `Il quiz "${quizTitle}" è stato rimosso dal sistema`);
+      } else {
+        addNotification('error', 'Errore Eliminazione', 'Il quiz non è stato trovato o non può essere eliminato');
+      }
+    } catch (error) {
+      console.error('Error deleting quiz:', error);
+      addNotification('error', 'Errore Eliminazione', 'Non è stato possibile eliminare il quiz');
+    }
+  }
+
+  // Handler per aprire modal di modifica quiz
+  function handleEditQuiz(quiz: any) {
+    setEditingQuiz({
+      id: quiz.id,
+      module_id: quiz.module_id,
+      title: quiz.title,
+      description: quiz.description,
+      time_limit: quiz.time_limit,
+      passing_score: quiz.passing_score,
+      max_attempts: quiz.max_attempts
+    });
+    setShowEditQuiz(true);
   }
 
   // Funzione per filtrare i moduli
@@ -2138,7 +2301,7 @@ export default function Admin() {
                         Gestione Quiz ({quizzes.length})
                       </h3>
                       <button
-                        onClick={() => {/* TODO: Implementare creazione quiz */}}
+                        onClick={() => setShowAddQuiz(true)}
                         disabled={!hasPermission('education.create')}
                         className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                           hasPermission('education.create')
@@ -2193,7 +2356,7 @@ export default function Admin() {
                                 <Eye className="h-5 w-5" />
                               </button>
                               <button
-                                onClick={() => {/* TODO: Implementare modifica quiz */}}
+                                onClick={() => handleEditQuiz(quiz)}
                                 disabled={!hasPermission('education.edit')}
                                 className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
                                   hasPermission('education.edit')
@@ -2205,7 +2368,7 @@ export default function Admin() {
                                 <Edit3 className="h-5 w-5" />
                               </button>
                               <button
-                                onClick={() => {/* TODO: Implementare eliminazione quiz */}}
+                                onClick={() => handleDeleteQuiz(quiz.id, quiz.title)}
                                 disabled={!hasPermission('education.delete')}
                                 className={`p-3 min-h-[48px] min-w-[48px] transition-colors rounded-lg ${
                                   hasPermission('education.delete')
@@ -2227,6 +2390,210 @@ export default function Admin() {
             )}
           </div>
         </div>
+
+        {/* Modal Aggiungi Quiz */}
+        {showAddQuiz && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Aggiungi Nuovo Quiz</h3>
+                <button
+                  onClick={() => setShowAddQuiz(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Modulo *</label>
+                  <select
+                    value={quizForm.module_id}
+                    onChange={(e) => setQuizForm({...quizForm, module_id: e.target.value})}
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Seleziona un modulo</option>
+                    {modules.map((module) => (
+                      <option key={module.id} value={module.id}>
+                        {courses.find(c => c.id === module.course_id)?.title} - {module.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Titolo *</label>
+                  <input
+                    type="text"
+                    value={quizForm.title}
+                    onChange={(e) => setQuizForm({...quizForm, title: e.target.value})}
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Titolo del quiz"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione *</label>
+                  <textarea
+                    value={quizForm.description}
+                    onChange={(e) => setQuizForm({...quizForm, description: e.target.value})}
+                    className="w-full px-3 py-3 min-h-[100px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+                    placeholder="Descrizione del quiz"
+                    rows={4}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tempo Limite (minuti) *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="300"
+                      value={quizForm.time_limit}
+                      onChange={(e) => setQuizForm({...quizForm, time_limit: parseInt(e.target.value) || 30})}
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Punteggio Minimo (%) *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={quizForm.passing_score}
+                      onChange={(e) => setQuizForm({...quizForm, passing_score: parseInt(e.target.value) || 60})}
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tentativi Massimi *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={quizForm.max_attempts}
+                      onChange={(e) => setQuizForm({...quizForm, max_attempts: parseInt(e.target.value) || 3})}
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t">
+                <button
+                  onClick={() => setShowAddQuiz(false)}
+                  className="px-4 py-3 min-h-[44px] text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleCreateQuiz}
+                  className="px-4 py-3 min-h-[44px] bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                >
+                  Crea Quiz
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Modifica Quiz */}
+        {showEditQuiz && editingQuiz && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Modifica Quiz</h3>
+                <button
+                  onClick={() => setShowEditQuiz(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Titolo *</label>
+                  <input
+                    type="text"
+                    value={editingQuiz.title}
+                    onChange={(e) => setEditingQuiz({...editingQuiz, title: e.target.value})}
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Titolo del quiz"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione *</label>
+                  <textarea
+                    value={editingQuiz.description}
+                    onChange={(e) => setEditingQuiz({...editingQuiz, description: e.target.value})}
+                    className="w-full px-3 py-3 min-h-[100px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+                    placeholder="Descrizione del quiz"
+                    rows={4}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tempo Limite (minuti) *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="300"
+                      value={editingQuiz.time_limit}
+                      onChange={(e) => setEditingQuiz({...editingQuiz, time_limit: parseInt(e.target.value) || 30})}
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Punteggio Minimo (%) *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={editingQuiz.passing_score}
+                      onChange={(e) => setEditingQuiz({...editingQuiz, passing_score: parseInt(e.target.value) || 60})}
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tentativi Massimi *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={editingQuiz.max_attempts}
+                      onChange={(e) => setEditingQuiz({...editingQuiz, max_attempts: parseInt(e.target.value) || 3})}
+                      className="w-full px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t">
+                <button
+                  onClick={() => setShowEditQuiz(false)}
+                  className="px-4 py-3 min-h-[44px] text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleUpdateQuiz}
+                  className="px-4 py-3 min-h-[44px] bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+                >
+                  Aggiorna Quiz
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal Aggiungi Utente */}
         {showAddUser && (
