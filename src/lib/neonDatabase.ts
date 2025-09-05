@@ -2506,6 +2506,64 @@ export async function deleteQuizQuestion(id: string): Promise<boolean> {
   }
 }
 
+// Funzioni per gestione tentativi quiz
+export async function createQuizAttempt(data: {
+  user_id: string;
+  quiz_id: string;
+  score: number;
+  max_score: number;
+  passed: boolean;
+  answers: Record<string, number>;
+  started_at: string;
+  completed_at: string;
+}): Promise<QuizAttempt | null> {
+  try {
+    console.log('🎓 NEON: Creazione tentativo quiz:', data.quiz_id);
+    const result = await sql`
+      INSERT INTO quiz_attempts (
+        user_id, quiz_id, score, max_score, passed, answers, started_at, completed_at
+      ) VALUES (
+        ${data.user_id}, ${data.quiz_id}, ${data.score}, ${data.max_score}, 
+        ${data.passed}, ${JSON.stringify(data.answers)}, 
+        ${data.started_at}, ${data.completed_at}
+      )
+      RETURNING *
+    `;
+    return result[0] as QuizAttempt || null;
+  } catch (error) {
+    console.error('🚨 NEON: Errore creazione tentativo quiz:', error);
+    return null;
+  }
+}
+
+export async function getQuizAttempts(userId: string, quizId: string): Promise<QuizAttempt[]> {
+  try {
+    console.log('🎓 NEON: Recupero tentativi quiz:', { userId, quizId });
+    const result = await sql`
+      SELECT * FROM quiz_attempts 
+      WHERE user_id = ${userId} AND quiz_id = ${quizId}
+      ORDER BY created_at DESC
+    `;
+    return result as QuizAttempt[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero tentativi quiz:', error);
+    return [];
+  }
+}
+
+export async function getQuizAttemptById(id: string): Promise<QuizAttempt | null> {
+  try {
+    console.log('🎓 NEON: Recupero tentativo quiz:', id);
+    const result = await sql`
+      SELECT * FROM quiz_attempts WHERE id = ${id}
+    `;
+    return result[0] as QuizAttempt || null;
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero tentativo quiz:', error);
+    return null;
+  }
+}
+
 export async function createQuizQuestion(data: Omit<QuizQuestion, 'id' | 'created_at' | 'updated_at'>): Promise<QuizQuestion | null> {
   try {
     console.log('🎓 NEON: Creazione domanda quiz');
@@ -2604,6 +2662,26 @@ export async function completeCourse(enrollmentId: string, finalScore: number): 
     return result.length > 0;
   } catch (error) {
     console.error('🚨 NEON: Errore completamento corso:', error);
+    return false;
+  }
+}
+
+export async function updateEnrollmentStatus(enrollmentId: string, status: 'enrolled' | 'in_progress' | 'completed' | 'failed'): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Aggiornamento status iscrizione:', { enrollmentId, status });
+    
+    const result = await sql`
+      UPDATE enrollments 
+      SET 
+        status = ${status},
+        updated_at = NOW(),
+        completed_at = ${status === 'completed' ? 'NOW()' : null}
+      WHERE id = ${enrollmentId}
+    `;
+    
+    return result.length > 0;
+  } catch (error) {
+    console.error('🚨 NEON: Errore aggiornamento status iscrizione:', error);
     return false;
   }
 }

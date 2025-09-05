@@ -10,7 +10,10 @@ import {
   CheckCircle,
   Lock,
   BookOpen,
-  AlertCircle
+  AlertCircle,
+  Award,
+  Target,
+  TrendingUp
 } from 'lucide-react';
 import { 
   getAllCourses, 
@@ -234,7 +237,7 @@ export default function Education() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 text-center">
             <div className="p-3 bg-blue-100 rounded-xl w-fit mx-auto mb-3">
               <GraduationCap className="h-6 w-6 text-blue-800" />
@@ -252,11 +255,19 @@ export default function Education() {
           </div>
           
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 text-center">
-            <div className="p-3 bg-purple-100 rounded-xl w-fit mx-auto mb-3">
-              <Clock className="h-6 w-6 text-purple-800" />
+            <div className="p-3 bg-yellow-100 rounded-xl w-fit mx-auto mb-3">
+              <TrendingUp className="h-6 w-6 text-yellow-800" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900">0h</h3>
-            <p className="text-gray-600">Ore di Formazione</p>
+            <h3 className="text-2xl font-bold text-gray-900">{courses.filter(c => c.isEnrolled && !c.completed).length}</h3>
+            <p className="text-gray-600">In Corso</p>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 text-center">
+            <div className="p-3 bg-purple-100 rounded-xl w-fit mx-auto mb-3">
+              <Award className="h-6 w-6 text-purple-800" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900">{courses.filter(c => c.completed).length}</h3>
+            <p className="text-gray-600">Certificati</p>
           </div>
         </div>
 
@@ -352,21 +363,36 @@ export default function Education() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">
-                    {course.modules_count} moduli
-                  </span>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm text-gray-600">
+                    <span>{course.modules_count} moduli</span>
+                    <span className="flex items-center space-x-1">
+                      <Target className="h-3 w-3" />
+                      <span>Punteggio min: {course.passing_score}%</span>
+                    </span>
+                  </div>
                   
                   {course.completed ? (
-                    <span className="flex items-center space-x-2 text-green-600 text-sm font-medium">
-                      <CheckCircle className="h-4 w-4" />
-                      <span>Completato</span>
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center space-x-2 text-green-600 text-sm font-medium">
+                        <Award className="h-4 w-4" />
+                        <span>Certificato Ottenuto</span>
+                      </span>
+                      <button 
+                        onClick={() => navigate(`/course/${course.id}`)}
+                        className="flex items-center space-x-2 bg-gray-100 text-gray-700 px-3 py-1 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                      >
+                        <BookOpen className="h-3 w-3" />
+                        <span>Rivedi</span>
+                      </button>
+                    </div>
                   ) : course.locked ? (
-                    <span className="flex items-center space-x-2 text-gray-400 text-sm">
-                      <Lock className="h-4 w-4" />
-                      <span>Bloccato</span>
-                    </span>
+                    <div className="flex items-center justify-center py-2">
+                      <span className="flex items-center space-x-2 text-gray-400 text-sm">
+                        <Lock className="h-4 w-4" />
+                        <span>Completa i prerequisiti</span>
+                      </span>
+                    </div>
                   ) : course.isEnrolled ? (
                     <button 
                       onClick={() => {
@@ -377,10 +403,10 @@ export default function Education() {
                         navigate(`/course/${course.id}`);
                         console.log('🎯 DEBUG: Navigate called, URL after:', window.location.pathname);
                       }}
-                      className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm min-h-[44px]"
+                      className="w-full flex items-center justify-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                     >
                       <PlayCircle className="h-4 w-4" />
-                      <span>Continua</span>
+                      <span>Continua Percorso</span>
                     </button>
                   ) : (
                     <button 
@@ -388,10 +414,10 @@ export default function Education() {
                         console.log(`🎓 Education: Clicking Enroll for course: ${course.title} (${course.id}) - isEnrolled: ${course.isEnrolled}`);
                         handleEnroll(course.id);
                       }}
-                      className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm min-h-[44px]"
+                      className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                     >
                       <BookOpen className="h-4 w-4" />
-                      <span>Iscriviti</span>
+                      <span>Inizia Corso</span>
                     </button>
                   )}
                 </div>
