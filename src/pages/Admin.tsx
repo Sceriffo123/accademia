@@ -57,6 +57,7 @@ import {
   XCircle,
   Info,
   Eye,
+  Play,
   RefreshCw,
   GraduationCap,
   Settings,
@@ -105,6 +106,11 @@ export default function Admin() {
   const [showAddQuestion, setShowAddQuestion] = useState(false);
   const [showEditQuestion, setShowEditQuestion] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<any>(null);
+  const [showQuizPreview, setShowQuizPreview] = useState(false);
+  const [previewQuiz, setPreviewQuiz] = useState<any>(null);
+  const [previewAnswers, setPreviewAnswers] = useState<Record<string, number>>({});
+  const [previewCurrentQuestion, setPreviewCurrentQuestion] = useState(0);
+  const [previewShowResults, setPreviewShowResults] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showAddNormative, setShowAddNormative] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
@@ -708,6 +714,88 @@ export default function Admin() {
       explanation: '',
       order_num: quizQuestions.length + 1
     });
+  }
+
+  // Handler per preview quiz
+  async function handlePreviewQuiz(quiz: any) {
+    try {
+      console.log('🎓 Admin: Avvio preview quiz:', quiz.title);
+      const questions = await getQuizQuestions(quiz.id);
+      
+      if (questions.length === 0) {
+        addNotification('warning', 'Quiz Vuoto', 'Questo quiz non contiene domande. Aggiungi almeno una domanda prima del preview.');
+        return;
+      }
+
+      setPreviewQuiz({
+        ...quiz,
+        questions: questions
+      });
+      setPreviewAnswers({});
+      setPreviewCurrentQuestion(0);
+      setPreviewShowResults(false);
+      setShowQuizPreview(true);
+      
+      console.log('🎓 Admin: Preview quiz avviato con', questions.length, 'domande');
+    } catch (error) {
+      console.error('Error loading quiz preview:', error);
+      addNotification('error', 'Errore Preview', 'Non è stato possibile caricare il preview del quiz');
+    }
+  }
+
+  // Handler per risposta preview
+  function handlePreviewAnswer(questionId: string, answerIndex: number) {
+    setPreviewAnswers(prev => ({
+      ...prev,
+      [questionId]: answerIndex
+    }));
+  }
+
+  // Handler per navigazione preview
+  function handlePreviewNavigation(direction: 'prev' | 'next' | 'finish') {
+    if (direction === 'prev' && previewCurrentQuestion > 0) {
+      setPreviewCurrentQuestion(prev => prev - 1);
+    } else if (direction === 'next' && previewCurrentQuestion < previewQuiz.questions.length - 1) {
+      setPreviewCurrentQuestion(prev => prev + 1);
+    } else if (direction === 'finish') {
+      // Calcola risultati
+      let correctAnswers = 0;
+      previewQuiz.questions.forEach((question: any) => {
+        if (previewAnswers[question.id] === question.correct_answer) {
+          correctAnswers++;
+        }
+      });
+      
+      setPreviewShowResults(true);
+      console.log('🎓 Admin: Preview completato -', correctAnswers, 'su', previewQuiz.questions.length, 'corrette');
+    }
+  }
+
+  // Handler per reset preview
+  function handleResetPreview() {
+    setPreviewAnswers({});
+    setPreviewCurrentQuestion(0);
+    setPreviewShowResults(false);
+  }
+
+  // Funzione per validare completezza quiz
+  function validateQuizCompleteness(quiz: any, questions: any[]) {
+    const issues = [];
+    
+    if (!quiz.title?.trim()) issues.push('Titolo mancante');
+    if (!quiz.description?.trim()) issues.push('Descrizione mancante');
+    if (!quiz.time_limit || quiz.time_limit < 1) issues.push('Tempo limite non valido');
+    if (!quiz.passing_score || quiz.passing_score < 1 || quiz.passing_score > 100) issues.push('Punteggio minimo non valido');
+    if (!quiz.max_attempts || quiz.max_attempts < 1) issues.push('Tentativi massimi non validi');
+    if (questions.length === 0) issues.push('Nessuna domanda presente');
+    
+    questions.forEach((q, index) => {
+      if (!q.question?.trim()) issues.push(`Domanda ${index + 1}: testo mancante`);
+      if (!q.options || q.options.length < 2) issues.push(`Domanda ${index + 1}: minimo 2 opzioni richieste`);
+      if (q.correct_answer < 0 || q.correct_answer >= q.options.length) issues.push(`Domanda ${index + 1}: risposta corretta non valida`);
+    });
+    
+    return issues;
   }
 
   const loadUserPermissions = async () => {
@@ -2538,6 +2626,13 @@ export default function Admin() {
                             </div>
                             
                             <div className="flex flex-wrap items-center gap-2 sm:gap-2">
+                              <button
+                                onClick={() => handlePreviewQuiz(quiz)}
+                                className="p-3 min-h-[48px] min-w-[48px] text-gray-400 hover:text-purple-600 transition-colors rounded-lg hover:bg-purple-50"
+                                title="Preview Quiz"
+                              >
+                                <Play className="h-5 w-5" />
+                              </button>
                               <button
                                 onClick={() => handleManageQuestions(quiz)}
                                 className="p-3 min-h-[48px] min-w-[48px] text-gray-400 hover:text-blue-600 transition-colors rounded-lg hover:bg-blue-50"
@@ -4983,6 +5078,277 @@ export default function Admin() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Preview Quiz */}
+        {showQuizPreview && previewQuiz && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              {!previewShowResults ? (
+                <>
+                  {/* Header Preview */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900">
+                        Preview: {previewQuiz.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {previewQuiz.courseName} • {previewQuiz.moduleName}
+                      </p>
+                      <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                        <span>⏱️ {previewQuiz.time_limit} minuti</span>
+                        <span>🎯 {previewQuiz.passing_score}% per superare</span>
+                        <span>🔄 {previewQuiz.max_attempts} tentativi</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowQuizPreview(false)}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <X className="h-6 w-6" />
+                    </button>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Domanda {previewCurrentQuestion + 1} di {previewQuiz.questions.length}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        {Math.round(((previewCurrentQuestion + 1) / previewQuiz.questions.length) * 100)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{
+                          width: `${((previewCurrentQuestion + 1) / previewQuiz.questions.length) * 100}%`
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* Domanda Corrente */}
+                  {previewQuiz.questions[previewCurrentQuestion] && (
+                    <div className="mb-8">
+                      <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                        <h4 className="text-lg font-medium text-gray-900 mb-4">
+                          {previewQuiz.questions[previewCurrentQuestion].question}
+                        </h4>
+                        
+                        <div className="space-y-3">
+                          {previewQuiz.questions[previewCurrentQuestion].options.map((option: string, index: number) => (
+                            <label
+                              key={index}
+                              className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                                previewAnswers[previewQuiz.questions[previewCurrentQuestion].id] === index
+                                  ? 'border-blue-500 bg-blue-50'
+                                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name={`question_${previewQuiz.questions[previewCurrentQuestion].id}`}
+                                checked={previewAnswers[previewQuiz.questions[previewCurrentQuestion].id] === index}
+                                onChange={() => handlePreviewAnswer(previewQuiz.questions[previewCurrentQuestion].id, index)}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 mr-4"
+                              />
+                              <span className={`text-sm font-medium mr-3 px-2 py-1 rounded-full ${
+                                previewAnswers[previewQuiz.questions[previewCurrentQuestion].id] === index
+                                  ? 'bg-blue-200 text-blue-800'
+                                  : 'bg-gray-200 text-gray-600'
+                              }`}>
+                                {String.fromCharCode(65 + index)}
+                              </span>
+                              <span className="text-gray-900">{option}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Navigazione */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => handlePreviewNavigation('prev')}
+                      disabled={previewCurrentQuestion === 0}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                        previewCurrentQuestion === 0
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      <span>← Precedente</span>
+                    </button>
+
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={handleResetPreview}
+                        className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                      >
+                        Reset
+                      </button>
+                    </div>
+
+                    {previewCurrentQuestion < previewQuiz.questions.length - 1 ? (
+                      <button
+                        onClick={() => handlePreviewNavigation('next')}
+                        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <span>Successiva →</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handlePreviewNavigation('finish')}
+                        className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        <span>Termina Preview</span>
+                      </button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Risultati Preview */}
+                  <div className="text-center">
+                    <div className="mb-6">
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                        Preview Completato!
+                      </h3>
+                      <p className="text-gray-600">
+                        Ecco come avresti performato in questo quiz
+                      </p>
+                    </div>
+
+                    {(() => {
+                      const correctAnswers = previewQuiz.questions.filter((q: any) => 
+                        previewAnswers[q.id] === q.correct_answer
+                      ).length;
+                      const totalQuestions = previewQuiz.questions.length;
+                      const percentage = Math.round((correctAnswers / totalQuestions) * 100);
+                      const passed = percentage >= previewQuiz.passing_score;
+
+                      return (
+                        <div className="mb-8">
+                          <div className={`inline-flex items-center justify-center w-32 h-32 rounded-full mb-4 ${
+                            passed ? 'bg-green-100' : 'bg-red-100'
+                          }`}>
+                            <div className="text-center">
+                              <div className={`text-3xl font-bold ${
+                                passed ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {percentage}%
+                              </div>
+                              <div className={`text-sm ${
+                                passed ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {correctAnswers}/{totalQuestions}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full ${
+                            passed 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {passed ? (
+                              <>
+                                <CheckCircle className="h-5 w-5" />
+                                <span className="font-medium">Quiz Superato!</span>
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="h-5 w-5" />
+                                <span className="font-medium">Quiz Non Superato</span>
+                              </>
+                            )}
+                          </div>
+
+                          <p className="text-sm text-gray-600 mt-4">
+                            Punteggio minimo richiesto: {previewQuiz.passing_score}%
+                          </p>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Riepilogo Risposte */}
+                    <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                      <h4 className="text-lg font-medium text-gray-900 mb-4">
+                        Riepilogo Risposte
+                      </h4>
+                      <div className="space-y-4 text-left">
+                        {previewQuiz.questions.map((question: any, index: number) => {
+                          const userAnswer = previewAnswers[question.id];
+                          const isCorrect = userAnswer === question.correct_answer;
+                          
+                          return (
+                            <div key={question.id} className="border-b border-gray-200 pb-4 last:border-b-0">
+                              <div className="flex items-start space-x-3">
+                                <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                                  isCorrect ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                                }`}>
+                                  {isCorrect ? '✓' : '✗'}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="font-medium text-gray-900 mb-2">
+                                    {index + 1}. {question.question}
+                                  </p>
+                                  <div className="text-sm space-y-1">
+                                    <p>
+                                      <span className="text-gray-600">Tua risposta: </span>
+                                      <span className={isCorrect ? 'text-green-600' : 'text-red-600'}>
+                                        {userAnswer !== undefined 
+                                          ? `${String.fromCharCode(65 + userAnswer)} - ${question.options[userAnswer]}`
+                                          : 'Non risposto'
+                                        }
+                                      </span>
+                                    </p>
+                                    {!isCorrect && (
+                                      <p>
+                                        <span className="text-gray-600">Risposta corretta: </span>
+                                        <span className="text-green-600">
+                                          {String.fromCharCode(65 + question.correct_answer)} - {question.options[question.correct_answer]}
+                                        </span>
+                                      </p>
+                                    )}
+                                    {question.explanation && (
+                                      <p className="text-blue-600 italic">
+                                        💡 {question.explanation}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Azioni Finali */}
+                    <div className="flex items-center justify-center space-x-4">
+                      <button
+                        onClick={handleResetPreview}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Riprova Preview
+                      </button>
+                      <button
+                        onClick={() => setShowQuizPreview(false)}
+                        className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                      >
+                        Chiudi
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
