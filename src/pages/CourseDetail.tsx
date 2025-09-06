@@ -35,15 +35,9 @@ import VideoPlayer from '../components/VideoPlayer';
 import RichContentViewer from '../components/RichContentViewer';
 
 export default function CourseDetail() {
-  console.log('📚 CourseDetail: Componente caricato!');
-  console.log('📚 CourseDetail: URL corrente:', window.location.pathname);
-  
   const { id: courseId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { profile } = useAuth();
-  
-  console.log('📚 CourseDetail: courseId da useParams:', courseId);
-  console.log('📚 CourseDetail: profile:', profile);
   
   const [course, setCourse] = useState<Course | null>(null);
   const [modules, setModules] = useState<CourseModule[]>([]);
@@ -61,7 +55,12 @@ export default function CourseDetail() {
   const [documentProgress, setDocumentProgress] = useState<Record<string, { scrollPercent: number, readingComplete: boolean }>>({});
 
   useEffect(() => {
+    console.log('📚 CourseDetail: Componente caricato!');
+    console.log('📚 CourseDetail: URL corrente:', window.location.pathname);
+    console.log('📚 CourseDetail: courseId da useParams:', courseId);
+    console.log('📚 CourseDetail: profile:', profile);
     console.log('📚 CourseDetail: useEffect chiamato con:', { courseId, profileId: profile?.id });
+    
     if (courseId && profile?.id) {
       console.log('📚 CourseDetail: Condizioni soddisfatte, chiamando loadCourseData');
       loadCourseData();
@@ -74,15 +73,15 @@ export default function CourseDetail() {
   }, [courseId, profile?.id]);
 
   const loadCourseData = async () => {
+    if (!courseId || !profile?.id) {
+      return;
+    }
+
     try {
       setLoading(true);
-      console.log('📚 CourseDetail: Caricamento corso:', courseId);
-      console.log('📚 CourseDetail: User ID:', profile?.id);
-      console.log('📚 CourseDetail: URL params:', { courseId });
-      console.log('📚 CourseDetail: Current location:', window.location.pathname);
       
       const [courseData, modulesData, progressData] = await Promise.all([
-        getCourseById(courseId!),
+        getCourseById(courseId),
         getCourseModules(courseId!),
         getUserProgress(profile!.id, courseId!)
       ]);
