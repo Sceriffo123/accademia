@@ -2582,6 +2582,19 @@ export async function getQuizAttemptById(id: string): Promise<QuizAttempt | null
   }
 }
 
+export async function getQuizByModuleId(moduleId: string): Promise<Quiz | null> {
+  try {
+    console.log('🎓 NEON: Recupero quiz per modulo:', moduleId);
+    const result = await sql`
+      SELECT * FROM quizzes WHERE module_id = ${moduleId}
+    `;
+    return result[0] as Quiz || null;
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero quiz per modulo:', error);
+    return null;
+  }
+}
+
 export async function createQuizQuestion(data: Omit<QuizQuestion, 'id' | 'created_at' | 'updated_at'>): Promise<QuizQuestion | null> {
   try {
     console.log('🎓 NEON: Creazione domanda quiz');

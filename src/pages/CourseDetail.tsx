@@ -13,7 +13,8 @@ import {
   Video,
   Award,
   BarChart3,
-  AlertCircle
+  AlertCircle,
+  Play
 } from 'lucide-react';
 import { 
   getCourseById,
@@ -21,12 +22,17 @@ import {
   getUserProgress,
   updateModuleProgress,
   updateEnrollmentStatus,
+  getQuizByModuleId,
+  getQuizAttempts,
   sql,
   type Course,
   type CourseModule,
   type ModuleProgress
 } from '../lib/neonDatabase';
 import QuizInterface from '../components/QuizInterface';
+import PDFViewer from '../components/PDFViewer';
+import VideoPlayer from '../components/VideoPlayer';
+import RichContentViewer from '../components/RichContentViewer';
 
 export default function CourseDetail() {
   console.log('📚 CourseDetail: Componente caricato!');
@@ -47,8 +53,12 @@ export default function CourseDetail() {
   const [notifications, setNotifications] = useState<{type: 'success' | 'error' | 'info', message: string}[]>([]);
   const [showQuiz, setShowQuiz] = useState(false);
   const [quizResult, setQuizResult] = useState<{passed: boolean, score: number} | null>(null);
+  const [quizAttempts, setQuizAttempts] = useState<any[]>([]);
   const [courseCompleted, setCourseCompleted] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [moduleTimers, setModuleTimers] = useState<Record<string, { startTime: number, isActive: boolean }>>({});
+  const [moduleTimeSpent, setModuleTimeSpent] = useState<Record<string, number>>({});
+  const [documentProgress, setDocumentProgress] = useState<Record<string, { scrollPercent: number, readingComplete: boolean }>>({});
 
   useEffect(() => {
     console.log('📚 CourseDetail: useEffect chiamato con:', { courseId, profileId: profile?.id });
@@ -76,6 +86,24 @@ export default function CourseDetail() {
         getCourseModules(courseId!),
         getUserProgress(profile!.id, courseId!)
       ]);
+      
+      // Carica stato quiz completati per ogni modulo quiz
+      const quizModules = modulesData.filter(m => m.type === 'quiz');
+      const allQuizAttempts: any[] = [];
+      
+      for (const module of quizModules) {
+        try {
+          const quiz = await getQuizByModuleId(module.id);
+          if (quiz) {
+            const attempts = await getQuizAttempts(profile!.id, quiz.id);
+            allQuizAttempts.push(...attempts.map(a => ({...a, moduleId: module.id, quizId: quiz.id})));
+          }
+        } catch (error) {
+          console.error('Errore caricamento tentativi quiz per modulo:', module.id, error);
+        }
+      }
+      
+      setQuizAttempts(allQuizAttempts);
 
       console.log('📚 CourseDetail: Risultati caricamento:', {
         course: courseData,
@@ -100,12 +128,33 @@ export default function CourseDetail() {
         progress: (progressData || []).length
       });
     } catch (error) {
-      console.error('📚 CourseDetail: Errore caricamento corso:', error);
+      console.error('Errore caricamento dati:', error);
       addNotification('error', 'Errore nel caricamento del corso');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setModuleTimers(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(moduleId => {
+          if (updated[moduleId].isActive) {
+            const timeSpent = Math.floor((Date.now() - updated[moduleId].startTime) / 1000);
+            setModuleTimeSpent(prev => ({
+              ...prev,
+              [moduleId]: (prev[moduleId] || 0) + timeSpent
+            }));
+            updated[moduleId].startTime = Date.now(); // Reset per evitare accumulo
+          }
+        });
+        return updated;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const addNotification = (type: 'success' | 'error' | 'info', message: string) => {
     setNotifications(prev => [...prev, { type, message }]);
@@ -118,10 +167,17 @@ export default function CourseDetail() {
     const module = modules.find(m => m.id === moduleId);
     if (!module) return;
     
+    // Ferma il timer se attivo
+    stopModuleTimer(moduleId);
+    
     // Verifica se il modulo può essere completato
     if (!canCompleteModule(module)) {
       if (module.type === 'quiz') {
         addNotification('error', 'Devi superare il quiz per completare questo modulo');
+      } else {
+        const timeSpent = getModuleTimeSpent(moduleId);
+        const minTime = getMinTimeRequired(module.type);
+        addNotification('error', `Devi studiare almeno ${minTime} secondi per completare questo modulo. Tempo attuale: ${timeSpent}s`);
       }
       return;
     }
@@ -138,7 +194,8 @@ export default function CourseDetail() {
         return;
       }
       
-      await updateModuleProgress(enrollment[0].id, moduleId, true);
+      const timeSpent = getModuleTimeSpent(moduleId);
+      await updateModuleProgress(enrollment[0].id, moduleId, true, 100, timeSpent);
       await loadCourseData(); // Refresh data
       addNotification('success', 'Modulo completato!');
       
@@ -154,9 +211,38 @@ export default function CourseDetail() {
     }
   };
 
-  const handleStartQuiz = () => {
-    setShowQuiz(true);
-    setQuizResult(null);
+  const handleStartQuiz = async () => {
+    if (!selectedModule) return;
+    
+    try {
+      const quiz = await getQuizByModuleId(selectedModule.id);
+      if (!quiz) {
+        addNotification('error', 'Quiz non trovato per questo modulo');
+        return;
+      }
+      
+      // Controlla tentativi precedenti
+      const attempts = await getQuizAttempts(profile!.id, quiz.id);
+      const passedAttempt = attempts.find(a => a.passed);
+      
+      if (passedAttempt) {
+        addNotification('info', 'Hai già superato questo quiz!');
+        setQuizResult({ passed: true, score: passedAttempt.score });
+        return;
+      }
+      
+      // Controlla limite tentativi
+      if (quiz.max_attempts && attempts.length >= quiz.max_attempts) {
+        addNotification('error', `Hai raggiunto il limite di ${quiz.max_attempts} tentativi per questo quiz`);
+        return;
+      }
+      
+      setShowQuiz(true);
+      setQuizResult(null);
+    } catch (error) {
+      console.error('Errore avvio quiz:', error);
+      addNotification('error', 'Errore nel caricamento del quiz');
+    }
   };
 
   const handleQuizComplete = async (passed: boolean, score: number) => {
@@ -193,12 +279,122 @@ export default function CourseDetail() {
     return Math.round((completedModules / modules.length) * 100);
   };
 
-  const canCompleteModule = (module: CourseModule) => {
-    // Se è un quiz, deve essere superato per essere completato
-    if (module.type === 'quiz') {
-      return quizResult?.passed === true;
+  // Avvia timer per un modulo
+  const startModuleTimer = (moduleId: string) => {
+    setModuleTimers(prev => ({
+      ...prev,
+      [moduleId]: { startTime: Date.now(), isActive: true }
+    }));
+  };
+
+  const stopModuleTimer = (moduleId: string) => {
+    setModuleTimers(prev => {
+      const timer = prev[moduleId];
+      if (timer && timer.isActive) {
+        const timeSpent = Math.floor((Date.now() - timer.startTime) / 1000);
+        setModuleTimeSpent(prevTime => ({
+          ...prevTime,
+          [moduleId]: (prevTime[moduleId] || 0) + timeSpent
+        }));
+        return {
+          ...prev,
+          [moduleId]: { ...timer, isActive: false }
+        };
+      }
+      return prev;
+    });
+  };
+
+  const getModuleTimeSpent = (moduleId: string): number => {
+    const baseTime = moduleTimeSpent[moduleId] || 0;
+    const timer = moduleTimers[moduleId];
+    if (timer && timer.isActive) {
+      const currentTime = Math.floor((Date.now() - timer.startTime) / 1000);
+      return baseTime + currentTime;
     }
-    // Altri tipi di modulo possono essere completati direttamente
+    return baseTime;
+  };
+
+  const getMinTimeRequired = (moduleType: string): number => {
+    switch (moduleType) {
+      case 'lesson': return 30;
+      case 'video': return 60;
+      case 'document': return 45;
+      case 'quiz': return 0;
+      default: return 30;
+    }
+  };
+
+  // Document reading functions
+  const handleDocumentScroll = (moduleId: string, scrollPercent: number) => {
+    setDocumentProgress(prev => ({
+      ...prev,
+      [moduleId]: {
+        scrollPercent: Math.max(prev[moduleId]?.scrollPercent || 0, scrollPercent),
+        readingComplete: scrollPercent >= 90 // Consider complete at 90% scroll
+      }
+    }));
+  };
+
+  const getDocumentProgress = (moduleId: string): number => {
+    return documentProgress[moduleId]?.scrollPercent || 0;
+  };
+
+  const isDocumentReadingComplete = (moduleId: string): boolean => {
+    return documentProgress[moduleId]?.readingComplete || false;
+  };
+
+  // Module prerequisite functions
+  const isModuleUnlocked = (module: CourseModule, moduleIndex: number): boolean => {
+    // Il primo modulo è sempre sbloccato
+    if (moduleIndex === 0) return true;
+    
+    // Controlla se tutti i moduli precedenti sono completati
+    const progressArray = Array.isArray(progress) ? progress : [];
+    const previousModules = modules.slice(0, moduleIndex);
+    
+    return previousModules.every(prevModule => 
+      progressArray.some(p => p.module_id === prevModule.id && p.completed)
+    );
+  };
+
+  const getNextUnlockedModule = (): CourseModule | null => {
+    const progressArray = Array.isArray(progress) ? progress : [];
+    return modules.find(module => 
+      !progressArray.some(p => p.module_id === module.id && p.completed)
+    ) || null;
+  };
+
+  const canCompleteModule = (module: CourseModule) => {
+    // Se è un quiz, controlla se è già stato superato
+    if (module.type === 'quiz') {
+      const moduleAttempts = quizAttempts.filter(a => a.moduleId === module.id);
+      const passedAttempt = moduleAttempts.find(a => a.passed);
+      return passedAttempt || quizResult?.passed === true;
+    }
+    
+    // Per moduli document, controlla anche il progresso di lettura
+    if (module.type === 'document') {
+      const timeSpent = getModuleTimeSpent(module.id);
+      const minTimeRequired = getMinTimeRequired(module.type);
+      const readingComplete = isDocumentReadingComplete(module.id);
+      
+      if (timeSpent < minTimeRequired || !readingComplete) {
+        console.log(`📄 Documento ${module.id} richiede tempo: ${timeSpent}/${minTimeRequired}s e lettura completa: ${readingComplete}`);
+        return false;
+      }
+      return true;
+    }
+    
+    // Per altri tipi di modulo, controlla tempo minimo di studio
+    const timeSpent = getModuleTimeSpent(module.id);
+    const minTimeRequired = getMinTimeRequired(module.type);
+    
+    if (timeSpent < minTimeRequired) {
+      console.log(`⏱️ Modulo ${module.id} richiede almeno ${minTimeRequired}s, attuale: ${timeSpent}s`);
+      return false;
+    }
+    
     return true;
   };
 
@@ -385,25 +581,37 @@ export default function CourseDetail() {
                     const Icon = getModuleIcon(module.type);
                     const completed = isModuleCompleted(module.id);
                     const isSelected = selectedModule?.id === module.id;
+                    const unlocked = isModuleUnlocked(module, index);
                     
                     return (
                       <button
                         key={module.id}
-                        onClick={() => setSelectedModule(module)}
+                        onClick={() => unlocked ? setSelectedModule(module) : null}
+                        disabled={!unlocked}
                         className={`w-full text-left p-4 rounded-lg border transition-all duration-200 ${
-                          isSelected 
-                            ? 'border-blue-200 bg-blue-50' 
-                            : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'
+                          !unlocked
+                            ? 'border-gray-200 bg-gray-100 opacity-60 cursor-not-allowed'
+                            : isSelected 
+                              ? 'border-blue-200 bg-blue-50' 
+                              : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'
                         }`}
                       >
                         <div className="flex items-start space-x-3">
                           <div className={`p-2 rounded-lg ${
-                            completed ? 'bg-green-100' : 'bg-gray-100'
+                            completed 
+                              ? 'bg-green-100' 
+                              : unlocked 
+                                ? 'bg-gray-100' 
+                                : 'bg-red-100'
                           }`}>
                             {completed ? (
                               <CheckCircle className="h-5 w-5 text-green-600" />
-                            ) : (
+                            ) : unlocked ? (
                               <Icon className="h-5 w-5 text-gray-600" />
+                            ) : (
+                              <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-9a2 2 0 00-2-2M6 7V5a2 2 0 012-2h8a2 2 0 012 2v2m-6 4h.01" />
+                              </svg>
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -413,6 +621,11 @@ export default function CourseDetail() {
                               </span>
                               {completed && (
                                 <CheckCircle className="h-4 w-4 text-green-600" />
+                              )}
+                              {!unlocked && (
+                                <span className="text-xs px-2 py-1 bg-red-100 text-red-600 rounded-full">
+                                  🔒 Bloccato
+                                </span>
                               )}
                             </div>
                             <h3 className="font-medium text-gray-900 text-sm line-clamp-2">
@@ -477,13 +690,164 @@ export default function CourseDetail() {
                               )}
                             </div>
                           ) : (
-                            <button
-                              onClick={() => handleCompleteModule(selectedModule.id)}
-                              className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                              <span>Completa Modulo</span>
-                            </button>
+                            <div className="space-y-4">
+                              {/* Timer Display */}
+                              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center space-x-2">
+                                    <Clock className="h-5 w-5 text-blue-600" />
+                                    <span className="text-sm font-medium text-blue-800">
+                                      Tempo di studio: {getModuleTimeSpent(selectedModule.id)}s / {getMinTimeRequired(selectedModule.type)}s minimo
+                                    </span>
+                                  </div>
+                                  {moduleTimers[selectedModule.id]?.isActive ? (
+                                    <div className="flex items-center space-x-2">
+                                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                      <span className="text-xs text-green-600 font-medium">In corso...</span>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => startModuleTimer(selectedModule.id)}
+                                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                                    >
+                                      Avvia Studio
+                                    </button>
+                                  )}
+                                </div>
+                                
+                                {/* Progress Bar */}
+                                <div className="w-full bg-blue-200 rounded-full h-2 mb-2">
+                                  <div 
+                                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                    style={{ 
+                                      width: `${Math.min(100, (getModuleTimeSpent(selectedModule.id) / getMinTimeRequired(selectedModule.type)) * 100)}%` 
+                                    }}
+                                  ></div>
+                                </div>
+                                
+                                {getModuleTimeSpent(selectedModule.id) < getMinTimeRequired(selectedModule.type) && (
+                                  <div className="text-xs text-blue-600">
+                                    ⚠️ Devi studiare almeno {getMinTimeRequired(selectedModule.type)} secondi per completare questo modulo
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Document Content Interface */}
+                              {selectedModule.type === 'document' ? (
+                                <div className="bg-gray-50 p-6 rounded-lg border-l-4 border-blue-500">
+                                  <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-lg font-semibold text-gray-800">
+                                      📄 Documento di Studio
+                                    </h3>
+                                    <div className="flex items-center space-x-2 text-sm text-gray-500">
+                                      <Clock className="h-4 w-4" />
+                                      <span>{selectedModule.duration_minutes || 15} min</span>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="bg-white p-4 rounded border mb-4">
+                                    <h4 className="font-medium text-gray-800 mb-2">{selectedModule.title}</h4>
+                                    <p className="text-gray-600 text-sm mb-3">
+                                      Leggi attentamente il documento per completare questo modulo. 
+                                      Il sistema traccia il tempo di lettura per garantire un apprendimento efficace.
+                                    </p>
+                                    
+                                    {/* Document Content Area */}
+                                    {selectedModule.document_url ? (
+                                      <PDFViewer
+                                        file={selectedModule.document_url}
+                                        onScrollProgress={(progress) => handleDocumentScroll(selectedModule.id, progress)}
+                                        className="mb-4"
+                                      />
+                                    ) : (
+                                      <div 
+                                        className="bg-gray-50 p-4 rounded border-2 border-dashed border-gray-300 min-h-[300px] overflow-y-auto"
+                                        onScroll={(e) => {
+                                          const element = e.target as HTMLDivElement;
+                                          const scrollPercent = (element.scrollTop / (element.scrollHeight - element.clientHeight)) * 100;
+                                          handleDocumentScroll(selectedModule.id, scrollPercent);
+                                        }}
+                                      >
+                                        <div className="text-center text-gray-500 py-8">
+                                          <div className="text-4xl mb-2">📖</div>
+                                          <p className="text-sm">
+                                            Contenuto del documento sarà visualizzato qui
+                                          </p>
+                                          <p className="text-xs text-gray-400 mt-1">
+                                            (In sviluppo: integrazione con sistema documenti)
+                                          </p>
+                                          <div className="mt-4 p-4 bg-white rounded border text-left">
+                                            <h4 className="font-medium text-gray-800 mb-2">Esempio di Contenuto Documento</h4>
+                                            <p className="text-sm text-gray-600 mb-2">
+                                              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
+                                              Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                                            </p>
+                                            <p className="text-sm text-gray-600 mb-2">
+                                              Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. 
+                                              Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                                            </p>
+                                            <p className="text-sm text-gray-600 mb-2">
+                                              Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, 
+                                              totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+                                            </p>
+                                            <p className="text-sm text-gray-600">
+                                              <strong>Scorri fino alla fine per completare la lettura del documento.</strong>
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Document Actions */}
+                                    <div className="flex items-center justify-between mt-4 pt-3 border-t">
+                                      <div className="flex items-center space-x-4">
+                                        <button className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 text-sm">
+                                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                          </svg>
+                                          <span>Scarica PDF</span>
+                                        </button>
+                                        <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-700 text-sm">
+                                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                          </svg>
+                                          <span>Prendi Note</span>
+                                        </button>
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        📊 Progresso lettura: {Math.round(getDocumentProgress(selectedModule.id))}%
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="bg-gray-50 p-6 rounded-lg">
+                                  <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                                    Contenuto del Modulo
+                                  </h3>
+                                  <p className="text-gray-600 mb-4">
+                                    Questo modulo contiene informazioni importanti per il tuo percorso di apprendimento.
+                                  </p>
+                                  <div className="flex items-center space-x-2 text-sm text-gray-500">
+                                    <Clock className="h-4 w-4" />
+                                    <span>{selectedModule.duration_minutes || 15} min</span>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <button
+                                onClick={() => handleCompleteModule(selectedModule.id)}
+                                disabled={!canCompleteModule(selectedModule)}
+                                className={`flex items-center space-x-2 px-6 py-3 rounded-lg transition-colors ${
+                                  canCompleteModule(selectedModule)
+                                    ? 'bg-green-600 text-white hover:bg-green-700'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                }`}
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                                <span>Completa Modulo</span>
+                              </button>
+                            </div>
                           )}
                         </div>
                       )}
@@ -535,22 +899,49 @@ export default function CourseDetail() {
                     )}
 
                     {/* Video Content */}
-                    {selectedModule.type === 'video' && selectedModule.video_url && !showQuiz && (
+                    {selectedModule.type === 'video' && !showQuiz && (
                       <div className="mb-6">
-                        <div className="aspect-video bg-gray-900 rounded-lg flex items-center justify-center">
-                          <div className="text-center text-white">
-                            <Video className="h-12 w-12 mx-auto mb-3 opacity-75" />
-                            <p className="text-sm opacity-75">Video Player</p>
-                            <p className="text-xs opacity-50 mt-1">
-                              URL: {selectedModule.video_url}
-                            </p>
+                        {selectedModule.video_url ? (
+                          <VideoPlayer
+                            videoUrl={selectedModule.video_url}
+                            onTimeUpdate={(currentTime, duration) => {
+                              // Track video watching time
+                              const watchPercent = (currentTime / duration) * 100;
+                              if (watchPercent >= 80) {
+                                handleDocumentScroll(selectedModule.id, 100);
+                              }
+                            }}
+                            onEnded={() => {
+                              // Mark as fully watched when video ends
+                              handleDocumentScroll(selectedModule.id, 100);
+                            }}
+                            className="w-full"
+                          />
+                        ) : (
+                          <div className="aspect-video bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-center">
+                            <div className="text-center text-yellow-800">
+                              <Video className="h-12 w-12 mx-auto mb-3" />
+                              <p className="text-sm font-medium">Nessun video configurato</p>
+                              <p className="text-xs mt-1">
+                                Contatta l'amministratore per aggiungere il contenuto video.
+                              </p>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     )}
 
                     {/* Text Content */}
-                    {selectedModule.content && !showQuiz && (
+                    {selectedModule.content && !showQuiz && selectedModule.type === 'lesson' && (
+                      <RichContentViewer
+                        content={selectedModule.content}
+                        onScrollProgress={(progress) => handleDocumentScroll(selectedModule.id, progress)}
+                        className="mb-6"
+                      />
+                    )}
+
+                    {/* Fallback for other content types */}
+                    {selectedModule.content && !showQuiz && selectedModule.type !== 'lesson' && (
                       <div className="prose max-w-none">
                         <div className="whitespace-pre-wrap text-gray-700">
                           {selectedModule.content}
