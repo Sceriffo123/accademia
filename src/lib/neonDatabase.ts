@@ -2396,6 +2396,17 @@ export async function getModuleQuiz(moduleId: string): Promise<Quiz | null> {
   }
 }
 
+// Funzione helper per parsing options
+export function parseQuizOptions(options: string | string[]): string[] {
+  if (Array.isArray(options)) {
+    return options;
+  }
+  if (typeof options === 'string') {
+    return options.split(',').map(opt => opt.trim());
+  }
+  return [];
+}
+
 export async function getQuizQuestions(quizId: string): Promise<QuizQuestion[]> {
   try {
     console.log('🎓 NEON: Recupero domande quiz:', quizId);
@@ -2404,7 +2415,15 @@ export async function getQuizQuestions(quizId: string): Promise<QuizQuestion[]> 
       WHERE quiz_id = ${quizId}
       ORDER BY order_num ASC
     `;
-    return result as QuizQuestion[];
+    
+    // Parse options da string a array per compatibilità
+    const parsedQuestions = result.map(question => ({
+      ...question,
+      options: parseQuizOptions(question.options)
+    }));
+    
+    console.log(`✅ NEON: ${parsedQuestions.length} domande con options parsate`);
+    return parsedQuestions as QuizQuestion[];
   } catch (error) {
     console.error('🚨 NEON: Errore recupero domande quiz:', error);
     return [];
