@@ -30,7 +30,6 @@ export default function RichContentViewer({ content, onScrollProgress, className
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      
       if (!line) continue;
       
       // Headings
@@ -54,17 +53,30 @@ export default function RichContentViewer({ content, onScrollProgress, className
           });
         }
       }
-      // Links (supporta anche emoji e caratteri speciali)
+      // Links - REGEX MIGLIORATA per catturare tutti i link
       else if (line.includes('[') && line.includes('](')) {
-        const match = line.match(/\[([^\]]+)\]\(([^)]+)\)/);
-        if (match) {
+        // Trova tutti i link nella riga
+        const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+        let match;
+        let hasLinks = false;
+        let remainingText = line;
+        
+        while ((match = linkRegex.exec(line)) !== null) {
+          hasLinks = true;
           blocks.push({
             type: 'link',
             content: match[1],
             metadata: { href: match[2] }
           });
-        } else {
+          // Rimuovi il link processato dal testo rimanente
+          remainingText = remainingText.replace(match[0], '').trim();
+        }
+        
+        // Se c'è testo rimanente dopo aver rimosso i link, aggiungilo come testo
+        if (remainingText && !hasLinks) {
           blocks.push({ type: 'text', content: line });
+        } else if (remainingText) {
+          blocks.push({ type: 'text', content: remainingText });
         }
       }
       // Lists
@@ -108,7 +120,10 @@ export default function RichContentViewer({ content, onScrollProgress, className
   };
 
   useEffect(() => {
-    setParsedContent(parseContent(content));
+    const parsed = parseContent(content);
+    console.log('🔍 RichContentViewer - Contenuto originale:', content);
+    console.log('🔍 RichContentViewer - Contenuto parsato:', parsed);
+    setParsedContent(parsed);
   }, [content]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {

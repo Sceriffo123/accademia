@@ -385,6 +385,27 @@ export default function CourseDetail() {
       return true;
     }
     
+    // Per moduli lesson, controlla tempo minimo e scroll progress
+    if (module.type === 'lesson') {
+      const timeSpent = getModuleTimeSpent(module.id);
+      const minTimeRequired = getMinTimeRequired(module.type);
+      const scrollComplete = documentProgress[module.id]?.readingComplete || false;
+      
+      console.log(`📚 LESSON ${module.id} - Tempo: ${timeSpent}/${minTimeRequired}s, Scroll: ${scrollComplete}`);
+      
+      if (timeSpent < minTimeRequired) {
+        console.log(`⏱️ Modulo lesson ${module.id} richiede almeno ${minTimeRequired}s, attuale: ${timeSpent}s`);
+        return false;
+      }
+      
+      if (!scrollComplete) {
+        console.log(`📜 Modulo lesson ${module.id} richiede scroll completo`);
+        return false;
+      }
+      
+      return true;
+    }
+    
     // Per altri tipi di modulo, controlla tempo minimo di studio
     const timeSpent = getModuleTimeSpent(module.id);
     const minTimeRequired = getMinTimeRequired(module.type);
