@@ -316,7 +316,7 @@ export default function CourseDetail() {
 
   const getMinTimeRequired = (moduleType: string): number => {
     switch (moduleType) {
-      case 'lesson': return 30;
+      case 'lesson': return 10;
       case 'video': return 60;
       case 'document': return 45;
       case 'quiz': return 0;

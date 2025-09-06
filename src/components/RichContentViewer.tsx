@@ -54,7 +54,7 @@ export default function RichContentViewer({ content, onScrollProgress, className
           });
         }
       }
-      // Links
+      // Links (supporta anche emoji e caratteri speciali)
       else if (line.includes('[') && line.includes('](')) {
         const match = line.match(/\[([^\]]+)\]\(([^)]+)\)/);
         if (match) {
