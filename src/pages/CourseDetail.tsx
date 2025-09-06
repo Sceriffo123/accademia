@@ -959,7 +959,18 @@ export default function CourseDetail() {
                               <p className="text-sm text-gray-600">File allegato</p>
                             </div>
                           </div>
-                          <button className="flex items-center space-x-2 text-blue-600 hover:text-blue-700">
+                          <button 
+                            onClick={() => {
+                              if (selectedModule.document_url) {
+                                const link = document.createElement('a');
+                                link.href = selectedModule.document_url;
+                                link.download = `${selectedModule.title}.pdf`;
+                                link.target = '_blank';
+                                link.click();
+                              }
+                            }}
+                            className="flex items-center space-x-2 text-blue-600 hover:text-blue-700"
+                          >
                             <Download className="h-4 w-4" />
                             <span>Scarica</span>
                           </button>
