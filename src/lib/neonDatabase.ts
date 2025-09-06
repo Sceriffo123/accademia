@@ -2530,21 +2530,17 @@ export async function createQuizAttempt(data: {
   user_id: string;
   quiz_id: string;
   score: number;
-  max_score: number;
-  passed: boolean;
   answers: Record<string, number>;
-  started_at: string;
   completed_at: string;
 }): Promise<QuizAttempt | null> {
   try {
     console.log('🎓 NEON: Creazione tentativo quiz:', data.quiz_id);
     const result = await sql`
       INSERT INTO quiz_attempts (
-        user_id, quiz_id, score, max_score, passed, answers, started_at, completed_at
+        user_id, quiz_id, score, answers, completed_at
       ) VALUES (
-        ${data.user_id}, ${data.quiz_id}, ${data.score}, ${data.max_score}, 
-        ${data.passed}, ${JSON.stringify(data.answers)}, 
-        ${data.started_at}, ${data.completed_at}
+        ${data.user_id}, ${data.quiz_id}, ${data.score}, 
+        ${JSON.stringify(data.answers)}, ${data.completed_at}
       )
       RETURNING *
     `;
