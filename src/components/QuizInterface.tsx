@@ -125,14 +125,19 @@ export default function QuizInterface({ moduleId, onComplete, onCancel }: QuizIn
       
       // Salva tentativo nel database
       if (quiz && profile?.id) {
+        const completedAt = new Date();
+        const startedAt = new Date(completedAt.getTime() - (quiz.time_limit * 60 * 1000)); // Stima tempo inizio
+        const timeTaken = Math.round((completedAt.getTime() - startedAt.getTime()) / 1000); // Secondi
+        
         await createQuizAttempt({
           user_id: profile.id,
           quiz_id: quiz.id,
           score: score,
           passed: passed,
           answers: answers,
-          started_at: new Date().toISOString(),
-          completed_at: new Date().toISOString()
+          started_at: startedAt.toISOString(),
+          completed_at: completedAt.toISOString(),
+          time_taken: timeTaken
         });
       }
       
