@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle, 
   XCircle, 
@@ -8,23 +8,24 @@ import {
   ArrowLeft,
   ArrowRight
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
 import { 
   getModuleQuiz, 
-  getQuizQuestions, 
+  getQuizQuestionsWithParsedOptions,
   createQuizAttempt,
+  getQuizAttemptCount,
+  getBestQuizAttempt,
   type Quiz,
   type QuizQuestion 
 } from '../lib/neonDatabase';
 
 interface QuizInterfaceProps {
   moduleId: string;
+  userId: string;
   onComplete: (passed: boolean, score: number) => void;
   onCancel: () => void;
 }
 
-export default function QuizInterface({ moduleId, onComplete, onCancel }: QuizInterfaceProps) {
-  const { profile } = useAuth();
+export default function QuizInterface({ moduleId, userId, onComplete, onCancel }: QuizInterfaceProps) {
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -33,13 +34,16 @@ export default function QuizInterface({ moduleId, onComplete, onCancel }: QuizIn
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [attemptCount, setAttemptCount] = useState(0);
+  const [bestScore, setBestScore] = useState<number | null>(null);
+  const [startTime, setStartTime] = useState<Date | null>(null);
 
   useEffect(() => {
     loadQuiz();
   }, [moduleId]);
 
   useEffect(() => {
-    if (quiz && quiz.time_limit && timeLeft > 0) {
+    if (quiz && quiz.time_limit && timeLeft > 0 && !isSubmitted) {
       const timer = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
@@ -51,12 +55,15 @@ export default function QuizInterface({ moduleId, onComplete, onCancel }: QuizIn
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [quiz, timeLeft]);
+  }, [quiz, timeLeft, isSubmitted]);
 
   const loadQuiz = async () => {
     try {
       setLoading(true);
       setError(null);
+      setIsSubmitted(false);
+      setAnswers({});
+      setCurrentQuestion(0);
       
       const quizData = await getModuleQuiz(moduleId);
       if (!quizData) {
@@ -64,20 +71,37 @@ export default function QuizInterface({ moduleId, onComplete, onCancel }: QuizIn
         return;
       }
 
-      const questionsData = await getQuizQuestions(quizData.id);
+      // Usa la nuova funzione con parsing automatico delle options
+      const questionsData = await getQuizQuestionsWithParsedOptions(quizData.id);
       if (questionsData.length === 0) {
         setError('Nessuna domanda trovata per questo quiz');
+        return;
+      }
+
+      // Verifica tentativi esistenti
+      const currentAttempts = await getQuizAttemptCount(userId, quizData.id);
+      const bestAttempt = await getBestQuizAttempt(userId, quizData.id);
+      
+      setAttemptCount(currentAttempts);
+      setBestScore(bestAttempt?.score || null);
+
+      // Controlla se ha raggiunto il limite di tentativi
+      if (currentAttempts >= quizData.max_attempts) {
+        setError(`Hai raggiunto il limite massimo di ${quizData.max_attempts} tentativi per questo quiz.`);
         return;
       }
 
       setQuiz(quizData);
       setQuestions(questionsData);
       setTimeLeft(quizData.time_limit * 60); // Converti minuti in secondi
+      setStartTime(new Date());
       
       console.log('🎯 QuizInterface: Quiz caricato:', {
         quiz: quizData.title,
         questions: questionsData.length,
-        timeLimit: quizData.time_limit
+        timeLimit: quizData.time_limit,
+        attempts: `${currentAttempts}/${quizData.max_attempts}`,
+        bestScore: bestAttempt?.score
       });
     } catch (error) {
       console.error('🎯 QuizInterface: Errore caricamento quiz:', error);
@@ -107,7 +131,7 @@ export default function QuizInterface({ moduleId, onComplete, onCancel }: QuizIn
   };
 
   const handleSubmit = async () => {
-    if (isSubmitted) return;
+    if (isSubmitted || !quiz || !startTime) return;
     
     try {
       setIsSubmitted(true);
@@ -121,33 +145,38 @@ export default function QuizInterface({ moduleId, onComplete, onCancel }: QuizIn
       });
       
       const score = Math.round((correctAnswers / questions.length) * 100);
-      const passed = score >= (quiz?.passing_score || 60);
+      const passed = score >= quiz.passing_score;
+      const timeSpent = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
       
-      // Salva tentativo nel database
-      if (quiz && profile?.id) {
-        await createQuizAttempt({
-          user_id: profile.id,
-          quiz_id: quiz.id,
-          score: score,
-          max_score: 100,
-          passed: passed,
-          answers: answers,
-          started_at: new Date().toISOString(),
-          completed_at: new Date().toISOString()
-        });
+      // Salva tentativo nel database con la struttura corretta
+      const attemptResult = await createQuizAttempt({
+        user_id: userId,
+        quiz_id: quiz.id,
+        attempt_number: attemptCount + 1,
+        answers: answers,
+        score: score,
+        time_spent: timeSpent,
+        completed_at: new Date().toISOString()
+      });
+
+      if (!attemptResult) {
+        throw new Error('Errore nel salvataggio del tentativo');
       }
       
       console.log('🎯 QuizInterface: Quiz completato:', {
         score,
         passed,
         correctAnswers,
-        totalQuestions: questions.length
+        totalQuestions: questions.length,
+        timeSpent: `${Math.floor(timeSpent / 60)}:${(timeSpent % 60).toString().padStart(2, '0')}`,
+        attemptNumber: attemptCount + 1
       });
       
       onComplete(passed, score);
     } catch (error) {
       console.error('🎯 QuizInterface: Errore salvataggio quiz:', error);
       setError('Errore nel salvataggio del quiz');
+      setIsSubmitted(false);
     }
   };
 
@@ -155,6 +184,10 @@ export default function QuizInterface({ moduleId, onComplete, onCancel }: QuizIn
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const getAnsweredCount = () => {
+    return Object.keys(answers).length;
   };
 
   if (loading) {
@@ -172,12 +205,19 @@ export default function QuizInterface({ moduleId, onComplete, onCancel }: QuizIn
         <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">Errore</h3>
         <p className="text-gray-600 mb-4">{error}</p>
-        <button
-          onClick={onCancel}
-          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-        >
-          Torna al Modulo
-        </button>
+        <div className="space-y-2">
+          {bestScore !== null && (
+            <p className="text-sm text-gray-500">
+              Miglior punteggio: <span className="font-semibold">{bestScore}%</span>
+            </p>
+          )}
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            Torna al Modulo
+          </button>
+        </div>
       </div>
     );
   }
@@ -200,6 +240,7 @@ export default function QuizInterface({ moduleId, onComplete, onCancel }: QuizIn
 
   const currentQuestionData = questions[currentQuestion];
   const progress = ((currentQuestion + 1) / questions.length) * 100;
+  const answeredCount = getAnsweredCount();
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -209,10 +250,20 @@ export default function QuizInterface({ moduleId, onComplete, onCancel }: QuizIn
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{quiz.title}</h2>
             <p className="text-gray-600 mt-1">{quiz.description}</p>
+            <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+              <span>Tentativo {attemptCount + 1} di {quiz.max_attempts}</span>
+              <span>Punteggio minimo: {quiz.passing_score}%</span>
+              {bestScore !== null && (
+                <span className="text-green-600 font-medium">
+                  Miglior punteggio: {bestScore}%
+                </span>
+              )}
+            </div>
           </div>
           <button
             onClick={onCancel}
             className="text-gray-400 hover:text-gray-600 transition-colors"
+            title="Chiudi quiz"
           >
             <XCircle className="h-6 w-6" />
           </button>
@@ -226,13 +277,13 @@ export default function QuizInterface({ moduleId, onComplete, onCancel }: QuizIn
                 Domanda {currentQuestion + 1} di {questions.length}
               </span>
               <span className="text-sm text-gray-500">
-                {Math.round(progress)}%
+                Risposte: {answeredCount}/{questions.length} ({Math.round(progress)}%)
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${progress}%` }}
+                style={{ width: progress + '%' }}
               ></div>
             </div>
           </div>
@@ -257,7 +308,7 @@ export default function QuizInterface({ moduleId, onComplete, onCancel }: QuizIn
         </h3>
         
         <div className="space-y-3">
-          {currentQuestionData.options.map((option, index) => (
+          {Array.isArray(currentQuestionData.options) && currentQuestionData.options.map((option: string, index: number) => (
             <label
               key={index}
               className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all ${
@@ -304,7 +355,8 @@ export default function QuizInterface({ moduleId, onComplete, onCancel }: QuizIn
         <div className="flex items-center space-x-2">
           <button
             onClick={loadQuiz}
-            className="flex items-center space-x-2 px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            disabled={isSubmitted}
+            className="flex items-center space-x-2 px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RotateCcw className="h-4 w-4" />
             <span>Ricomincia</span>
@@ -313,10 +365,15 @@ export default function QuizInterface({ moduleId, onComplete, onCancel }: QuizIn
           {currentQuestion === questions.length - 1 ? (
             <button
               onClick={handleSubmit}
-              className="flex items-center space-x-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              disabled={isSubmitted || answeredCount < questions.length}
+              className={`flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors ${
+                isSubmitted || answeredCount < questions.length
+                  ? 'bg-gray-400 text-white cursor-not-allowed'
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
             >
               <CheckCircle className="h-4 w-4" />
-              <span>Termina Quiz</span>
+              <span>{isSubmitted ? 'Invio...' : 'Termina Quiz'}</span>
             </button>
           ) : (
             <button
