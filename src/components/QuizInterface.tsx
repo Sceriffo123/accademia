@@ -129,6 +129,7 @@ export default function QuizInterface({ moduleId, onComplete, onCancel }: QuizIn
           user_id: profile.id,
           quiz_id: quiz.id,
           score: score,
+          passed: passed,
           answers: answers,
           completed_at: new Date().toISOString()
         });
