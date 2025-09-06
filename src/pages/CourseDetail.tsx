@@ -3,29 +3,30 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   ArrowLeft,
-  PlayCircle, 
   Clock, 
   Users, 
   Star,
   CheckCircle,
-  Lock,
   BookOpen,
   Download,
   FileText,
   Video,
   Award,
-  BarChart3
+  BarChart3,
+  AlertCircle
 } from 'lucide-react';
 import { 
   getCourseById,
   getCourseModules,
   getUserProgress,
   updateModuleProgress,
+  updateEnrollmentStatus,
   sql,
   type Course,
   type CourseModule,
   type ModuleProgress
 } from '../lib/neonDatabase';
+import QuizInterface from '../components/QuizInterface';
 
 export default function CourseDetail() {
   console.log('📚 CourseDetail: Componente caricato!');
@@ -44,6 +45,10 @@ export default function CourseDetail() {
   const [loading, setLoading] = useState(true);
   const [selectedModule, setSelectedModule] = useState<CourseModule | null>(null);
   const [notifications, setNotifications] = useState<{type: 'success' | 'error' | 'info', message: string}[]>([]);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [quizResult, setQuizResult] = useState<{passed: boolean, score: number} | null>(null);
+  const [courseCompleted, setCourseCompleted] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
 
   useEffect(() => {
     console.log('📚 CourseDetail: useEffect chiamato con:', { courseId, profileId: profile?.id });
@@ -103,14 +108,24 @@ export default function CourseDetail() {
   };
 
   const addNotification = (type: 'success' | 'error' | 'info', message: string) => {
-    const id = Date.now().toString();
     setNotifications(prev => [...prev, { type, message }]);
     setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n !== notifications.find(n => n.message === message)));
+      setNotifications(prev => prev.filter(n => n.message !== message));
     }, 5000);
   };
 
   const handleCompleteModule = async (moduleId: string) => {
+    const module = modules.find(m => m.id === moduleId);
+    if (!module) return;
+    
+    // Verifica se il modulo può essere completato
+    if (!canCompleteModule(module)) {
+      if (module.type === 'quiz') {
+        addNotification('error', 'Devi superare il quiz per completare questo modulo');
+      }
+      return;
+    }
+    
     try {
       // Trova l'enrollment ID per questo utente e corso
       const enrollment = await sql`
@@ -126,10 +141,40 @@ export default function CourseDetail() {
       await updateModuleProgress(enrollment[0].id, moduleId, true);
       await loadCourseData(); // Refresh data
       addNotification('success', 'Modulo completato!');
+      
+      // Controlla se il corso può essere completato
+      setTimeout(() => {
+        if (canCompleteCourse()) {
+          addNotification('info', 'Hai completato tutti i moduli! Puoi ora completare il corso.');
+        }
+      }, 1000);
     } catch (error) {
       console.error('Errore completamento modulo:', error);
       addNotification('error', 'Errore nel completamento del modulo');
     }
+  };
+
+  const handleStartQuiz = () => {
+    setShowQuiz(true);
+    setQuizResult(null);
+  };
+
+  const handleQuizComplete = async (passed: boolean, score: number) => {
+    setQuizResult({ passed, score });
+    setShowQuiz(false);
+    
+    if (passed) {
+      // Completa automaticamente il modulo se il quiz è superato
+      await handleCompleteModule(selectedModule!.id);
+      addNotification('success', `Quiz superato! Punteggio: ${score}%`);
+    } else {
+      addNotification('error', `Quiz non superato. Punteggio: ${score}%. Riprova!`);
+    }
+  };
+
+  const handleQuizCancel = () => {
+    setShowQuiz(false);
+    setQuizResult(null);
   };
 
   const getModuleIcon = (type: string) => {
@@ -146,6 +191,56 @@ export default function CourseDetail() {
     const progressArray = Array.isArray(progress) ? progress : [];
     const completedModules = progressArray.filter(p => p.completed).length;
     return Math.round((completedModules / modules.length) * 100);
+  };
+
+  const canCompleteModule = (module: CourseModule) => {
+    // Se è un quiz, deve essere superato per essere completato
+    if (module.type === 'quiz') {
+      return quizResult?.passed === true;
+    }
+    // Altri tipi di modulo possono essere completati direttamente
+    return true;
+  };
+
+  const canCompleteCourse = () => {
+    if (modules.length === 0) return false;
+    
+    const progressArray = Array.isArray(progress) ? progress : [];
+    const completedModules = progressArray.filter(p => p.completed).length;
+    
+    // Tutti i moduli devono essere completati
+    const allModulesCompleted = completedModules === modules.length;
+    
+    // Verifica che tutti i quiz siano stati superati
+    const quizModules = modules.filter(m => m.type === 'quiz');
+    const allQuizzesPassed = quizModules.every(quiz => 
+      progressArray.some(p => p.module_id === quiz.id && p.completed)
+    );
+    
+    return allModulesCompleted && allQuizzesPassed;
+  };
+
+  const handleCompleteCourse = async () => {
+    try {
+      // Trova l'enrollment ID per questo utente e corso
+      const enrollment = await sql`
+        SELECT id FROM enrollments 
+        WHERE user_id = ${profile!.id} AND course_id = ${courseId}
+      `;
+      
+      if (enrollment.length === 0) {
+        addNotification('error', 'Iscrizione al corso non trovata');
+        return;
+      }
+      
+      await updateEnrollmentStatus(enrollment[0].id, 'completed');
+      setCourseCompleted(true);
+      setShowCompletionModal(true);
+      addNotification('success', 'Congratulazioni! Hai completato il corso!');
+    } catch (error) {
+      console.error('Errore completamento corso:', error);
+      addNotification('error', 'Errore nel completamento del corso');
+    }
   };
 
   const isModuleCompleted = (moduleId: string) => {
@@ -246,12 +341,29 @@ export default function CourseDetail() {
                       </div>
                       <div className="text-sm text-gray-600">Completato</div>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
                       <div 
                         className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${getProgressPercentage()}%` }}
                       ></div>
                     </div>
+                    
+                    {canCompleteCourse() && !courseCompleted && (
+                      <button
+                        onClick={handleCompleteCourse}
+                        className="w-full flex items-center justify-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                      >
+                        <Award className="h-4 w-4" />
+                        <span>Completa Corso</span>
+                      </button>
+                    )}
+                    
+                    {courseCompleted && (
+                      <div className="w-full flex items-center justify-center space-x-2 bg-green-100 text-green-800 px-4 py-2 rounded-lg text-sm font-medium">
+                        <Award className="h-4 w-4" />
+                        <span>Corso Completato!</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -307,7 +419,7 @@ export default function CourseDetail() {
                               {module.title}
                             </h3>
                             <p className="text-xs text-gray-600 mt-1">
-                              {module.duration}
+                              {module.duration_minutes ? `${module.duration_minutes} min` : '30 min'}
                             </p>
                           </div>
                         </div>
@@ -334,7 +446,7 @@ export default function CourseDetail() {
                         <div className="flex items-center space-x-4 text-sm text-gray-500">
                           <div className="flex items-center space-x-1">
                             <Clock className="h-4 w-4" />
-                            <span>{selectedModule.duration}</span>
+                            <span>{selectedModule.duration_minutes ? `${selectedModule.duration_minutes} min` : '30 min'}</span>
                           </div>
                           <div className="flex items-center space-x-1">
                             {React.createElement(getModuleIcon(selectedModule.type), { className: "h-4 w-4" })}
@@ -344,19 +456,86 @@ export default function CourseDetail() {
                       </div>
                       
                       {!isModuleCompleted(selectedModule.id) && (
-                        <button
-                          onClick={() => handleCompleteModule(selectedModule.id)}
-                          className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                          <span>Completa Modulo</span>
-                        </button>
+                        <div className="flex items-center space-x-2">
+                          {selectedModule.type === 'quiz' ? (
+                            <div className="flex flex-col items-end space-y-2">
+                              <button
+                                onClick={handleStartQuiz}
+                                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                              >
+                                <BarChart3 className="h-4 w-4" />
+                                <span>Inizia Quiz</span>
+                              </button>
+                              {quizResult?.passed && (
+                                <button
+                                  onClick={() => handleCompleteModule(selectedModule.id)}
+                                  className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                  <span>Completa Modulo</span>
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleCompleteModule(selectedModule.id)}
+                              className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                              <span>Completa Modulo</span>
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
 
                   <div className="p-6">
-                    {selectedModule.type === 'video' && selectedModule.video_url && (
+                    {/* Quiz Interface */}
+                    {showQuiz && selectedModule.type === 'quiz' && (
+                      <QuizInterface
+                        moduleId={selectedModule.id}
+                        userId={profile!.id}
+                        onComplete={handleQuizComplete}
+                        onCancel={handleQuizCancel}
+                      />
+                    )}
+
+                    {/* Quiz Result */}
+                    {quizResult && !showQuiz && (
+                      <div className={`mb-6 p-6 rounded-lg border-2 ${
+                        quizResult.passed 
+                          ? 'bg-green-50 border-green-200' 
+                          : 'bg-red-50 border-red-200'
+                      }`}>
+                        <div className="flex items-center space-x-3">
+                          {quizResult.passed ? (
+                            <CheckCircle className="h-8 w-8 text-green-600" />
+                          ) : (
+                            <AlertCircle className="h-8 w-8 text-red-600" />
+                          )}
+                          <div>
+                            <h3 className={`text-lg font-semibold ${
+                              quizResult.passed ? 'text-green-800' : 'text-red-800'
+                            }`}>
+                              {quizResult.passed ? 'Quiz Superato!' : 'Quiz Non Superato'}
+                            </h3>
+                            <p className={`text-sm ${
+                              quizResult.passed ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              Punteggio: {quizResult.score}%
+                              {quizResult.passed 
+                                ? ' - Ottimo lavoro! Modulo completato.' 
+                                : ' - Riprova per superare il quiz.'
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Video Content */}
+                    {selectedModule.type === 'video' && selectedModule.video_url && !showQuiz && (
                       <div className="mb-6">
                         <div className="aspect-video bg-gray-900 rounded-lg flex items-center justify-center">
                           <div className="text-center text-white">
@@ -370,7 +549,8 @@ export default function CourseDetail() {
                       </div>
                     )}
 
-                    {selectedModule.content && (
+                    {/* Text Content */}
+                    {selectedModule.content && !showQuiz && (
                       <div className="prose max-w-none">
                         <div className="whitespace-pre-wrap text-gray-700">
                           {selectedModule.content}
@@ -378,7 +558,8 @@ export default function CourseDetail() {
                       </div>
                     )}
 
-                    {selectedModule.file_path && (
+                    {/* Document Download */}
+                    {selectedModule.document_url && !showQuiz && (
                       <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
@@ -396,7 +577,8 @@ export default function CourseDetail() {
                       </div>
                     )}
 
-                    {isModuleCompleted(selectedModule.id) && (
+                    {/* Module Completed */}
+                    {isModuleCompleted(selectedModule.id) && !showQuiz && (
                       <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                         <div className="flex items-center space-x-3">
                           <CheckCircle className="h-5 w-5 text-green-600" />
@@ -424,6 +606,55 @@ export default function CourseDetail() {
           </div>
         </div>
       </div>
+      
+      {/* Course Completion Modal */}
+      {showCompletionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 text-center">
+            <div className="mb-6">
+              <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <Award className="h-8 w-8 text-green-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                Congratulazioni!
+              </h2>
+              <p className="text-gray-600">
+                Hai completato con successo il corso <strong>{course?.title}</strong>.
+                Ottimo lavoro!
+              </p>
+            </div>
+            
+            <div className="bg-green-50 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-green-700">Moduli completati:</span>
+                <span className="font-semibold text-green-800">{modules.length}/{modules.length}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm mt-1">
+                <span className="text-green-700">Progresso:</span>
+                <span className="font-semibold text-green-800">100%</span>
+              </div>
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowCompletionModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Continua
+              </button>
+              <button
+                onClick={() => {
+                  setShowCompletionModal(false);
+                  navigate('/education');
+                }}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Vai ai Corsi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

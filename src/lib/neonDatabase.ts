@@ -2506,6 +2506,64 @@ export async function deleteQuizQuestion(id: string): Promise<boolean> {
   }
 }
 
+// Funzioni per gestione tentativi quiz
+export async function createQuizAttempt(data: {
+  user_id: string;
+  quiz_id: string;
+  score: number;
+  max_score: number;
+  passed: boolean;
+  answers: Record<string, number>;
+  started_at: string;
+  completed_at: string;
+}): Promise<QuizAttempt | null> {
+  try {
+    console.log('🎓 NEON: Creazione tentativo quiz:', data.quiz_id);
+    const result = await sql`
+      INSERT INTO quiz_attempts (
+        user_id, quiz_id, score, max_score, passed, answers, started_at, completed_at
+      ) VALUES (
+        ${data.user_id}, ${data.quiz_id}, ${data.score}, ${data.max_score}, 
+        ${data.passed}, ${JSON.stringify(data.answers)}, 
+        ${data.started_at}, ${data.completed_at}
+      )
+      RETURNING *
+    `;
+    return result[0] as QuizAttempt || null;
+  } catch (error) {
+    console.error('🚨 NEON: Errore creazione tentativo quiz:', error);
+    return null;
+  }
+}
+
+export async function getQuizAttempts(userId: string, quizId: string): Promise<QuizAttempt[]> {
+  try {
+    console.log('🎓 NEON: Recupero tentativi quiz:', { userId, quizId });
+    const result = await sql`
+      SELECT * FROM quiz_attempts 
+      WHERE user_id = ${userId} AND quiz_id = ${quizId}
+      ORDER BY created_at DESC
+    `;
+    return result as QuizAttempt[];
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero tentativi quiz:', error);
+    return [];
+  }
+}
+
+export async function getQuizAttemptById(id: string): Promise<QuizAttempt | null> {
+  try {
+    console.log('🎓 NEON: Recupero tentativo quiz:', id);
+    const result = await sql`
+      SELECT * FROM quiz_attempts WHERE id = ${id}
+    `;
+    return result[0] as QuizAttempt || null;
+  } catch (error) {
+    console.error('🚨 NEON: Errore recupero tentativo quiz:', error);
+    return null;
+  }
+}
+
 export async function createQuizQuestion(data: Omit<QuizQuestion, 'id' | 'created_at' | 'updated_at'>): Promise<QuizQuestion | null> {
   try {
     console.log('🎓 NEON: Creazione domanda quiz');
@@ -2604,6 +2662,26 @@ export async function completeCourse(enrollmentId: string, finalScore: number): 
     return result.length > 0;
   } catch (error) {
     console.error('🚨 NEON: Errore completamento corso:', error);
+    return false;
+  }
+}
+
+export async function updateEnrollmentStatus(enrollmentId: string, status: 'enrolled' | 'in_progress' | 'completed' | 'failed'): Promise<boolean> {
+  try {
+    console.log('🎓 NEON: Aggiornamento status iscrizione:', { enrollmentId, status });
+    
+    const result = await sql`
+      UPDATE enrollments 
+      SET 
+        status = ${status},
+        updated_at = NOW(),
+        completed_at = ${status === 'completed' ? 'NOW()' : null}
+      WHERE id = ${enrollmentId}
+    `;
+    
+    return result.length > 0;
+  } catch (error) {
+    console.error('🚨 NEON: Errore aggiornamento status iscrizione:', error);
     return false;
   }
 }
@@ -3028,152 +3106,5 @@ export async function getCourseAverageRating(courseId: string): Promise<number> 
   } catch (error) {
     console.error('🚨 NEON: Errore calcolo rating medio corso:', error);
     return 0;
-  }
-}
-
-// ===== QUIZ ATTEMPTS FUNCTIONS =====
-
-export interface QuizAttempt {
-  id: string;
-  user_id: string;
-  quiz_id: string;
-  attempt_number: number;
-  answers: Record<string, any>;
-  score: number;
-  time_spent: number;
-  completed_at: string;
-  created_at: string;
-}
-
-export async function createQuizAttempt(data: {
-  user_id: string;
-  quiz_id: string;
-  attempt_number: number;
-  answers: Record<string, any>;
-  score: number;
-  time_spent: number;
-  completed_at: string;
-}): Promise<QuizAttempt | null> {
-  try {
-    console.log('🎯 NEON: Creazione tentativo quiz:', {
-      user_id: data.user_id,
-      quiz_id: data.quiz_id,
-      attempt_number: data.attempt_number,
-      score: data.score
-    });
-
-    const result = await sql`
-      INSERT INTO quiz_attempts (
-        user_id, quiz_id, attempt_number, answers, score, time_spent, completed_at
-      ) VALUES (
-        ${data.user_id}, ${data.quiz_id}, ${data.attempt_number}, 
-        ${JSON.stringify(data.answers)}, ${data.score}, ${data.time_spent}, ${data.completed_at}
-      )
-      RETURNING *
-    `;
-
-    const attempt = result[0] as QuizAttempt;
-    console.log('✅ NEON: Tentativo quiz creato:', attempt.id);
-    return attempt;
-  } catch (error) {
-    console.error('🚨 NEON: Errore creazione tentativo quiz:', error);
-    return null;
-  }
-}
-
-export async function getQuizAttempts(userId: string, quizId?: string): Promise<QuizAttempt[]> {
-  try {
-    console.log('🎯 NEON: Recupero tentativi quiz:', { userId, quizId });
-
-    const result = quizId 
-      ? await sql`
-          SELECT * FROM quiz_attempts 
-          WHERE user_id = ${userId} AND quiz_id = ${quizId}
-          ORDER BY attempt_number DESC
-        `
-      : await sql`
-          SELECT * FROM quiz_attempts 
-          WHERE user_id = ${userId}
-          ORDER BY created_at DESC
-        `;
-
-    console.log(`✅ NEON: Trovati ${result.length} tentativi`);
-    return result as QuizAttempt[];
-  } catch (error) {
-    console.error('🚨 NEON: Errore recupero tentativi quiz:', error);
-    return [];
-  }
-}
-
-export async function getQuizAttemptCount(userId: string, quizId: string): Promise<number> {
-  try {
-    console.log('🎯 NEON: Conteggio tentativi quiz:', { userId, quizId });
-
-    const result = await sql`
-      SELECT COUNT(*) as count 
-      FROM quiz_attempts 
-      WHERE user_id = ${userId} AND quiz_id = ${quizId}
-    `;
-
-    const count = parseInt(result[0]?.count || '0');
-    console.log(`✅ NEON: Tentativi trovati: ${count}`);
-    return count;
-  } catch (error) {
-    console.error('🚨 NEON: Errore conteggio tentativi quiz:', error);
-    return 0;
-  }
-}
-
-export async function getBestQuizAttempt(userId: string, quizId: string): Promise<QuizAttempt | null> {
-  try {
-    console.log('🎯 NEON: Recupero miglior tentativo quiz:', { userId, quizId });
-
-    const result = await sql`
-      SELECT * FROM quiz_attempts 
-      WHERE user_id = ${userId} AND quiz_id = ${quizId}
-      ORDER BY score DESC, completed_at ASC
-      LIMIT 1
-    `;
-
-    if (result.length === 0) {
-      console.log('✅ NEON: Nessun tentativo trovato');
-      return null;
-    }
-
-    const bestAttempt = result[0] as QuizAttempt;
-    console.log(`✅ NEON: Miglior tentativo: ${bestAttempt.score}%`);
-    return bestAttempt;
-  } catch (error) {
-    console.error('🚨 NEON: Errore recupero miglior tentativo:', error);
-    return null;
-  }
-}
-
-export function parseQuizOptions(options: string | string[]): string[] {
-  if (Array.isArray(options)) {
-    return options;
-  }
-  if (typeof options === 'string') {
-    return options.split(',').map(opt => opt.trim());
-  }
-  return [];
-}
-
-export async function getQuizQuestionsWithParsedOptions(quizId: string): Promise<QuizQuestion[]> {
-  try {
-    console.log('🎯 NEON: Recupero domande quiz con parsing options:', quizId);
-
-    const questions = await getQuizQuestions(quizId);
-    
-    const parsedQuestions = questions.map(question => ({
-      ...question,
-      options: parseQuizOptions(question.options)
-    }));
-
-    console.log(`✅ NEON: ${parsedQuestions.length} domande con options parsate`);
-    return parsedQuestions;
-  } catch (error) {
-    console.error('🚨 NEON: Errore parsing options domande:', error);
-    return [];
   }
 }
